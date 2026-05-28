@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cherrywood Autos | Inventory</title>
+    <style>
+        :root {
+            --primary-blue: #0a2342;
+            --accent-blue: #007bff;
+            --success-green: #28a745;
+            --danger-red: #dc3545;
+            --light-bg: #f4f7f9;
+            --white: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            background-color: var(--light-bg);
+            color: #333;
+        }
+
+        nav {
+            background: var(--primary-blue);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        header {
+            background: linear-gradient(rgba(10, 35, 66, 0.8), rgba(10, 35, 66, 0.8)), 
+                        url('https://images.unsplash.com/photo-1486006396193-471068589bca?auto=format&fit=crop&q=80&w=1000');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: -40px auto 40px;
+            padding: 20px;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            padding: 25px;
+        }
+
+        /* Search Bar Styling */
+        .search-container {
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        th {
+            text-align: left;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            color: var(--primary-blue);
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        .status-ok { background: #e2f6ea; color: #155724; }
+        .status-low { background: #fce8e6; color: #a81c1c; }
+
+        .btn-delete {
+            background: none;
+            border: 1px solid var(--danger-red);
+            color: var(--danger-red);
+            padding: 4px 10px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .btn-delete:hover {
+            background: var(--danger-red);
+            color: white;
+        }
+
+        .form-section {
+            border-top: 2px solid #f0f2f5;
+            padding-top: 25px;
+            margin-top: 20px;
+        }
+
+        .form-title {
+            font-size: 1.2rem;
+            color: var(--primary-blue);
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 15px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #666;
+        }
+
+        .form-group input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .btn-submit {
+            background: var(--success-green);
+            color: white;
+            padding: 11px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .btn-submit:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <nav>
+    <div class="logo">CHERRYWOOD AUTOS</div>
+    <div style="display: flex; align-items: center; gap: 20px;">
+        <span>Inventory Management Dashboard</span>
+        <a href="{{ url_for('logout') }}" style="color: #ff4d4d; text-decoration: none; font-weight: bold; font-size: 0.9rem; border: 1px solid #ff4d4d; padding: 4px 10px; border-radius: 4px;">Log Out</a>
+    </div>
+</nav>
+    </nav>
+
+    <header>
+        <h1>Live Parts Inventory</h1>
+        <p>Real-time stock levels for the garage floor</p>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" onkeyup="filterTable()" placeholder="🔍 Search parts by name...">
+            </div>
+
+            <table id="inventoryTable">
+                <thead>
+                    <tr>
+                        <th>Part Name</th>
+                        <th>Price</th>
+                        <th>Status</th>
+                        <th>Stock Level</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for part in parts %}
+                    <tr>
+                        <td class="part-name"><strong>{{ part['part_name'] }}</strong></td>
+                        <td>£{{ "{:.2f}".format(part['price']|float) }}</td>
+                        <td>
+                            {% if part['stock']|int > 5 %}
+                            <span class="badge status-ok">In Stock</span>
+                            {% else %}
+                            <span class="badge status-low">Low Stock</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <a href="{{ url_for('subtract_stock', item_id=part['id']) }}" 
+                                   style="background: #dc3545; color: white; padding: 2px 8px; border-radius: 4px; text-decoration: none; font-weight: bold;">-</a>
+                                <span style="font-weight: bold; min-width: 60px; text-align: center;">
+                                    {{ part['stock'] }} items
+                                </span>
+                                <a href="{{ url_for('add_stock', item_id=part['id']) }}" 
+                                   style="background: #28a745; color: white; padding: 2px 8px; border-radius: 4px; text-decoration: none; font-weight: bold;">+</a>
+                            </div>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('delete_part', item_id=part['id']) }}" 
+                               class="btn-delete" 
+                               onclick="return confirm('Are you sure you want to permanently delete this part from inventory?');">Delete</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="form-section">
+                <div class="form-title">Log New Parts Delivery</div>
+                <form action="{{ url_for('add_new_part') }}" method="POST" class="form-grid">
+                    <div class="form-group">
+                        <label for="part_name">Part Description / Name</label>
+                        <input type="text" id="part_name" name="part_name" placeholder="e.g. Wiper Blade 22 inch" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="price">Unit Price (£)</label>
+                        <input type="number" id="price" name="price" step="0.01" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="stock">Initial Stock Count</label>
+                        <input type="number" id="stock" name="stock" placeholder="0" required>
+                    </div>
+                    <button type="submit" class="btn-submit">Add to Inventory</button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+    function filterTable() {
+        let input = document.getElementById("searchInput");
+        let filter = input.value.toUpperCase();
+        let table = document.getElementById("inventoryTable");
+        let tr = table.getElementsByTagName("tr");
+
+        // Loop through all table rows (skipping the header row)
+        for (let i = 1; i < tr.length; i++) {
+            let td = tr[i].getElementsByClassName("part-name")[0];
+            if (td) {
+                let txtValue = td.textContent || td.innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = ""; // Show row
+                } else {
+                    tr[i].style.display = "none"; // Hide row
+                }
+            }
+        }
+    }
+    </script>
+
+</body>
+</html>
