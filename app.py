@@ -12,12 +12,17 @@ db = SQLAlchemy(app)
 # Database Model tailored for a Salvage Yard
 class Vehicle(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False) # e.g., "2016 Ford Fiesta Zetec"
-    engine = db.Column(db.String(50), nullable=False) # e.g., "1.2L Petrol"
-    status = db.Column(db.String(50), nullable=False) # "Breaking for Parts" or "Whole Salvage Car"
+    title = db.Column(db.String(100), nullable=False)
+    engine = db.Column(db.String(50), nullable=False)
+    status = db.Column(db.String(50), nullable=False)
     description = db.Column(db.String(500), default="All parts available. Contact us for prices.")
     image_url = db.Column(db.String(500), default="https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=500&auto=format&fit=crop")
 
+# 🟢 ADD THESE THREE LINES RIGHT HERE SO RENDER RUNS THEM IMMEDIATELY:
+with app.app_context():
+    db.create_all()
+
+# Simple login credentials for your private dashboard
 ADMIN_PASSWORD = "cherrywood2026"
 
 @app.route('/')
