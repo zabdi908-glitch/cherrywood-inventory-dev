@@ -9,7 +9,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///salvage.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# Database Model tailored for a Salvage Yard
+# Database Model for Vehicles
 class Vehicle(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
@@ -18,24 +18,26 @@ class Vehicle(db.Model):
     description = db.Column(db.String(500), default="All parts available. Contact us for prices.")
     image_url = db.Column(db.String(500), default="https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=500&auto=format&fit=crop")
 
-# 🟢 ADD THESE THREE LINES RIGHT HERE SO RENDER RUNS THEM IMMEDIATELY:
 with app.app_context():
     db.create_all()
 
-# Simple login credentials for your private dashboard
 ADMIN_PASSWORD = "cherrywood2026"
 
 @app.route('/')
 def home():
+    # Public view only showing the salvage inventory
     vehicles = Vehicle.query.all()
     return render_template('index.html', vehicles=vehicles)
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
+@app.route('/yard-manager', methods=['GET', 'POST'])
+def admin_portal():
+    # Hidden secret link just for you to log in and manage vehicles
     if request.method == 'POST':
         if request.form['password'] == ADMIN_PASSWORD:
             session['logged_in'] = True
             return redirect(url_for('home'))
+    if session.get('logged_in'):
+        return render_template('index.html', vehicles=Vehicle.query.all())
     return render_template('login.html')
 
 @app.route('/logout')
@@ -57,7 +59,7 @@ def add_vehicle():
         new_vehicle = Vehicle(title=title, engine=engine, status=status, description=desc, image_url=img)
         db.session.add(new_vehicle)
         db.session.commit()
-    return redirect(url_for('home'))
+    return redirect(url_for('admin_portal'))
 
 @app.route('/delete/<int:vehicle_id>', methods=['POST'])
 def delete_vehicle(vehicle_id):
@@ -66,9 +68,7 @@ def delete_vehicle(vehicle_id):
         if v:
             db.session.delete(v)
             db.session.commit()
-    return redirect(url_for('home'))
+    return redirect(url_for('admin_portal'))
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()  # This creates the vehicle table automatically!
     app.run(debug=True)
