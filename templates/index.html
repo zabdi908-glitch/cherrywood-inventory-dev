@@ -15,13 +15,15 @@
             --success: #10b981;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-        body { background-color: var(--bg-dark); color: var(--text-main); padding-bottom: 220px; }
+        body { background-color: var(--bg-dark); color: var(--text-main); padding-bottom: 240px; }
         
         .navbar { background: #111827; border-bottom: 1px solid #334155; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
         .logo { font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
         .logo span { color: var(--yard-orange); }
-        .nav-actions { display: flex; gap: 15px; align-items: center; }
-        .nav-btn { color: var(--text-muted); text-decoration: none; font-size: 14px; border: 1px solid #334155; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; background: transparent; }
+        .nav-contacts { display: flex; gap: 20px; align-items: center; }
+        .contact-link { color: #fff; text-decoration: none; font-size: 14px; font-weight: 600; }
+        .contact-link span { color: var(--yard-orange); margin-right: 4px; }
+        .call-btn { background: var(--yard-orange); padding: 8px 16px; border-radius: 6px; font-weight: 700; color: #fff; text-decoration: none; font-size: 14px; }
 
         .hero-search { background: radial-gradient(circle at top left, #1e293b, #0f172a); padding: 40px 20px; text-align: center; border-bottom: 1px solid #334155; }
         .hero-search h2 { font-size: 24px; margin-bottom: 15px; font-weight: 700; }
@@ -31,8 +33,9 @@
         .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
         
-        .vehicle-card { background: var(--card-bg); border: 1px solid #334155; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; position: relative; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        
+        .placeholder-text { text-align: center; color: var(--text-muted); grid-column: 1 / -1; padding: 40px; font-size: 16px; border: 2px dashed #334155; border-radius: 12px; }
+
+        .vehicle-card { background: var(--card-bg); border: 1px solid #334155; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; position: relative; }
         .status-badge { position: absolute; top: 12px; left: 12px; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; z-index: 10; color: #fff; }
         .status-badge.breaking { background: var(--yard-orange); }
         .status-badge.salvage { background: var(--accent-blue); }
@@ -44,22 +47,18 @@
         .vehicle-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; min-height: 45px; }
         
         .action-row { margin-top: auto; padding-top: 15px; border-top: 1px solid #334155; display: flex; flex-direction: column; gap: 10px; }
-        
-        /* Buttons */
         .enquire-btn { width: 100%; background: #fff; color: #000; border: none; padding: 10px; border-radius: 6px; font-weight: 700; text-align: center; text-decoration: none; display: block; font-size: 14px; }
-        .enquire-btn:hover { background: #e2e8f0; }
         .del-btn { width: 100%; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 600; }
 
-        /* Fixed Admin Entry Dock */
         .dock-panel { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-top: 1px solid #334155; padding: 15px 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.5); z-index: 100; }
         .form-grid { display: grid; grid-template-columns: 2fr 1fr 1.2fr 2fr 2fr auto; gap: 10px; align-items: end; }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
         .form-group label { font-size: 11px; color: var(--text-muted); font-weight: 700; }
         .form-input { background: var(--bg-dark); border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; color: #fff; font-size: 14px; outline: none; }
-        .form-input:focus { border-color: var(--yard-orange); }
         .submit-btn { background: var(--yard-orange); color: #fff; border: none; padding: 9px 15px; border-radius: 6px; font-weight: 600; cursor: pointer; height: 36px; }
-
+        
         @media (max-width: 768px) {
+            .navbar { flex-direction: column; gap: 10px; text-align: center; }
             .form-grid { grid-template-columns: 1fr; max-height: 220px; overflow-y: auto; }
             body { padding-bottom: 340px; }
         }
@@ -69,13 +68,12 @@
 
     <div class="navbar">
         <div class="logo">Cherrywood <span>Autos</span></div>
-        <div class="nav-actions">
+        <div class="nav-contacts">
+            <!-- Your professional phone and email contact layout -->
+            <a href="mailto:info@cherrywoodautos.co.uk" class="contact-link"><span>✉</span> info@cherrywoodautos.co.uk</a>
+            <a href="tel:01215555555" class="call-btn">📞 Call Yard: 0121 555 5555</a>
             {% if session.get('logged_in') %}
-                <span style="color:var(--success); font-size:12px; font-weight:700;">● YARD CONTROL ACTIVE</span>
-                <a href="/logout" class="nav-btn">Log Out</a>
-            {% else %}
-                <a href="tel:0121555555" class="nav-btn" style="color:#fff; border-color:var(--yard-orange)">📞 Call Yard</a>
-                <a href="/login" class="nav-btn">Staff Login</a>
+                <a href="/logout" style="color:red; font-size:12px; margin-left:10px;">[Log Out Admin]</a>
             {% endif %}
         </div>
     </div>
@@ -83,11 +81,17 @@
     <div class="hero-search">
         <h2>Vehicles Currently in our Salvage Yard</h2>
         <p style="color: var(--text-muted); margin-bottom: 15px; font-size: 14px;">Browse vehicles breaking for parts or complete salvage rebuild projects</p>
-        <input type="text" id="searchBox" class="search-bar" placeholder="Search by car make, model, or year... (e.g., Ford)" onkeyup="filterVehicles()">
+        <input type="text" id="searchBox" class="search-bar" placeholder="Search by car make, model, or year..." onkeyup="filterVehicles()">
     </div>
 
     <div class="container">
         <div class="grid">
+            {% if vehicles|length == 0 %}
+                <div class="placeholder-text">
+                    No vehicles listed in the yard yet. Admin: log in to your hidden portal to publish your first vehicle!
+                </div>
+            {% endif %}
+            
             {% for vehicle in vehicles %}
             <div class="vehicle-card" data-name="{{ vehicle.title|lower }}">
                 <span class="status-badge {% if vehicle.status == 'Breaking for Parts' %}breaking{% else %}salvage{% endif %}">
@@ -100,12 +104,11 @@
                     <p class="vehicle-desc">{{ vehicle.description }}</p>
                     
                     <div class="action-row">
-                        <!-- Public Contact Button -->
-                        <a href="https://wa.me/44121555555?text=Hi, I am enquiring about parts for the {{ vehicle.title }}" target="_blank" class="enquire-btn">
+                        <!-- Direct text query link for customers -->
+                        <a href="https://wa.me/441215555555?text=Hi, I am enquiring about parts for the {{ vehicle.title }}" target="_blank" class="enquire-btn">
                             💬 Enquire About Parts
                         </a>
                         
-                        <!-- Private Admin Button -->
                         {% if session.get('logged_in') %}
                         <form action="/delete/{{ vehicle.id }}" method="POST" style="margin:0; width:100%;">
                             <button type="submit" class="del-btn">Remove From Yard</button>
@@ -118,22 +121,23 @@
         </div>
     </div>
 
-    <!-- Private Admin Vehicle Logger Dock -->
+    <!-- The Logger dock ONLY shows if you are logged in via the hidden url -->
     {% if session.get('logged_in') %}
     <div class="dock-panel">
+        <div style="color:var(--success); font-weight:700; font-size:12px; margin-bottom:8px;">● YARD MANAGER PANEL ACTIVE</div>
         <form action="/add" method="POST" class="form-grid">
             <div class="form-group"><label>Vehicle Title</label><input type="text" name="title" class="form-input" placeholder="e.g., 2015 Audi A3 S-Line" required></div>
             <div class="form-group"><label>Engine size</label><input type="text" name="engine" class="form-input" placeholder="e.g., 2.0 TDi Diesel" required></div>
             <div class="form-group">
                 <label>Yard Status</label>
-                <select name="status" class="form-input" style="background-color: var(--bg-dark);">
+                <select name="status" class="form-input" style="background-color: var(--bg-dark); color: white;">
                     <option value="Breaking for Parts">Breaking for Parts</option>
                     <option value="Whole Salvage Car">Whole Salvage Car</option>
                 </select>
             </div>
-            <div class="form-group"><label>Yard Notes / Damage</label><input type="text" name="description" class="form-input" placeholder="e.g., Front-end damage, interior mint, all engine parts available."></div>
+            <div class="form-group"><label>Yard Notes / Damage</label><input type="text" name="description" class="form-input" placeholder="e.g., Front damage, engine mint."></div>
             <div class="form-group"><label>Vehicle Photo URL</label><input type="url" name="image_url" class="form-input" placeholder="https://..."></div>
-            <button type="submit" class="submit-btn">Log Vehicle</button>
+            <button type="submit" class="submit-btn">Publish Vehicle</button>
         </form>
     </div>
     {% endif %}
