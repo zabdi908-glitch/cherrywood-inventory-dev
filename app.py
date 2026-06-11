@@ -1,103 +1,69 @@
-from flask import Flask, render_template, redirect, url_for, request, session
-import sqlite3
 import os
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
+app.secret_key = "cherrywood_super_secret_key"
 
-# This keeps your login session secure and encrypted
-app.secret_key = "cherrywood_super_secret_key_123"
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///salvage.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "inventory.db")
+# Database Model tailored for a Salvage Yard
+class Vehicle(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False) # e.g., "2016 Ford Fiesta Zetec"
+    engine = db.Column(db.String(50), nullable=False) # e.g., "1.2L Petrol"
+    status = db.Column(db.String(50), nullable=False) # "Breaking for Parts" or "Whole Salvage Car"
+    description = db.Column(db.String(500), default="All parts available. Contact us for prices.")
+    image_url = db.Column(db.String(500), default="https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=500&auto=format&fit=crop")
 
-# SET YOUR PASSWORD HERE:
-GARAGE_PASSWORD = "cherrywood2026"
+ADMIN_PASSWORD = "cherrywood2026"
 
-def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+@app.route('/')
+def home():
+    vehicles = Vehicle.query.all()
+    return render_template('index.html', vehicles=vehicles)
 
-# ROUTE: The Login Page
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    error = None
     if request.method == 'POST':
-        if request.form['password'] == GARAGE_PASSWORD:
+        if request.form['password'] == ADMIN_PASSWORD:
             session['logged_in'] = True
-            return redirect(url_for('index'))
-        else:
-            error = "Incorrect garage password. Please try again."
-    return render_template('login.html', error=error)
+            return redirect(url_for('home'))
+    return render_template('login.html')
 
-# ROUTE: Logout Button
 @app.route('/logout')
 def logout():
-    session.pop('logged_in', None)
-    return redirect(url_for('login'))
+    session['logged_in'] = False
+    return redirect(url_for('home'))
 
-# ROUTE: Main Dashboard (Protected)
-@app.route('/')
-def index():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
+@app.route('/add', methods=['POST'])
+def add_vehicle():
+    if session.get('logged_in'):
+        title = request.form['title']
+        engine = request.form['engine']
+        status = request.form['status']
+        desc = request.form.get('description', 'All parts available. Contact us for prices.')
+        img = request.form.get('image_url')
+        if not img:
+            img = "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=500&auto=format&fit=crop"
         
-    try:
-        conn = get_db_connection()
-        parts = conn.execute('SELECT * FROM inventory').fetchall()
-        conn.close()
-        return render_template('index.html', parts=parts)
-    except sqlite3.OperationalError as e:
-        return f"Database error: {e}. Run clear_and_fix.py first!"
+        new_vehicle = Vehicle(title=title, engine=engine, status=status, description=desc, image_url=img)
+        db.session.add(new_vehicle)
+        db.session.commit()
+    return redirect(url_for('home'))
 
-# ROUTE: Increase Stock (Protected)
-@app.route('/add/<int:item_id>')
-def add_stock(item_id):
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    conn = get_db_connection()
-    conn.execute('UPDATE inventory SET stock = stock + 1 WHERE id = ?', (item_id,))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('index'))
-
-# ROUTE: Decrease Stock (Protected)
-@app.route('/subtract/<int:item_id>')
-def subtract_stock(item_id):
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    conn = get_db_connection()
-    conn.execute('UPDATE inventory SET stock = MAX(0, stock - 1) WHERE id = ?', (item_id,))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('index'))
-
-# ROUTE: Add New Part (Protected)
-@app.route('/add_new_part', methods=['POST'])
-def add_new_part():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    part_name = request.form['part_name']
-    price = request.form['price']
-    stock = request.form['stock']
-    
-    conn = get_db_connection()
-    conn.execute('INSERT INTO inventory (part_name, price, stock) VALUES (?, ?, ?)',
-                 (part_name, float(price), int(stock)))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('index'))
-
-# ROUTE: Delete Part (Protected)
-@app.route('/delete/<int:item_id>')
-def delete_part(item_id):
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    conn = get_db_connection()
-    conn.execute('DELETE FROM inventory WHERE id = ?', (item_id,))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('index'))
+@app.route('/delete/<int:vehicle_id>', methods=['POST'])
+def delete_vehicle(vehicle_id):
+    if session.get('logged_in'):
+        v = Vehicle.query.get(vehicle_id)
+        if v:
+            db.session.delete(v)
+            db.session.commit()
+    return redirect(url_for('home'))
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)
