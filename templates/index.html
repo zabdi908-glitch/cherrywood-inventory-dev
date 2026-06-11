@@ -3,290 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cherrywood Autos | Inventory</title>
+    <title>Cherrywood Autos | Salvage Yard & Vehicle Breakers</title>
     <style>
         :root {
-            --primary-blue: #0a2342;
-            --accent-blue: #007bff;
-            --success-green: #28a745;
-            --danger-red: #dc3545;
-            --light-bg: #f4f7f9;
-            --white: #ffffff;
+            --yard-orange: #f97316;
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #3b82f6;
+            --success: #10b981;
         }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); padding-bottom: 220px; }
+        
+        .navbar { background: #111827; border-bottom: 1px solid #334155; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
+        .logo { font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+        .logo span { color: var(--yard-orange); }
+        .nav-actions { display: flex; gap: 15px; align-items: center; }
+        .nav-btn { color: var(--text-muted); text-decoration: none; font-size: 14px; border: 1px solid #334155; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; background: transparent; }
 
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            margin: 0;
-            background-color: var(--light-bg);
-            color: #333;
-        }
+        .hero-search { background: radial-gradient(circle at top left, #1e293b, #0f172a); padding: 40px 20px; text-align: center; border-bottom: 1px solid #334155; }
+        .hero-search h2 { font-size: 24px; margin-bottom: 15px; font-weight: 700; }
+        .search-bar { width: 100%; max-width: 500px; padding: 12px 18px; background: var(--card-bg); border: 1px solid #334155; border-radius: 8px; color: #fff; font-size: 16px; outline: none; }
+        .search-bar:focus { border-color: var(--yard-orange); }
 
-        nav {
-            background: var(--primary-blue);
-            color: white;
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
+        
+        .vehicle-card { background: var(--card-bg); border: 1px solid #334155; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; position: relative; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        
+        .status-badge { position: absolute; top: 12px; left: 12px; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; z-index: 10; color: #fff; }
+        .status-badge.breaking { background: var(--yard-orange); }
+        .status-badge.salvage { background: var(--accent-blue); }
 
-        .logo {
-            font-size: 1.5rem;
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
+        .vehicle-img { width: 100%; height: 200px; object-fit: cover; background: #334155; }
+        .vehicle-details { padding: 18px; display: flex; flex-direction: column; flex-grow: 1; gap: 8px; }
+        .vehicle-title { font-size: 19px; font-weight: 700; text-transform: capitalize; }
+        .vehicle-engine { font-size: 13px; color: var(--yard-orange); font-weight: 600; }
+        .vehicle-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; min-height: 45px; }
+        
+        .action-row { margin-top: auto; padding-top: 15px; border-top: 1px solid #334155; display: flex; flex-direction: column; gap: 10px; }
+        
+        /* Buttons */
+        .enquire-btn { width: 100%; background: #fff; color: #000; border: none; padding: 10px; border-radius: 6px; font-weight: 700; text-align: center; text-decoration: none; display: block; font-size: 14px; }
+        .enquire-btn:hover { background: #e2e8f0; }
+        .del-btn { width: 100%; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 600; }
 
-        header {
-            background: linear-gradient(rgba(10, 35, 66, 0.8), rgba(10, 35, 66, 0.8)), 
-                        url('https://images.unsplash.com/photo-1486006396193-471068589bca?auto=format&fit=crop&q=80&w=1000');
-            background-size: cover;
-            background-position: center;
-            color: white;
-            padding: 60px 20px;
-            text-align: center;
-        }
+        /* Fixed Admin Entry Dock */
+        .dock-panel { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-top: 1px solid #334155; padding: 15px 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.5); z-index: 100; }
+        .form-grid { display: grid; grid-template-columns: 2fr 1fr 1.2fr 2fr 2fr auto; gap: 10px; align-items: end; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-size: 11px; color: var(--text-muted); font-weight: 700; }
+        .form-input { background: var(--bg-dark); border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; color: #fff; font-size: 14px; outline: none; }
+        .form-input:focus { border-color: var(--yard-orange); }
+        .submit-btn { background: var(--yard-orange); color: #fff; border: none; padding: 9px 15px; border-radius: 6px; font-weight: 600; cursor: pointer; height: 36px; }
 
-        .container {
-            max-width: 1100px;
-            margin: -40px auto 40px;
-            padding: 20px;
-        }
-
-        .card {
-            background: var(--white);
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            overflow: hidden;
-            padding: 25px;
-        }
-
-        /* Search Bar Styling */
-        .search-container {
-            margin-bottom: 20px;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 12px 20px;
-            font-size: 1rem;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-sizing: border-box;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-        }
-
-        th {
-            text-align: left;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-bottom: 2px solid #dee2e6;
-            color: var(--primary-blue);
-        }
-
-        td {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .badge {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: bold;
-        }
-        .status-ok { background: #e2f6ea; color: #155724; }
-        .status-low { background: #fce8e6; color: #a81c1c; }
-
-        .btn-delete {
-            background: none;
-            border: 1px solid var(--danger-red);
-            color: var(--danger-red);
-            padding: 4px 10px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: bold;
-            transition: all 0.2s ease;
-        }
-
-        .btn-delete:hover {
-            background: var(--danger-red);
-            color: white;
-        }
-
-        .form-section {
-            border-top: 2px solid #f0f2f5;
-            padding-top: 25px;
-            margin-top: 20px;
-        }
-
-        .form-title {
-            font-size: 1.2rem;
-            color: var(--primary-blue);
-            margin-bottom: 15px;
-            font-weight: bold;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr;
-            gap: 15px;
-            align-items: end;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .form-group label {
-            font-size: 0.85rem;
-            font-weight: bold;
-            color: #666;
-        }
-
-        .form-group input {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 1rem;
-        }
-
-        .btn-submit {
-            background: var(--success-green);
-            color: white;
-            padding: 11px;
-            border: none;
-            border-radius: 6px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-        }
-
-        .btn-submit:hover {
-            background: #218838;
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; max-height: 220px; overflow-y: auto; }
+            body { padding-bottom: 340px; }
         }
     </style>
 </head>
 <body>
 
-    <nav>
-        <nav>
-    <div class="logo">CHERRYWOOD AUTOS</div>
-    <div style="display: flex; align-items: center; gap: 20px;">
-        <span>Inventory Management Dashboard</span>
-        <a href="{{ url_for('logout') }}" style="color: #ff4d4d; text-decoration: none; font-weight: bold; font-size: 0.9rem; border: 1px solid #ff4d4d; padding: 4px 10px; border-radius: 4px;">Log Out</a>
-    </div>
-</nav>
-    </nav>
-
-    <header>
-        <h1>Live Parts Inventory</h1>
-        <p>Real-time stock levels for the garage floor</p>
-    </header>
-
-    <div class="container">
-        <div class="card">
-            
-            <div class="search-container">
-                <input type="text" id="searchInput" class="search-input" onkeyup="filterTable()" placeholder="🔍 Search parts by name...">
-            </div>
-
-            <table id="inventoryTable">
-                <thead>
-                    <tr>
-                        <th>Part Name</th>
-                        <th>Price</th>
-                        <th>Status</th>
-                        <th>Stock Level</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for part in parts %}
-                    <tr>
-                        <td class="part-name"><strong>{{ part['part_name'] }}</strong></td>
-                        <td>£{{ "{:.2f}".format(part['price']|float) }}</td>
-                        <td>
-                            {% if part['stock']|int > 5 %}
-                            <span class="badge status-ok">In Stock</span>
-                            {% else %}
-                            <span class="badge status-low">Low Stock</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <a href="{{ url_for('subtract_stock', item_id=part['id']) }}" 
-                                   style="background: #dc3545; color: white; padding: 2px 8px; border-radius: 4px; text-decoration: none; font-weight: bold;">-</a>
-                                <span style="font-weight: bold; min-width: 60px; text-align: center;">
-                                    {{ part['stock'] }} items
-                                </span>
-                                <a href="{{ url_for('add_stock', item_id=part['id']) }}" 
-                                   style="background: #28a745; color: white; padding: 2px 8px; border-radius: 4px; text-decoration: none; font-weight: bold;">+</a>
-                            </div>
-                        </td>
-                        <td>
-                            <a href="{{ url_for('delete_part', item_id=part['id']) }}" 
-                               class="btn-delete" 
-                               onclick="return confirm('Are you sure you want to permanently delete this part from inventory?');">Delete</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-
-            <div class="form-section">
-                <div class="form-title">Log New Parts Delivery</div>
-                <form action="{{ url_for('add_new_part') }}" method="POST" class="form-grid">
-                    <div class="form-group">
-                        <label for="part_name">Part Description / Name</label>
-                        <input type="text" id="part_name" name="part_name" placeholder="e.g. Wiper Blade 22 inch" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="price">Unit Price (£)</label>
-                        <input type="number" id="price" name="price" step="0.01" placeholder="0.00" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="stock">Initial Stock Count</label>
-                        <input type="number" id="stock" name="stock" placeholder="0" required>
-                    </div>
-                    <button type="submit" class="btn-submit">Add to Inventory</button>
-                </form>
-            </div>
-
+    <div class="navbar">
+        <div class="logo">Cherrywood <span>Autos</span></div>
+        <div class="nav-actions">
+            {% if session.get('logged_in') %}
+                <span style="color:var(--success); font-size:12px; font-weight:700;">● YARD CONTROL ACTIVE</span>
+                <a href="/logout" class="nav-btn">Log Out</a>
+            {% else %}
+                <a href="tel:0121555555" class="nav-btn" style="color:#fff; border-color:var(--yard-orange)">📞 Call Yard</a>
+                <a href="/login" class="nav-btn">Staff Login</a>
+            {% endif %}
         </div>
     </div>
 
+    <div class="hero-search">
+        <h2>Vehicles Currently in our Salvage Yard</h2>
+        <p style="color: var(--text-muted); margin-bottom: 15px; font-size: 14px;">Browse vehicles breaking for parts or complete salvage rebuild projects</p>
+        <input type="text" id="searchBox" class="search-bar" placeholder="Search by car make, model, or year... (e.g., Ford)" onkeyup="filterVehicles()">
+    </div>
+
+    <div class="container">
+        <div class="grid">
+            {% for vehicle in vehicles %}
+            <div class="vehicle-card" data-name="{{ vehicle.title|lower }}">
+                <span class="status-badge {% if vehicle.status == 'Breaking for Parts' %}breaking{% else %}salvage{% endif %}">
+                    {{ vehicle.status }}
+                </span>
+                <img class="vehicle-img" src="{{ vehicle.image_url }}" alt="{{ vehicle.title }}">
+                <div class="vehicle-details">
+                    <h3 class="vehicle-title">{{ vehicle.title }}</h3>
+                    <span class="vehicle-engine">⚙️ {{ vehicle.engine }}</span>
+                    <p class="vehicle-desc">{{ vehicle.description }}</p>
+                    
+                    <div class="action-row">
+                        <!-- Public Contact Button -->
+                        <a href="https://wa.me/44121555555?text=Hi, I am enquiring about parts for the {{ vehicle.title }}" target="_blank" class="enquire-btn">
+                            💬 Enquire About Parts
+                        </a>
+                        
+                        <!-- Private Admin Button -->
+                        {% if session.get('logged_in') %}
+                        <form action="/delete/{{ vehicle.id }}" method="POST" style="margin:0; width:100%;">
+                            <button type="submit" class="del-btn">Remove From Yard</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Private Admin Vehicle Logger Dock -->
+    {% if session.get('logged_in') %}
+    <div class="dock-panel">
+        <form action="/add" method="POST" class="form-grid">
+            <div class="form-group"><label>Vehicle Title</label><input type="text" name="title" class="form-input" placeholder="e.g., 2015 Audi A3 S-Line" required></div>
+            <div class="form-group"><label>Engine size</label><input type="text" name="engine" class="form-input" placeholder="e.g., 2.0 TDi Diesel" required></div>
+            <div class="form-group">
+                <label>Yard Status</label>
+                <select name="status" class="form-input" style="background-color: var(--bg-dark);">
+                    <option value="Breaking for Parts">Breaking for Parts</option>
+                    <option value="Whole Salvage Car">Whole Salvage Car</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Yard Notes / Damage</label><input type="text" name="description" class="form-input" placeholder="e.g., Front-end damage, interior mint, all engine parts available."></div>
+            <div class="form-group"><label>Vehicle Photo URL</label><input type="url" name="image_url" class="form-input" placeholder="https://..."></div>
+            <button type="submit" class="submit-btn">Log Vehicle</button>
+        </form>
+    </div>
+    {% endif %}
+
     <script>
-    function filterTable() {
-        let input = document.getElementById("searchInput");
-        let filter = input.value.toUpperCase();
-        let table = document.getElementById("inventoryTable");
-        let tr = table.getElementsByTagName("tr");
-
-        // Loop through all table rows (skipping the header row)
-        for (let i = 1; i < tr.length; i++) {
-            let td = tr[i].getElementsByClassName("part-name")[0];
-            if (td) {
-                let txtValue = td.textContent || td.innerText;
-                if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                    tr[i].style.display = ""; // Show row
-                } else {
-                    tr[i].style.display = "none"; // Hide row
-                }
-            }
+        function filterVehicles() {
+            let val = document.getElementById('searchBox').value.toLowerCase();
+            document.querySelectorAll('.vehicle-card').forEach(c => {
+                c.style.display = c.getAttribute('data-name').includes(val) ? 'flex' : 'none';
+            });
         }
-    }
     </script>
-
 </body>
 </html>
