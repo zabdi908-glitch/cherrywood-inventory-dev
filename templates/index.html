@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cherrywood Auto Parts | Salvage Yard, Breakers & Used VAG Parts</title>
+    <title>Cherrywood Auto Parts | Salvage Yard & Breakers</title>
     <style>
         :root {
             --yard-orange: #f97316;
@@ -15,7 +15,7 @@
             --success: #10b981;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-        body { background-color: var(--bg-dark); color: var(--text-main); padding-bottom: 240px; }
+        body { background-color: var(--bg-dark); color: var(--text-main); padding-bottom: 340px; }
         
         /* Navbar Area */
         .navbar { background: #111827; border-bottom: 1px solid #334155; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
@@ -25,74 +25,89 @@
         .logo-main { font-size: 22px; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1; }
         .logo-sub { font-size: 10px; font-weight: 700; color: var(--yard-orange); text-transform: uppercase; letter-spacing: 2.5px; margin-top: 4px; }
         .nav-contacts { display: flex; gap: 20px; align-items: center; }
-        .contact-link { color: #fff; text-decoration: none; font-size: 14px; font-weight: 600; transition: 0.2s; }
-        .contact-link:hover { color: var(--yard-orange); }
+        .contact-link { color: #fff; text-decoration: none; font-size: 14px; font-weight: 600; }
         .contact-link span { color: var(--yard-orange); margin-right: 4px; }
-        .call-btn { background: var(--yard-orange); padding: 8px 16px; border-radius: 6px; font-weight: 700; color: #fff; text-decoration: none; font-size: 14px; transition: 0.2s; }
-        .call-btn:hover { background: #ea580c; }
+        .call-btn { background: var(--yard-orange); padding: 8px 16px; border-radius: 6px; font-weight: 700; color: #fff; text-decoration: none; font-size: 14px; }
 
-        /* Jumbotron / Hero Search Banner */
+        /* Upgrade 1: Advanced Hero Section Layout */
         .hero-search { background: radial-gradient(circle at top left, #1e293b, #0f172a); padding: 50px 20px; text-align: center; border-bottom: 1px solid #334155; }
-        .hero-search h2 { font-size: 28px; margin-bottom: 10px; font-weight: 800; }
-        .search-bar { width: 100%; max-width: 550px; padding: 14px 20px; background: var(--card-bg); border: 2px solid #334155; border-radius: 8px; color: #fff; font-size: 16px; outline: none; margin-top: 15px; transition: 0.2s; }
-        .search-bar:focus { border-color: var(--yard-orange); box-shadow: 0 0 10px rgba(249, 115, 22, 0.2); }
+        .hero-search h1 { font-size: 32px; font-weight: 900; letter-spacing: -0.5px; color: #fff; margin-bottom: 10px; }
+        .hero-subtitle { font-size: 15px; color: var(--text-muted); max-width: 600px; margin: 0 auto 25px auto; line-height: 1.5; }
+        
+        .hero-stats { display: flex; justify-content: center; gap: 30px; margin-bottom: 30px; flex-wrap: wrap; }
+        .stat-box { background: #111827; border: 1px solid #334155; border-radius: 8px; padding: 10px 20px; min-width: 140px; text-align: center; }
+        .stat-box strong { display: block; font-size: 20px; color: var(--yard-orange); font-weight: 800; }
+        .stat-box span { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
 
-        /* Multi-Service Pill Blocks */
-        .services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; max-width: 1200px; margin: -30px auto 30px auto; padding: 0 20px; z-index: 20; position: relative; }
-        .service-pill { background: #111827; border: 1px solid #334155; border-radius: 10px; padding: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        .service-icon { font-size: 24px; margin-bottom: 8px; display: inline-block; }
-        .service-pill h3 { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 5px; }
-        .service-pill p { font-size: 12px; color: var(--text-muted); }
+        .search-bar { width: 100%; max-width: 550px; padding: 14px 20px; background: var(--card-bg); border: 2px solid #334155; border-radius: 8px; color: #fff; font-size: 16px; outline: none; }
+        .search-bar:focus { border-color: var(--yard-orange); }
 
-        /* Specialized Brands Bar */
-        .brands-bar { background: #111827; padding: 15px; border-top: 1px solid #334155; border-bottom: 1px solid #334155; text-align: center; }
-        .brands-title { font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--yard-orange); letter-spacing: 2px; margin-bottom: 8px; }
-        .brands-list { display: flex; justify-content: center; gap: 25px; font-weight: 700; font-size: 14px; color: var(--text-muted); flex-wrap: wrap; }
-        .brands-list span { color: #fff; background: #1e293b; padding: 3px 10px; border-radius: 4px; border: 1px solid #334155; }
+        /* Upgrade 2: Trust Banner Segment */
+        .trust-bar { display: flex; justify-content: center; flex-wrap: wrap; gap: 25px; padding: 15px; background: #111827; border-bottom: 1px solid #334155; font-weight: 700; font-size: 13px; color: #e2e8f0; }
+        .trust-bar div { display: flex; align-items: center; gap: 5px; }
+        .trust-bar div span { color: var(--success); }
 
-        /* Grid Layout for Vehicles */
-        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
-        .section-header { font-size: 20px; font-weight: 800; margin-bottom: 20px; border-left: 4px solid var(--yard-orange); padding-left: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
-        .placeholder-text { text-align: center; color: var(--text-muted); grid-column: 1 / -1; padding: 40px; font-size: 14px; border: 2px dashed #334155; border-radius: 12px; background: #111827; }
+        /* Grid Layout */
+        .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+        .section-header { font-size: 20px; font-weight: 800; margin-bottom: 20px; border-left: 4px solid var(--yard-orange); padding-left: 10px; text-transform: uppercase; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
+        .placeholder-text { text-align: center; color: var(--text-muted); grid-column: 1 / -1; padding: 40px; border: 2px dashed #334155; border-radius: 12px; }
 
-        /* Vehicle Cards */
-        .vehicle-card { background: var(--card-bg); border: 1px solid #334155; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; position: relative; transition: 0.2s; }
-        .vehicle-card:hover { transform: translateY(-3px); border-color: #475569; }
+        /* Upgrade 3: Premium Vehicle Cards & Meta Blocks */
+        .vehicle-card { background: var(--card-bg); border: 1px solid #334155; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; position: relative; }
         .status-badge { position: absolute; top: 12px; left: 12px; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; z-index: 10; color: #fff; }
         .status-badge.breaking { background: var(--yard-orange); }
         .status-badge.salvage { background: var(--accent-blue); }
-        .vehicle-img { width: 100%; height: 200px; object-fit: cover; background: #334155; }
-        .vehicle-details { padding: 18px; display: flex; flex-direction: column; flex-grow: 1; gap: 8px; }
-        .vehicle-title { font-size: 19px; font-weight: 700; text-transform: capitalize; }
-        .vehicle-engine { font-size: 13px; color: var(--yard-orange); font-weight: 600; }
-        .vehicle-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; min-height: 45px; }
         
-        /* Interaction Rows */
-        .action-row { margin-top: auto; padding-top: 15px; border-top: 1px solid #334155; display: flex; flex-direction: column; gap: 10px; }
-        .enquire-btn { width: 100%; background: #fff; color: #000; border: none; padding: 10px; border-radius: 6px; font-weight: 700; text-align: center; text-decoration: none; display: block; font-size: 14px; }
-        .del-btn { width: 100%; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 600; }
+        .vehicle-img { width: 100%; height: 210px; object-fit: cover; background: #334155; }
+        .vehicle-details { padding: 20px; display: flex; flex-direction: column; flex-grow: 1; gap: 10px; }
+        .vehicle-title { font-size: 20px; font-weight: 800; color: #fff; }
+        
+        .vehicle-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; font-weight: 700; color: #cbd5e1; }
+        .vehicle-meta span { background: #1e293b; border: 1px solid #475569; padding: 3px 8px; border-radius: 4px; }
+        .vehicle-engine { font-size: 14px; color: var(--yard-orange); font-weight: 700; display: flex; align-items: center; gap: 4px; }
+        
+        /* Upgrade 4: Intelligent Part Inventory Tag Layout */
+        .parts-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 5px 0; }
+        .parts-tags span { background: #334155; color: #f1f5f9; padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .vehicle-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; min-height: 40px; }
+        
+        .action-row { margin-top: auto; padding-top: 15px; border-top: 1px solid #334155; display: flex; gap: 10px; }
+        .enquire-btn { flex: 1; background: var(--success); color: #fff; border: none; padding: 10px; border-radius: 6px; font-weight: 700; text-align: center; text-decoration: none; font-size: 13px; }
+        .del-btn { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); padding: 10px 15px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 700; }
 
-        /* Hidden Management Panel */
-        .dock-panel { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-top: 1px solid #334155; padding: 15px 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.5); z-index: 100; }
-        .form-grid { display: grid; grid-template-columns: 2fr 1fr 1.2fr 2fr 2fr auto; gap: 10px; align-items: end; }
+        /* Upgrade 6: Conversion Oriented 'Need a Part' Request Panel */
+        .part-request { background: linear-gradient(rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9)), url('https://images.unsplash.com/photo-1486006920555-c77dce18193b?q=80&w=1200&auto=format&fit=crop'); background-size: cover; background-position: center; border: 1px solid #334155; padding: 40px 20px; text-align: center; border-radius: 12px; max-width: 1200px; margin: 40px auto; }
+        .part-request h2 { font-size: 24px; font-weight: 800; margin-bottom: 10px; }
+        .part-request p { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; max-width: 500px; margin-left: auto; margin-right: auto; }
+        .request-btn { background: var(--yard-orange); color: #fff; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 700; display: inline-block; font-size: 14px; }
+
+        /* Upgrade 7: Structural Sticky Footer Setup */
+        footer { background: #111827; padding: 40px 20px; text-align: center; border-top: 1px solid #334155; margin-top: 60px; }
+        footer h3 { font-size: 18px; font-weight: 800; margin-bottom: 10px; color: #fff; }
+        footer p { color: var(--text-muted); font-size: 13px; margin-bottom: 6px; }
+
+        /* Management Panel Dock */
+        .dock-panel { position: fixed; bottom: 0; left: 0; right: 0; background: #111827; border-top: 2px solid var(--yard-orange); padding: 15px 20px; box-shadow: 0 -5px 25px rgba(0,0,0,0.7); z-index: 100; max-height: 320px; overflow-y: auto; }
+        .form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; align-items: end; }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
-        .form-group label { font-size: 11px; color: var(--text-muted); font-weight: 700; }
-        .form-input { background: var(--bg-dark); border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; color: #fff; font-size: 14px; outline: none; }
-        .submit-btn { background: var(--yard-orange); color: #fff; border: none; padding: 9px 15px; border-radius: 6px; font-weight: 600; cursor: pointer; height: 36px; }
+        .form-group.full-width { grid-column: span 4; }
+        .form-group label { font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
+        .form-input { background: var(--bg-dark); border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; color: #fff; font-size: 13px; outline: none; }
+        .submit-btn { background: var(--yard-orange); color: #fff; border: none; padding: 10px; border-radius: 6px; font-weight: 700; cursor: pointer; grid-column: span 4; margin-top: 5px; }
         
         @media (max-width: 768px) {
-            .navbar { flex-direction: column; gap: 12px; text-align: center; }
+            .navbar { flex-direction: column; gap: 12px; }
             .nav-contacts { flex-direction: column; gap: 8px; }
-            .services-grid { margin-top: 20px; }
-            .form-grid { grid-template-columns: 1fr; max-height: 220px; overflow-y: auto; }
-            body { padding-bottom: 340px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .form-group.full-width { grid-column: span 1; }
+            .submit-btn { grid-column: span 1; }
+            body { padding-bottom: 450px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- Header Navbar Container -->
     <div class="navbar">
         <a href="/" class="logo-wrapper">
             <div class="logo-icon">C</div>
@@ -103,84 +118,86 @@
         </a>
         <div class="nav-contacts">
             <a href="mailto:cherrywoodparts@outlook.com" class="contact-link"><span>✉</span> cherrywoodparts@outlook.com</a>
-            <a href="tel:07440369576" class="call-btn">📞 Call Yard: 07440 369576</a>
+            <a href="tel:07440369576" class="call-btn">📞 Call: 07440 369576</a>
             {% if session.get('logged_in') %}
                 <a href="/logout" style="color:#ef4444; font-size:12px; font-weight:bold; margin-left:10px; text-decoration:none;">[Logout Admin]</a>
             {% endif %}
         </div>
     </div>
 
-    <!-- Main Hero Search Header -->
     <div class="hero-search">
-        <h2>Search Genuine Used Car Parts & Vehicles</h2>
-        <p style="color: var(--text-muted); font-size: 15px;">Affordable, tested auto components ready for collection or delivery</p>
-        <input type="text" id="searchBox" class="search-bar" placeholder="Search by vehicle make, model, engine size..." onkeyup="filterVehicles()">
+        <h1>Used Audi, VW, SEAT & Škoda Parts</h1>
+        <p class="hero-subtitle">Engines, Gearboxes, Body Panels, Interior Parts & Salvage Vehicles Available Nationwide.</p>
+        
+        <div class="hero-stats">
+            <div class="stat-box">
+                <strong>{{ vehicles|length }}</strong>
+                <span>Vehicles Breaking</span>
+            </div>
+            <div class="stat-box">
+                <strong>UK</strong>
+                <span>Nationwide Delivery</span>
+            </div>
+            <div class="stat-box">
+                <strong>✓</strong>
+                <span>Tested Parts</span>
+            </div>
+        </div>
+
+        <input type="text" id="searchBox" class="search-bar" placeholder="Search Audi, VW, Seat, Skoda, Engine Code, Model..." onkeyup="filterVehicles()">
     </div>
 
-    <!-- Multi-Service Utility Cards Area -->
-    <div class="services-grid">
-        <div class="service-pill">
-            <span class="service-icon">⚙️</span>
-            <h3>New & Used Parts</h3>
-            <p>Thousands of tested engines, gearboxes, and body panels in stock.</p>
-        </div>
-        <div class="service-pill">
-            <span class="service-icon">♻️</span>
-            <h3>Scrap Your Vehicle</h3>
-            <p>Authorised treatment center. We pay competitive cash rates with collection.</p>
-        </div>
-        <div class="service-pill">
-            <span class="service-icon">🛠️</span>
-            <h3>Service & Fitting</h3>
-            <p>Engine replacements, major component swaps, and mechanical repairs.</p>
-        </div>
-        <div class="service-pill">
-            <span class="service-icon">🚛</span>
-            <h3>Nationwide Delivery</h3>
-            <p>Fast pallet shipping and local delivery services across the UK.</p>
-        </div>
+    <div class="trust-bar">
+        <div><span>✓</span> Licensed Vehicle Recycler</div>
+        <div><span>✓</span> Tested Used Parts</div>
+        <div><span>✓</span> Nationwide Delivery</div>
+        <div><span>✓</span> Friendly WhatsApp Support</div>
     </div>
 
-    <!-- VAG Group Specialisation Bar -->
-    <div class="brands-bar">
-        <div class="brands-title">Specialists in German VAG Group Components</div>
-        <div class="brands-list">
-            <span>Audi</span>
-            <span>Volkswagen (VW)</span>
-            <span>SEAT</span>
-            <span>Škoda</span>
-        </div>
-    </div>
-
-    <!-- Current Live Inventory Section -->
     <div class="container">
         <div class="section-header">Vehicles Currently Breaking in the Yard</div>
         <div class="grid">
             {% if vehicles|length == 0 %}
                 <div class="placeholder-text">
-                    No vehicles listed in the yard yet. Use the hidden management portal to add your inventory.
+                    No vehicles listed in the yard yet. Use the manager portal to add your first car.
                 </div>
             {% endif %}
             
             {% for vehicle in vehicles %}
-            <div class="vehicle-card" data-name="{{ vehicle.title|lower }} {{ vehicle.engine|lower }}">
+            <div class="vehicle-card" data-search="{{ vehicle.title }} {{ vehicle.engine }} {{ vehicle.description }} {{ vehicle.year }} {{ vehicle.reg }} {{ vehicle.make }} {{ vehicle.model }} {{ vehicle.fuel }} {{ vehicle.transmission }}">
                 <span class="status-badge {% if vehicle.status == 'Breaking for Parts' %}breaking{% else %}salvage{% endif %}">
                     {{ vehicle.status }}
                 </span>
                 <img class="vehicle-img" src="{{ vehicle.image_url }}" alt="{{ vehicle.title }}">
+                
                 <div class="vehicle-details">
                     <h3 class="vehicle-title">{{ vehicle.title }}</h3>
-                    <span class="vehicle-engine">⚙️ {{ vehicle.engine }}</span>
+                    
+                    <div class="vehicle-meta">
+                        <span>📅 {{ vehicle.year }}</span>
+                        <span>🛣️ {{ vehicle.mileage }} mi</span>
+                        <span>⛽ {{ vehicle.fuel }}</span>
+                        <span>🕹️ {{ vehicle.transmission }}</span>
+                    </div>
+                    
+                    <span class="vehicle-engine">⚙️ {{ vehicle.engine }} (Reg: {{ vehicle.reg }})</span>
+                    
+                    <div class="parts-tags">
+                        {% for part in vehicle.get_parts_list() %}
+                            <span>{{ part }}</span>
+                        {% endfor %}
+                    </div>
+                    
                     <p class="vehicle-desc">{{ vehicle.description }}</p>
                     
                     <div class="action-row">
-                        <a href="https://wa.me/447440369576?text=Hi, I am enquiring about parts for the {{ vehicle.title }}" target="_blank" class="enquire-btn">
-                            💬 Enquire About Parts
+                        <a href="https://wa.me/447440369576?text=Hi, I'm interested in parts from the {{ vehicle.year }} {{ vehicle.title }} (Reg: {{ vehicle.reg }})" target="_blank" class="enquire-btn">
+                            💬 WhatsApp Enquiry
                         </a>
                         
                         {% if session.get('logged_in') %}
-                        <form action="/delete/{{ vehicle.id }}" method="POST" style="margin:0; width:100%;">
-                            <button type="submit" class="del-btn">Remove From Yard</button>
+                        <form action="/delete/{{ vehicle.id }}" method="POST" style="margin:0;">
+                            <button type="submit" class="del-btn">Remove</button>
                         </form>
                         {% endif %}
                     </div>
@@ -190,13 +207,34 @@
         </div>
     </div>
 
-    <!-- Active Management Dock -->
+    <div class="part-request">
+        <h2>Can't Find The Part You Need?</h2>
+        <p>Send us your registration and the part you're looking for and we'll check our live warehouse stock right away.</p>
+        <a href="https://wa.me/447440369576?text=Hi, I am looking for a part for my car. My registration is: " target="_blank" class="request-btn">
+            Request A Part Now
+        </a>
+    </div>
+
+    <footer>
+        <h3>Cherrywood Auto Parts</h3>
+        <p>Specialists in Audi, Volkswagen, SEAT & Škoda Used Parts.</p>
+        <p>Nationwide Delivery Available Across the United Kingdom.</p>
+        <p style="margin-top: 15px; font-weight: bold; color: #fff;">📞 07440 369576 &nbsp;|&nbsp; ✉ cherrywoodparts@outlook.com</p>
+    </footer>
+
     {% if session.get('logged_in') %}
     <div class="dock-panel">
-        <div style="color:var(--success); font-weight:700; font-size:12px; margin-bottom:8px;">● YARD MANAGER PANEL ACTIVE</div>
+        <div style="color:var(--success); font-weight:700; font-size:12px; margin-bottom:10px;">● UPGRADED YARD MANAGEMENT ACTIVE</div>
         <form action="/add" method="POST" class="form-grid">
-            <div class="form-group"><label>Vehicle Title</label><input type="text" name="title" class="form-input" placeholder="e.g., 2017 Volkswagen Golf GTD" required></div>
-            <div class="form-group"><label>Engine Size</label><input type="text" name="engine" class="form-input" placeholder="e.g., 2.0 TDi Diesel" required></div>
+            <div class="form-group"><label>Full Display Title</label><input type="text" name="title" class="form-input" placeholder="e.g. Golf GTD Recaro Edition" required></div>
+            <div class="form-group"><label>Make</label><input type="text" name="make" class="form-input" placeholder="e.g. Volkswagen" required></div>
+            <div class="form-group"><label>Model</label><input type="text" name="model" class="form-input" placeholder="e.g. Golf" required></div>
+            <div class="form-group"><label>Year</label><input type="text" name="year" class="form-input" placeholder="e.g. 2017" required></div>
+            <div class="form-group"><label>Registration / Plate</label><input type="text" name="reg" class="form-input" placeholder="e.g. KX67 XYZ" required></div>
+            <div class="form-group"><label>Engine Size / Code</label><input type="text" name="engine" class="form-input" placeholder="e.g. 2.0 TDi (CUNA)" required></div>
+            <div class="form-group"><label>Fuel Type</label><input type="text" name="fuel" class="form-input" placeholder="e.g. Diesel" required></div>
+            <div class="form-group"><label>Transmission</label><input type="text" name="transmission" class="form-input" placeholder="e.g. DSG Automatic" required></div>
+            <div class="form-group"><label>Mileage</label><input type="text" name="mileage" class="form-input" placeholder="e.g. 84,000" required></div>
             <div class="form-group">
                 <label>Yard Status</label>
                 <select name="status" class="form-input" style="background-color: var(--bg-dark); color: white;">
@@ -204,18 +242,20 @@
                     <option value="Whole Salvage Car">Whole Salvage Car</option>
                 </select>
             </div>
-            <div class="form-group"><label>Yard Notes / Damage</label><input type="text" name="description" class="form-input" placeholder="e.g., Rear hit. Engine & front end perfect."></div>
             <div class="form-group"><label>Vehicle Photo URL</label><input type="url" name="image_url" class="form-input" placeholder="https://..."></div>
-            <button type="submit" class="submit-btn">Publish Vehicle</button>
+            <div class="form-group"><label>Available Parts Tags (Separated by commas)</label><input type="text" name="parts_available" class="form-input" value="Engine, Gearbox, Turbo, Front Bumper, Doors, Wheels, Headlights"></div>
+            <div class="form-group full-width"><label>Damage Notes / Yard Description</label><input type="text" name="description" class="form-input" placeholder="e.g. Rear impact damage. Front end completely straight, engine runs sweet."></div>
+            <button type="submit" class="submit-btn">Publish Upgraded Vehicle Record</button>
         </form>
     </div>
     {% endif %}
 
     <script>
         function filterVehicles() {
-            let val = document.getElementById('searchBox').value.toLowerCase();
-            document.querySelectorAll('.vehicle-card').forEach(c => {
-                c.style.display = c.getAttribute('data-name').includes(val) ? 'flex' : 'none';
+            const query = document.getElementById("searchBox").value.toLowerCase();
+            document.querySelectorAll(".vehicle-card").forEach(card => {
+                const searchable = card.getAttribute("data-search").toLowerCase();
+                card.style.display = searchable.includes(query) ? "flex" : "none";
             });
         }
     </script>
