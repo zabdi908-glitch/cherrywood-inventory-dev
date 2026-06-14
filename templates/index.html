@@ -33,7 +33,7 @@
         .whatsapp-top-btn { background: var(--whatsapp-green); padding: 8px 16px; border-radius: 6px; font-weight: 700; color: #fff; text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 10px rgba(34, 197, 94, 0.2); }
         .call-btn { background: #334155; border: 1px solid #475569; padding: 8px 16px; border-radius: 6px; font-weight: 700; color: #fff; text-decoration: none; font-size: 13px; }
 
-        /* Upgrade 1: Visual High-Impact Hero Section */
+        /* Visual High-Impact Hero Section */
         .hero-search { 
             background: linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.9)), url('https://images.unsplash.com/photo-1563720223185-11003d516935?q=80&w=1200&auto=format&fit=crop'); 
             background-size: cover;
@@ -56,12 +56,12 @@
         .search-bar { width: 100%; max-width: 550px; padding: 14px 20px; background: var(--card-bg); border: 2px solid #334155; border-radius: 8px; color: #fff; font-size: 16px; outline: none; }
         .search-bar:focus { border-color: var(--yard-orange); }
 
-        /* Upgrade 2 & 6: Trust & Warranty Bar Combo */
+        /* Trust & Warranty Bar Combo */
         .trust-bar { display: flex; justify-content: center; flex-wrap: wrap; gap: 25px; padding: 14px; background: #111827; border-bottom: 1px solid #334155; font-weight: 700; font-size: 12px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px; }
         .trust-bar div { display: flex; align-items: center; gap: 6px; }
         .trust-bar div span { color: var(--yard-orange); }
 
-        /* Upgrade 4: Registration & Part High-Value Request Form */
+        /* Registration & Part High-Value Request Form */
         .lookup-section { max-width: 850px; margin: -25px auto 40px auto; background: #111827; border: 2px solid var(--yard-orange); border-radius: 12px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; z-index: 30; }
         .lookup-title { font-size: 14px; font-weight: 800; text-transform: uppercase; color: #fff; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
         .lookup-grid { display: grid; grid-template-columns: 1fr 1.5fr auto; gap: 12px; align-items: end; }
@@ -86,7 +86,7 @@
         .status-badge.breaking { background: var(--yard-orange); }
         .status-badge.salvage { background: var(--accent-blue); }
         
-        /* Upgrade 8: Stock Number Floating Badge */
+        /* Live Automated Unique Stock Number Badge */
         .stock-badge { position: absolute; top: 12px; right: 12px; background: rgba(15, 23, 42, 0.85); border: 1px solid #475569; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; color: #fff; z-index: 10; }
 
         .vehicle-img { width: 100%; height: 210px; object-fit: cover; background: #334155; }
@@ -105,7 +105,7 @@
         .enquire-btn { flex: 1; background: var(--whatsapp-green); color: #fff; border: none; padding: 11px; border-radius: 6px; font-weight: 700; text-align: center; text-decoration: none; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 4px; }
         .del-btn { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 10px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 700; }
 
-        /* Upgrade 5: Social Proof / Customer Review Panel */
+        /* Social Proof / Customer Review Panel */
         .reviews-section { background: #111827; border-top: 1px solid #334155; border-bottom: 1px solid #334155; padding: 50px 20px; }
         .reviews-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
         .review-card { background: var(--card-bg); border: 1px solid #334155; padding: 22px; border-radius: 10px; }
@@ -113,7 +113,7 @@
         .review-text { font-size: 13px; color: #e2e8f0; line-height: 1.5; font-style: italic; margin-bottom: 12px; }
         .review-author { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--yard-orange); letter-spacing: 0.5px; }
 
-        /* Upgrade 10: Frequently Stocked Parts SEO Cluster */
+        /* Regularly Stocked Parts SEO Cluster */
         .stocked-parts-bar { max-width: 1200px; margin: 50px auto 10px auto; padding: 0 20px; }
         .parts-cluster { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
         .parts-cluster span { background: #111827; border: 1px solid #334155; padding: 6px 14px; border-radius: 6px; font-size: 13px; color: var(--text-muted); font-weight: 600; }
@@ -172,17 +172,17 @@
         <p class="hero-subtitle">Tested engines, gearboxes, electronics and body panels ready for local collection or rapid UK delivery.</p>
         
         <div class="hero-stats">
+            <div class="stat-box" style="border-color: var(--yard-orange);">
+                <strong>📍 BIRMINGHAM</strong>
+                <span>Yard Collection</span>
+            </div>
             <div class="stat-box">
                 <strong>{{ vehicles|length }}</strong>
                 <span>Vehicles Breaking</span>
             </div>
             <div class="stat-box">
-                <strong>Midlands</strong>
-                <span>Collection Yard</span>
-            </div>
-            <div class="stat-box">
-                <strong>30-Day</strong>
-                <span>Parts Warranty</span>
+                <strong>UK WIDE</strong>
+                <span>Pallet Delivery</span>
             </div>
         </div>
 
@@ -243,7 +243,7 @@
                     <div class="vehicle-meta">
                         <span>📅 {{ vehicle.year }}</span>
                         <span>🛣️ {{ vehicle.mileage }} mi</span>
-                        <span>Hex: {{ vehicle.fuel }}</span>
+                        <span>⛽ {{ vehicle.fuel }}</span>
                         <span>🕹️ {{ vehicle.transmission }}</span>
                     </div>
                     
@@ -281,18 +281,18 @@
         <div class="reviews-grid">
             <div class="review-card">
                 <div class="stars">★★★★★</div>
-                <p class="review-text">"Found a replacement DSG gearbox for my Golf MK7. Completely tested, clean component, and arrived palletized next day to Sheffield. Highly recommended breaker yard."</p>
-                <div class="review-author">— Mark R., Sheffield</div>
+                <p class="review-text">"Had my turbo leak everywhere and these guys had it replaced in no time. Came back after my injectors died and their service was faultless. No nonsense, fast, and efficient service."</p>
+                <div class="review-author">— Sultan Ahmed</div>
             </div>
             <div class="review-card">
                 <div class="stars">★★★★★</div>
-                <p class="review-text">"Brilliant communication on WhatsApp. Sent them my vehicle registration, they sourced the exact color-coded Audi A4 passenger door immediately. Fair pricing."</p>
-                <div class="review-author">— James T., Birmingham</div>
+                <p class="review-text">"The best place for repairs. They love their job. Firoz is a great laugh and knows what he is doing. I will bring any of my vehicles here without hesitation."</p>
+                <div class="review-author">— Muhammad Adam</div>
             </div>
             <div class="review-card">
                 <div class="stars">★★★★★</div>
-                <p class="review-text">"Sourced an ECU module block with matching numbers for a Škoda Octavia. Very knowledgeable lads down at the yard, explicitly verified fitment before shipment."</p>
-                <div class="review-author">— Harpreet S., Coventry</div>
+                <p class="review-text">"Very professional company. Nice family-run business of people who take passion in their work. Prices are extremely competitive and most jobs are sorted the same day."</p>
+                <div class="review-author">— Ekshaan Husain</div>
             </div>
         </div>
     </div>
@@ -307,7 +307,16 @@
     <footer>
         <h3>Cherrywood Auto Parts</h3>
         <p>Specialists in Genuine Audi, Volkswagen, SEAT & Škoda Used Vehicle Components.</p>
-        <p>Yard Collection available in Birmingham | Secure Nationwide Courier Distribution.</p>
+        
+        <p style="color: var(--yard-orange); font-weight: 700; margin: 10px 0 3px 0;">
+            📍 Address: 110 Cherrywood Rd, Birmingham, B9 4UH
+        </p>
+
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
+            🕒 Mon - Sat: 9:30 am – 6:00 pm | Sunday: Closed
+        </p>
+        
+        <p>Yard Collection Available | Secure Nationwide Courier Distribution.</p>
         <p style="margin-top: 15px; font-weight: bold; color: #fff;">📞 Call Yard: 07440 369576 &nbsp;|&nbsp; ✉ cherrywoodparts@outlook.com</p>
     </footer>
 
@@ -348,7 +357,6 @@
             });
         }
 
-        // Script converting your high-value Reg Finder Lookup into immediate automated WhatsApp text queries
         function sendStockLookup() {
             const reg = document.getElementById("lookupReg").value.trim().toUpperCase();
             const part = document.getElementById("lookupPart").value.trim();
