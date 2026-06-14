@@ -61,8 +61,18 @@
         .trust-bar div { display: flex; align-items: center; gap: 6px; }
         .trust-bar div span { color: var(--yard-orange); }
 
-        /* Registration & Part High-Value Request Form */
-        .lookup-section { max-width: 850px; margin: -25px auto 40px auto; background: #111827; border: 2px solid var(--yard-orange); border-radius: 12px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; z-index: 30; }
+        /* Registration & Part Lookup Form Section (Fixed Spacing - No Overlap) */
+        .lookup-section { 
+            max-width: 850px; 
+            margin: 30px auto 40px auto; 
+            background: #111827; 
+            border: 2px solid var(--yard-orange); 
+            border-radius: 12px; 
+            padding: 20px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+            position: relative; 
+            z-index: 30; 
+        }
         .lookup-title { font-size: 14px; font-weight: 800; text-transform: uppercase; color: #fff; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
         .lookup-grid { display: grid; grid-template-columns: 1fr 1.5fr auto; gap: 12px; align-items: end; }
         .reg-input-wrapper { background: #facc15; padding: 4px; border-radius: 6px; display: flex; align-items: center; }
@@ -86,7 +96,7 @@
         .status-badge.breaking { background: var(--yard-orange); }
         .status-badge.salvage { background: var(--accent-blue); }
         
-        /* Live Automated Unique Stock Number Badge */
+        /* Stock Badge */
         .stock-badge { position: absolute; top: 12px; right: 12px; background: rgba(15, 23, 42, 0.85); border: 1px solid #475569; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; color: #fff; z-index: 10; }
 
         .vehicle-img { width: 100%; height: 210px; object-fit: cover; background: #334155; }
@@ -271,6 +281,11 @@
                 </div>
             </div>
             {% endfor %}
+        </div>
+
+        <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid var(--whatsapp-green); padding: 20px; border-radius: 12px; text-align: center; margin: 40px 0 10px 0;">
+            <p style="color: #fff; font-weight: 800; font-size: 16px; text-transform: uppercase; letter-spacing: 0.5px;">🔧 Need Your Sourced Part Fitted?</p>
+            <p style="color: var(--text-muted); font-size: 14px; margin-top: 6px; max-width: 700px; margin-left: auto; margin-right: auto; line-height: 1.4;">Don't just take parts away—book full mechanical installation, replacement clutch/turbo fitting, and authorized MOT tests right here on-site down at Cherrywood Road.</p>
         </div>
     </div>
 
