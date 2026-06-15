@@ -43,38 +43,46 @@
         </div>
     </nav>
 
-    <!-- HERO SECTION (Fixed z-index and spacing constraints) -->
-    <header class="relative bg-[#111827] overflow-hidden border-b border-slate-800 pt-16 pb-20 md:pt-24 md:pb-28 z-10">
-        <div class="absolute inset-0 opacity-10 pointer-events-none">
-            <div class="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:16px_16px]"></div>
+    <!-- HERO SECTION WITH RICH AUTOMOTIVE BACKGROUND LAYER -->
+    <header class="relative bg-slate-950 overflow-hidden border-b border-slate-900 pt-16 pb-20 md:pt-24 md:pb-28 z-10">
+        <!-- High Quality Garage Backdrop Overlay -->
+        <div class="absolute inset-0 z-0">
+            <img src="https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&q=40&w=1920" 
+                 alt="Garage Backdrop" 
+                 class="w-full h-full object-cover object-center filter grayscale contrast-125 brightness-[0.15]">
+            <!-- Subtle Grid overlay matching industrial look -->
+            <div class="absolute inset-0 bg-[radial-gradient(#f97316_1px,transparent_1px)] opacity-5 [background-size:24px_24px]"></div>
+            <!-- Linear gradient fade to bottom edge -->
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-black/50"></div>
         </div>
+
         <div class="max-w-4xl mx-auto text-center px-4 relative z-20">
-            <h1 class="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white mb-6">
+            <h1 class="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white mb-6 drop-shadow-md">
                 Used <span class="text-[#f97316]">Audi, Volkswagen, SEAT & Škoda</span> Parts
             </h1>
             
-            <p class="text-base sm:text-lg md:text-xl text-slate-300 max-w-2xl mx-auto mb-2 font-medium">
+            <p class="text-base sm:text-lg md:text-xl text-slate-200 max-w-2xl mx-auto mb-2 font-medium">
                 Need a part for your Audi, VW, SEAT or Škoda? 
             </p>
             <p class="text-sm sm:text-base text-slate-400 max-w-xl mx-auto mb-8 font-semibold">
                 Send us your vehicle registration and our yard team will check our shelves instantly.
             </p>
 
-            <div class="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-1.5 rounded-lg text-xs font-bold text-[#f97316] mb-8">
+            <div class="inline-flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-4 py-1.5 rounded-lg text-xs font-bold text-[#f97316] mb-8 backdrop-blur-sm">
                 <i class="fa-solid fa-boxes-stacked"></i> <span>1,000s of Tested Parts Ready on Shelves</span>
             </div>
 
             <div class="flex flex-wrap justify-center gap-2.5 font-bold text-xs md:text-sm tracking-wide uppercase text-slate-300 mb-10">
-                <span class="bg-slate-800 px-3.5 py-2 rounded-full border border-slate-700 flex items-center gap-1.5"><i class="fa-solid fa-truck text-[#f97316]"></i> UK Wide Delivery</span>
-                <span class="bg-slate-800 px-3.5 py-2 rounded-full border border-slate-700 flex items-center gap-1.5"><i class="fa-solid fa-car text-[#f97316]"></i> Vehicles Breaking Daily</span>
-                <span class="bg-slate-800 px-3.5 py-2 rounded-full border border-slate-700 flex items-center gap-1.5"><i class="fa-solid fa-pound-sign text-[#f97316]"></i> Scrap Collections</span>
+                <span class="bg-slate-900/80 backdrop-blur-sm px-3.5 py-2 rounded-full border border-slate-800 flex items-center gap-1.5"><i class="fa-solid fa-truck text-[#f97316]"></i> UK Wide Delivery</span>
+                <span class="bg-slate-900/80 backdrop-blur-sm px-3.5 py-2 rounded-full border border-slate-800 flex items-center gap-1.5"><i class="fa-solid fa-car text-[#f97316]"></i> Vehicles Breaking Daily</span>
+                <span class="bg-slate-900/80 backdrop-blur-sm px-3.5 py-2 rounded-full border border-slate-800 flex items-center gap-1.5"><i class="fa-solid fa-pound-sign text-[#f97316]"></i> Scrap Collections</span>
             </div>
             
             <div class="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-md mx-auto sm:max-w-none">
-                <a href="https://wa.me/447440369576" target="_blank" class="w-full sm:w-auto px-8 py-3.5 bg-[#22c55e] text-white rounded-xl font-black text-base md:text-lg flex items-center justify-center gap-3 shadow-xl shadow-green-950/30 hover:bg-green-600 transition">
+                <a href="https://wa.me/447440369576" target="_blank" class="w-full sm:w-auto px-8 py-3.5 bg-[#22c55e] text-white rounded-xl font-black text-base md:text-lg flex items-center justify-center gap-3 shadow-xl shadow-green-950/40 hover:bg-green-600 transition duration-150">
                     <i class="fa-brands fa-whatsapp text-2xl"></i> WhatsApp Us
                 </a>
-                <a href="tel:07440369576" class="w-full sm:w-auto px-8 py-3.5 bg-slate-800 text-white rounded-xl font-black text-base md:text-lg flex items-center justify-center gap-3 border border-slate-700 hover:bg-slate-700 transition">
+                <a href="tel:07440369576" class="w-full sm:w-auto px-8 py-3.5 bg-slate-900/90 backdrop-blur-sm text-white rounded-xl font-black text-base md:text-lg flex items-center justify-center gap-3 border border-slate-800 hover:bg-slate-800 transition duration-150">
                     <i class="fa-solid fa-phone text-xl text-[#f97316]"></i> Call Office
                 </a>
             </div>
@@ -92,7 +100,7 @@
         </div>
     </section>
 
-    <!-- PART SEARCH / REQUEST (Fixed Layout Margins to prevent Desktop Clipping) -->
+    <!-- PART SEARCH / REQUEST (Perfected safe margin layout) -->
     <section class="max-w-3xl mx-auto w-full px-4 pt-12 pb-6 relative z-30">
         <div class="bg-[#1e293b] p-6 sm:p-8 rounded-2xl border-2 border-[#f97316] shadow-2xl">
             <h3 class="text-xl font-black uppercase text-[#f97316] tracking-wide mb-2 flex items-center gap-2">
@@ -194,7 +202,7 @@
         </div>
 
         {% if not vehicles %}
-        <!-- Fixed Empty State Box -->
+        <!-- Empty State Box -->
         <div class="border-2 border-dashed border-slate-700 bg-[#111827] rounded-2xl p-12 text-center">
             <i class="fa-solid fa-circle-notch animate-spin text-[#f97316] text-3xl mb-4 block"></i>
             <h4 class="text-lg font-bold text-white uppercase tracking-wider mb-2">Inventory Upload In Progress</h4>
@@ -322,7 +330,7 @@
         </div>
     </section>
 
-    <!-- ADMIN ACCESSIBLE FORM OVERLAY -->
+    <!-- ADMIN PANEL -->
     {% if session.get('logged_in') %}
     <section id="admin-panel" class="bg-[#1e293b] py-12 border-t-4 border-green-500 w-full">
         <div class="max-w-3xl mx-auto px-4">
@@ -418,7 +426,7 @@
         </div>
     </footer>
 
-    <!-- STICKY MOBILE CONVERSION BAR (Fixed class handling to ensure it remains hidden on laptop screens) -->
+    <!-- STICKY MOBILE CONVERSION BAR (Hidden on Desktops) -->
     <div class="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-[#111827]/95 backdrop-blur-md border-t border-slate-800 grid grid-cols-3 font-black text-[10px] tracking-wider text-center uppercase text-white shadow-2xl">
         <a href="tel:07440369576" class="py-3 border-r border-slate-800 hover:bg-slate-800 transition flex flex-col items-center gap-0.5">
             <i class="fa-solid fa-phone text-sm text-[#f97316]"></i> Call Now
@@ -431,7 +439,7 @@
         </a>
     </div>
 
-    <!-- FLOATING DESKTOP WHATSAPP BUBBLE (Hidden safely on mobile screens) -->
+    <!-- FLOATING DESKTOP WHATSAPP BUBBLE (Hidden on Mobile) -->
     <a href="https://wa.me/447440369576" target="_blank" class="hidden md:flex fixed bottom-6 right-6 z-50 bg-[#22c55e] text-white w-14 h-14 rounded-full shadow-2xl items-center justify-center text-3xl hover:bg-green-600 hover:scale-110 transition duration-200" title="Chat on WhatsApp">
         <i class="fa-brands fa-whatsapp"></i>
     </a>
