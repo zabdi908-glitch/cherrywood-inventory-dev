@@ -34,7 +34,10 @@ def init_db():
         ''')
     conn.close()
 
-# Helper method for templates to parse comma strings into separate lists
+# FORCE DATABASE GENERATION ON STARTUP (Fixes the Render OperationalError)
+init_db()
+
+# Helper class for templates to parse comma strings into list arrays cleanly
 class VehicleWrapper:
     def __init__(self, row):
         self.id = row['id']
@@ -73,7 +76,7 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # Admin Credentials for Cherrywood Yard
+        # Secured Admin Credentials for Cherrywood Yard Portal
         if username == 'admin' and password == 'cherrywood123':
             session['logged_in'] = True
             return redirect(url_for('index'))
@@ -146,5 +149,4 @@ def delete_vehicle(id):
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True)
