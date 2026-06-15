@@ -34,10 +34,9 @@ def init_db():
         ''')
     conn.close()
 
-# FORCE DATABASE GENERATION ON STARTUP (Fixes the Render OperationalError)
+# Builds database tables immediately upon application startup
 init_db()
 
-# Helper class for templates to parse comma strings into list arrays cleanly
 class VehicleWrapper:
     def __init__(self, row):
         self.id = row['id']
@@ -70,13 +69,13 @@ def index():
     vehicles = [VehicleWrapper(row) for row in rows]
     return render_template('index.html', vehicles=vehicles)
 
+# THE SECURE ADMIN PORTAL ROUTE
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # Secured Admin Credentials for Cherrywood Yard Portal
         if username == 'admin' and password == 'cherrywood123':
             session['logged_in'] = True
             return redirect(url_for('index'))
