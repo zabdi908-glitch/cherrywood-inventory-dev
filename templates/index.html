@@ -43,22 +43,22 @@
         </div>
     </nav>
 
-    <!-- WRAPPER WITH CUSTOM SHUTTER GRAFFITI BACKGROUND -->
-    <div class="relative bg-slate-950 w-full z-10">
+    <!-- HERO BACKDROP WRAPPER WITH DIRECT INLINE FALLBACK BACKGROUND COLOR -->
+    <div class="relative bg-slate-950 w-full z-10 block overflow-hidden">
         <!-- Master Yard Background Graphic Layer -->
-        <div class="absolute inset-0 z-0 pointer-events-none">
-            <!-- Replace the src URL below with your hosted version of image 20260611_234926000_iOS.jpg -->
+        <div class="absolute inset-0 w-full h-full z-0 pointer-events-none">
+            <!-- Ensure your image file matches this exact relative string name, or change this src to an absolute web link -->
             <img src="/static/images/shutter-background.jpg" 
-                 alt="Cherrywood Shutter Graffiti Backdrop" 
-                 class="w-full h-[650px] md:h-[750px] object-cover object-center filter contrast-115 brightness-[0.20]">
+                 alt="Cherrywood Shutter Graffiti" 
+                 class="w-full h-full object-cover object-center filter contrast-125 brightness-[0.22] mix-blend-luminosity">
             <!-- Subtle layout lines over the graphic -->
-            <div class="absolute top-0 left-0 w-full h-[650px] md:h-[750px] bg-[radial-gradient(#f97316_1px,transparent_1px)] opacity-5 [background-size:24px_24px]"></div>
-            <!-- Smooth fade gradient to merge cleanly into core body layout dark colors -->
-            <div class="absolute top-0 left-0 w-full h-[650px] md:h-[750px] bg-gradient-to-b from-slate-950/40 via-slate-950/80 to-[#0f172a]"></div>
+            <div class="absolute inset-0 bg-[radial-gradient(#f97316_1px,transparent_1px)] opacity-5 [background-size:24px_24px]"></div>
+            <!-- Clean layout gradient blend -->
+            <div class="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/60 to-[#0f172a]"></div>
         </div>
 
         <!-- HERO CONTENT -->
-        <header class="relative pt-12 pb-10 md:pt-20 md:pb-14 px-4 text-center z-10">
+        <header class="relative pt-16 pb-12 md:pt-24 md:pb-16 px-4 text-center z-10">
             <div class="max-w-4xl mx-auto">
                 <h1 class="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white mb-6 drop-shadow-md">
                     Used <span class="text-[#f97316]">Audi, Volkswagen, SEAT & Škoda</span> Parts
@@ -104,7 +104,7 @@
         </section>
 
         <!-- PART SEARCH / REQUEST CARD -->
-        <section class="max-w-3xl mx-auto w-full px-4 pt-10 pb-12 relative z-20">
+        <section class="max-w-3xl mx-auto w-full px-4 pt-12 pb-14 relative z-20">
             <div class="bg-[#1e293b]/95 backdrop-blur-md p-6 sm:p-8 rounded-2xl border-2 border-[#f97316] shadow-2xl">
                 <h3 class="text-xl font-black uppercase text-[#f97316] tracking-wide mb-2 flex items-center gap-2">
                     <i class="fa-solid fa-magnifying-glass"></i> Quick Stock Check Enquiry
@@ -172,7 +172,7 @@
                     <i class="fa-solid fa-circle-dot text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
                     <span class="font-bold text-sm tracking-wide uppercase">Wheels</span>
                 </div>
-                <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group pointer-events-auto cursor-pointer" onclick="document.getElementById('form-part').value='Seats'; document.getElementById('form-part').focus();">
+                <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group cursor-pointer" onclick="document.getElementById('form-part').value='Seats'; document.getElementById('form-part').focus();">
                     <i class="fa-solid fa-chair text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
                     <span class="font-bold text-sm tracking-wide uppercase">Seats</span>
                 </div>
@@ -422,7 +422,7 @@
         </div>
     </footer>
 
-    <!-- STICKY MOBILE CONVERSION BAR (Hidden on Desktops) -->
+    <!-- STICKY MOBILE CONVERSION BAR -->
     <div class="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-[#111827]/95 backdrop-blur-md border-t border-slate-800 grid grid-cols-3 font-black text-[10px] tracking-wider text-center uppercase text-white shadow-2xl">
         <a href="tel:07440369576" class="py-3 border-r border-slate-800 hover:bg-slate-800 transition flex flex-col items-center gap-0.5">
             <i class="fa-solid fa-phone text-sm text-[#f97316]"></i> Call Now
