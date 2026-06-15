@@ -16,7 +16,7 @@
         @media (max-width: 768px) { 
             .sticky-mobile-bar { display: flex; } 
             body { padding-bottom: 60px; } 
-            .floating-whatsapp { display: none; } /* Handled by mobile bar instead */
+            .floating-whatsapp { display: none; } 
         }
     </style>
 </head>
@@ -26,7 +26,6 @@
     <nav class="bg-[#111827] border-b border-slate-800 sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <!-- Upgraded SVG-style Clean Minimalist Logo Element -->
                 <div class="flex items-center gap-2">
                     <svg class="w-8 h-8 text-[#f97316]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
@@ -38,7 +37,6 @@
                 </div>
             </div>
             <div class="flex items-center gap-4">
-                <!-- Locked Back to Birmingham, West Midlands -->
                 <span class="text-xs font-bold text-slate-400 hidden md:inline-flex items-center gap-1.5">
                     <i class="fa-solid fa-location-dot text-[#f97316]"></i> Birmingham, West Midlands
                 </span>
@@ -62,7 +60,6 @@
                 Used <span class="text-[#f97316]">Audi, Volkswagen, SEAT & Škoda</span> Parts
             </h1>
             
-            <!-- Customer Focused Subtitle Upgrade -->
             <p class="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto mb-4 font-medium">
                 Need a part for your Audi, VW, SEAT or Škoda? 
             </p>
@@ -70,7 +67,6 @@
                 Send us your vehicle registration and our yard team will check our shelves instantly.
             </p>
 
-            <!-- Human Trust Number Metric -->
             <div class="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-1.5 rounded-lg text-xs font-bold text-[#f97316] mb-8">
                 <i class="fa-solid fa-boxes-stacked"></i> <span>1,000s of Tested Parts Ready on Shelves</span>
             </div>
@@ -179,7 +175,7 @@
                 <i class="fa-solid fa-circle-dot text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
                 <span class="font-bold text-sm tracking-wide uppercase">Wheels</span>
             </div>
-            <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group cursor-pointer" onclick="document.getElementById('form-part').value='Seats'; document.getElementById('form-part').focus();">
+            <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group pointer-events-auto cursor-pointer" onclick="document.getElementById('form-part').value='Seats'; document.getElementById('form-part').focus();">
                 <i class="fa-solid fa-chair text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
                 <span class="font-bold text-sm tracking-wide uppercase">Seats</span>
             </div>
@@ -190,7 +186,7 @@
         </div>
     </section>
 
-    <!-- INVENTORY BREAKING GRID WITH PSYCHOLOGICAL EMPTY STATE UPGRADE -->
+    <!-- INVENTORY BREAKING GRID -->
     <section class="max-w-7xl mx-auto px-4 py-8 border-t border-slate-800">
         <div class="flex items-center justify-between mb-8">
             <div>
@@ -214,7 +210,7 @@
                 Contact us with your registration instead
             </button>
         </div>
-        {% default %}
+        {% else %} <!-- Clean, proper Jinja structure here -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {% for vehicle in vehicles %}
             <div class="bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col">
