@@ -3,10 +3,15 @@ import sqlite3
 import os
 import uuid
 from werkzeug.utils import secure_filename
+from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev_secret")
 
+# ---------------- SECURITY ----------------
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev_secret_key")
+csrf = CSRFProtect(app)
+
+# ---------------- PATHS ----------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DATABASE = os.path.join(BASE_DIR, "database.db")
 
@@ -25,18 +30,18 @@ def get_db():
 def init_db():
     with sqlite3.connect(DATABASE) as conn:
         conn.execute("""
-            CREATE TABLE IF NOT EXISTS vehicle (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT,
-                make TEXT,
-                model TEXT,
-                year TEXT,
-                reg TEXT,
-                engine TEXT,
-                mileage TEXT,
-                parts_available TEXT,
-                image_url TEXT
-            )
+        CREATE TABLE IF NOT EXISTS vehicle (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            make TEXT,
+            model TEXT,
+            year TEXT,
+            reg TEXT,
+            engine TEXT,
+            mileage TEXT,
+            parts_available TEXT,
+            image_url TEXT
+        )
         """)
 
 init_db()
@@ -62,19 +67,43 @@ def index():
         rows = db.execute("SELECT * FROM vehicle ORDER BY id DESC").fetchall()
 
     db.close()
-
     return render_template("index.html", vehicles=rows, search=search)
 
 
-# ---------------- ADD ----------------
+# ---------------- LOGIN ----------------
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        if request.form.get("password") == "cherrywood2026":
+            session["logged_in"] = True
+            return redirect(url_for("index"))
+        return "Wrong password"
+
+    return """
+    <form method="POST">
+        <input type="password" name="password" placeholder="Password">
+        <button type="submit">Login</button>
+    </form>
+    """
+
+
+# ---------------- LOGOUT ----------------
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("index"))
+
+
+# ---------------- ADD VEHICLE ----------------
 @app.route("/add", methods=["POST"])
+@csrf.exempt
 def add_vehicle():
     if not session.get("logged_in"):
         return "Unauthorized", 403
 
     file = request.files.get("vehicle_photo")
     if not file or file.filename == "":
-        return "No file", 400
+        return "No file uploaded", 400
 
     filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
     filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
@@ -107,8 +136,9 @@ def add_vehicle():
     return redirect(url_for("index"))
 
 
-# ---------------- DELETE (FIXED) ----------------
+# ---------------- DELETE ----------------
 @app.route("/delete/<int:id>", methods=["POST"])
+@csrf.exempt
 def delete_vehicle(id):
     if not session.get("logged_in"):
         return "Unauthorized", 403
@@ -118,30 +148,6 @@ def delete_vehicle(id):
     db.commit()
     db.close()
 
-    return redirect(url_for("index"))
-
-
-# ---------------- LOGIN ----------------
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        if request.form.get("password") == "cherrywood2026":
-            session["logged_in"] = True
-            return redirect(url_for("index"))
-        return "Wrong password"
-
-    return """
-    <form method="POST">
-        <input type="password" name="password" placeholder="Password">
-        <button type="submit">Login</button>
-    </form>
-    """
-
-
-# ---------------- LOGOUT ----------------
-@app.route("/logout")
-def logout():
-    session.clear()
     return redirect(url_for("index"))
 
 
