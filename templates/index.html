@@ -78,7 +78,7 @@
     </header>
 
     <!-- Main Content App Layer -->
-    <main class="max-w-7xl mx-auto px-4 pb-24 space-y-12">
+    <main class="max-w-7xl mx-auto px-4 pb-24 space-y-16">
         
         <!-- Live Live Query Filter Row -->
         <section class="glass-panel rounded-2xl p-5 shadow-2xl">
@@ -105,7 +105,10 @@
                 <p class="text-sm text-slate-400">New vehicles are currently being added.</p>
                 <div class="pt-4 border-t border-slate-800/80 text-left text-xs space-y-1.5 text-center">
                     <p class="font-bold text-orange-400 uppercase">Need a part now?</p>
-                    <p class="text-slate-300">Contact us with: ✓ Registration Number, ✓ Vehicle Model, ✓ Part Required</p>
+                    <p class="text-slate-300 mb-4">Contact us with: ✓ Registration Number, ✓ Vehicle Model, ✓ Part Required</p>
+                    <a href="https://wa.me/447440369576" class="inline-flex bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-6 rounded-lg transition-colors uppercase tracking-wider mx-auto text-xs">
+                        Direct Desk Inquiry
+                    </a>
                 </div>
             </div>
             {% else %}
@@ -182,9 +185,77 @@
             </div>
             {% endif %}
         </section>
+
+        <!-- ================= OPENING TIMES & FAQS MODULE ================= -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-12 border-t border-slate-800/60 text-sm">
+            
+            <!-- Column 1: Opening Times Box -->
+            <div class="glass-panel rounded-2xl p-6 space-y-4">
+                <h3 class="text-base font-bold uppercase tracking-wider text-orange-500 flex items-center gap-2">
+                    🕒 Opening Hours
+                </h3>
+                <div class="space-y-2.5 font-medium text-slate-300">
+                    <div class="flex justify-between border-b border-slate-800/40 pb-2">
+                        <span>Monday - Friday</span>
+                        <span class="text-white font-bold">09:00 - 17:30</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-800/40 pb-2">
+                        <span>Saturday</span>
+                        <span class="text-white font-bold">09:00 - 14:00</span>
+                    </div>
+                    <div class="flex justify-between text-slate-500">
+                        <span>Sunday & Bank Holidays</span>
+                        <span class="font-bold uppercase tracking-wider text-red-500/80">Closed</span>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-400 italic pt-2 border-t border-slate-800/30">
+                    * Parts counter counter operations close 15 mins prior to end of shift intervals.
+                </p>
+            </div>
+
+            <!-- Columns 2 & 3: FAQs Grid Framework -->
+            <div class="lg:col-span-2 space-y-4">
+                <h3 class="text-base font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                    ❓ Frequently Asked Questions
+                </h3>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- FAQ 1 -->
+                    <div class="glass-card rounded-xl p-4 space-y-1.5">
+                        <h4 class="font-bold text-orange-400 text-xs uppercase tracking-wide">Do you offer delivery?</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">Yes, we provide tracked UK-wide shipping on all small to medium items. Large assemblies like engines can be dispatched via secure pallet courier service networks.</p>
+                    </div>
+
+                    <!-- FAQ 2 -->
+                    <div class="glass-card rounded-xl p-4 space-y-1.5">
+                        <h4 class="font-bold text-orange-400 text-xs uppercase tracking-wide">Are your parts tested?</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">Absolutely. All mechanical packages, modules, and engine components are thoroughly shelf-verified and certified by our dismantle crew before logging storage parameters.</p>
+                    </div>
+
+                    <!-- FAQ 3 -->
+                    <div class="glass-card rounded-xl p-4 space-y-1.5">
+                        <h4 class="font-bold text-orange-400 text-xs uppercase tracking-wide">Can I collect in person?</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">Yes, you are welcome to pick up your ordered parts directly from our main service desk asset counter in Birmingham during normal yard operational schedules.</p>
+                    </div>
+
+                    <!-- FAQ 4 -->
+                    <div class="glass-card rounded-xl p-4 space-y-1.5">
+                        <h4 class="font-bold text-orange-400 text-xs uppercase tracking-wide">What is your return policy?</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">We provide a solid replacement program framework on all structural items. Bring the component back accompanied by your trade invoice log for swift exchange routing updates.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- ================= END OF OPENING TIMES & FAQS ================= -->
+
     </main>
 
-    <!-- Admin Hidden Interactive Windows Forms -->
+    <!-- Global Layout Base Footer -->
+    <footer class="bg-slate-950 border-t border-slate-900 py-6 text-center text-xs text-slate-500 px-4">
+        <p>© 2026 Cherrywood Auto Parts. All rights reserved. Environmental Agency Registered ATF Node.</p>
+    </footer>
+
+    <!-- Admin Interactive Windows Forms Area -->
     {% if session.get('logged_in') %}
     <!-- 1. ADD NEW RECORD MODAL -->
     <div id="uploadModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden justify-center items-center z-50 p-4">
