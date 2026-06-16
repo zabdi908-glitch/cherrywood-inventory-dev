@@ -1,236 +1,181 @@
-from flask import Flask, render_template, request, redirect, url_for, session
-import sqlite3
 import os
+from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask_sqlalchemy import SQLAlchemy
+import google.generativeai as genai
+from google.genai import types
 import json
-from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = 'cherrywood_yard_secret_key_2026'
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "cherrywood-yard-secret-101")
 
-DATABASE = 'database.db'
-UPLOAD_FOLDER = os.path.join('static', 'uploads')
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
+# Configure Database
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL", "sqlite:///cherrywood.db")
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# Initialize Gemini Client
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
-# Safe Import Layer: Prevents Render from crashing if the library isn't fully compiled yet
-try:
-    from google import genai
-    from google.genai import types
-    api_key = os.environ.get("GEMINI_API_KEY")
-    ai_client = genai.Client(api_key=api_key) if api_key else None
-    print("AI Vision Agent initialized successfully.")
-except Exception as e:
-    ai_client = None
-    print(f"AI Vision Agent offline (Using structural fallback framework): {e}")
-
-def get_db():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-def init_db():
-    with sqlite3.connect(DATABASE) as conn:
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS vehicle (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                make TEXT NOT NULL,
-                model TEXT NOT NULL,
-                year TEXT NOT NULL,
-                reg TEXT NOT NULL,
-                engine TEXT NOT NULL,
-                fuel TEXT NOT NULL,
-                transmission TEXT NOT NULL,
-                mileage TEXT NOT NULL,
-                status TEXT NOT NULL,
-                image_url TEXT,
-                parts_available TEXT,
-                description TEXT
-            )
-        ''')
-    conn.close()
-
-init_db()
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-class VehicleWrapper:
-    def __init__(self, row):
-        self.id = row['id']
-        self.title = row['title']
-        self.make = row['make']
-        self.model = row['model']
-        self.year = row['year']
-        self.reg = row['reg']
-        self.engine = row['engine']
-        self.fuel = row['fuel']
-        self.transmission = row['transmission']
-        self.mileage = row['mileage']
-        self.status = row['status']
-        # Point to your existing local shutter background image if custom photo is missing
-        self.image_url = row['image_url'] if row['image_url'] else '/static/shutter-background.jpg'
-        self.parts_available = row['parts_available']
-        self.description = row['description']
+# Vehicle Database Model Structure
+class Vehicle(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(150), nullable=False)
+    make = db.Column(db.String(50))
+    model = db.Column(db.String(50))
+    year = db.Column(db.String(150))
+    reg = db.Column(db.String(20))
+    engine = db.Column(db.String(50))
+    fuel = db.Column(db.String(50))
+    transmission = db.Column(db.String(50))
+    mileage = db.Column(db.String(50))
+    status = db.Column(db.String(50), default="BREAKING FOR PARTS")
+    components = db.Column(db.Text)  # Comma separated parts
+    description = db.Column(db.Text)
+    image_url = db.Column(db.Text)
 
     def get_parts_list(self):
-        if self.parts_available:
-            return [p.strip() for p in self.parts_available.split(',') if p.strip()]
+        if self.components:
+            return [p.strip() for p in self.components.split(",") if p.strip()]
         return []
+
+# Create Tables automatically
+with app.app_context():
+    db.create_all()
 
 @app.route('/')
 def index():
-    db = get_db()
-    cursor = db.execute('SELECT * FROM vehicle ORDER BY id DESC')
-    rows = cursor.fetchall()
-    db.close()
-    
-    vehicles = [VehicleWrapper(row) for row in rows]
+    vehicles = Vehicle.query.order_by(Vehicle.id.desc()).all()
     return render_template('index.html', vehicles=vehicles)
 
-@app.route('/login', methods=['GET', 'POST'])
+# THE SECRET PORTAL ENTRY WAY (Completely Hidden from Public Eyes)
+@app.route('/cherrywood-gatekeeper', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form.get('username')
         password = request.form.get('password')
-        
-        if username == 'admin' and password == 'cherrywood123':
+        # Simple master password verification
+        if password == os.environ.get("ADMIN_PASSWORD", "Cherrywood2026!"):
             session['logged_in'] = True
             return redirect(url_for('index'))
         else:
-            return '<script>alert("Invalid details! Try again."); window.location.href="/login";</script>'
-            
+            flash("Incorrect Master Security Key Access Key.")
     return '''
-        <div style="background:#0f172a; color:#fff; height:100vh; display:flex; justify-content:center; align-items:center; font-family:sans-serif;">
-            <form method="POST" style="background:#1e293b; padding:35px; border-radius:12px; border:2px solid #f97316; width:320px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-                <h2 style="margin-top:0; color:#f97316; text-transform:uppercase; font-size:22px; letter-spacing:1px; text-align:center;">Cherrywood Admin</h2>
-                <p style="color:#94a3b8; font-size:12px; text-align:center; margin-bottom:20px;">Log in to add or remove breaker vehicles</p>
-                
-                <label style="font-size:11px; text-transform:uppercase; color:#94a3b8; font-weight:bold;">Username</label>
-                <input type="text" name="username" style="width:100%; padding:11px; margin: 6px 0 15px 0; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#fff; outline:none;" required>
-                
-                <label style="font-size:11px; text-transform:uppercase; color:#94a3b8; font-weight:bold;">Password</label>
-                <input type="password" name="password" style="width:100%; padding:11px; margin: 6px 0 20px 0; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#fff; outline:none;" required>
-                
-                <button type="submit" style="width:100%; padding:12px; background:#22c55e; color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:14px; cursor:pointer; text-transform:uppercase;">Sign Into Portal</button>
-                <a href="/" style="display:block; text-align:center; margin-top:15px; color:#94a3b8; font-size:12px; text-decoration:none;">← Back to Public Website</a>
-            </form>
-        </div>
+    <!DOCTYPE html>
+    <body style="background:#0f172a; color:#fff; font-family:sans-serif; flex flex-col items-center justify-content:center; display:flex; height:100vh; margin:0;">
+        <form method="POST" style="background:#111827; padding:30px; border-radius:12px; border:1px solid #334155; max-w:320px; width:100%;">
+            <h2 style="margin:0 0 15px 0; font-size:16px; text-transform:uppercase; color:#f97316; letter-spacing:1px;">Cherrywood Secure Core</h2>
+            <p style="font-size:11px; color:#94a3b8; margin:0 0 20px 0;">Enter your master clearance passkey:</p>
+            <input type="password" name="password" placeholder="••••••••" style="width:100%; box-sizing:border-box; padding:12px; background:#000; border:1px solid #475569; color:#fff; border-radius:6px; margin-bottom:15px; outline:none;" autofocus>
+            <button type="submit" style="width:100%; padding:12px; background:#22c55e; border:0; color:#fff; font-weight:bold; border-radius:6px; cursor:pointer;">Unlock Workspace</button>
+        </form>
+    </body>
     '''
 
 @app.route('/logout')
 def logout():
-    session.clear()
+    session.pop('logged_in', None)
     return redirect(url_for('index'))
 
 @app.route('/add', methods=['POST'])
 def add_vehicle():
     if not session.get('logged_in'):
-        return "Unauthorized Access", 403
-        
-    if 'vehicle_photo' not in request.files:
-        return "No photo uploaded", 400
-        
-    file = request.files['vehicle_photo']
-    if file.filename == '':
-        return "No selected file", 400
+        return redirect(url_for('index'))
 
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        unique_filename = f"breaker_{os.urandom(4).hex()}_{filename}"
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-        file.save(filepath)
-        image_url = f"/{filepath}"
+    file = request.files.get('vehicle_photo')
+    if not file:
+        return redirect(url_for('index'))
+
+    try:
+        # 1. Host image temporarily via ImgBB API or base64 emulation (Using dummy/mock logic here or standard URL storage)
+        # For fluid execution we assume direct pass to Gemini API model vision engine
+        img_bytes = file.read()
         
-        # Clean default text if AI agent is sleeping or processing offline
-        car_data = {
-            "title": "Fresh Salvage Stock Arrival", 
-            "make": "VAG Group", 
-            "model": "Breaker Spec",
-            "year": "2026", 
-            "reg": "SCANNING", 
-            "engine": "Pending Check",
-            "fuel": "Petrol/Diesel", 
-            "transmission": "Manual/Auto", 
-            "mileage": "N/A",
-            "parts_available": "Engine, Gearbox, Panels, Lights, Alloy Wheels",
-            "description": "New vehicle arrival entering our yard layout. Contact the sales counter for parts availability."
+        prompt = """
+        Analyze this salvage vehicle image from our breaker yard. Extract structural information and output it in strict valid JSON format with these exact keys:
+        {
+          "title": "A summary title like '2015 Audi A3 S-Line TDI'",
+          "make": "Manufacturer name",
+          "model": "Model name",
+          "year": "Production year",
+          "reg": "License plate registration if visible, otherwise write Unknown",
+          "engine": "Engine engine code if legible, otherwise estimate displacement size",
+          "fuel": "Diesel, Petrol, Hybrid, or Electric",
+          "transmission": "Manual or Automatic",
+          "mileage": "Estimate mileage status or write Unknown",
+          "components": "List 5 major body components reusable from this picture separated by commas",
+          "description": "Short internal assessment summary regarding condition of panels seen."
         }
+        Return only the JSON object, absolutely no wrappers, no backticks, and no markdown prose.
+        """
+        
+        # Call Gemini Vision Agent
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content([
+            types.Part.from_bytes(data=img_bytes, mime_type=file.mimetype),
+            prompt
+        ])
+        
+        # Clean response and format JSON data
+        clean_text = response.text.replace("```json", "").replace("
+```", "").strip()
+        data = json.loads(clean_text)
+        
+        # Fallback tracking logic for hosting image layout
+        # (In your local file system, replace with your active imgbb upload lines if needed)
+        # Using a dummy stock placeholder for illustration
+        placeholder_url = "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=600"
 
-        # Run AI parsing sequence if client setup is successful
-        if ai_client:
-            try:
-                with open(filepath, 'rb') as img_file:
-                    img_bytes = img_file.read()
-                
-                prompt = """
-                You are an expert automotive salvage yard intelligence agent.
-                Analyze this photo of a breaker vehicle and return a clean JSON specification block.
-                
-                Target checklist:
-                1. Look for the UK registration number plate.
-                2. Identify the vehicle manufacturer make (Audi, Volkswagen, SEAT, or Skoda) and specific model.
-                3. Check for engine type badges (TDI, TSI, TFSI, etc.), fuel type, and transmission. If not fully clear, guess standard specifications logically based on the body shape.
-                4. Create a nice title e.g., '2016 Audi A4 S-Line Breaker'.
-                5. Create a comma-separated list of 6-8 specific parts likely available on this car.
-                6. Write a helpful 2-sentence description about it breaking for parts.
-                
-                Return ONLY raw JSON matching this format exactly:
-                {
-                    "title": "string",
-                    "make": "string",
-                    "model": "string",
-                    "year": "string",
-                    "reg": "string",
-                    "engine": "string",
-                    "fuel": "Petrol or Diesel",
-                    "transmission": "Manual or Automatic or DSG",
-                    "mileage": "string",
-                    "parts_available": "string",
-                    "description": "string"
-                }
-                """
-                
-                response = ai_client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=[
-                        types.Part.from_bytes(data=img_bytes, mime_type=file.mimetype),
-                        prompt
-                    ],
-                    config=types.GenerateContentConfig(response_mime_type="application/json")
-                )
-                
-                ai_data = json.loads(response.text.strip())
-                car_data.update(ai_data)
-            except Exception as e:
-                print(f"AI Core parsing skipped temporarily: {e}")
-
-        # Commit entry smoothly to SQLite
-        db = get_db()
-        db.execute('''
-            INSERT INTO vehicle (title, make, model, year, reg, engine, fuel, transmission, mileage, status, image_url, parts_available, description)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            car_data["title"], car_data["make"], car_data["model"], car_data["year"], 
-            car_data["reg"].upper(), car_data["engine"], car_data["fuel"], car_data["transmission"], 
-            car_data["mileage"], "Breaking", image_url, car_data["parts_available"], car_data["description"]
-        ))
-        db.commit()
-        db.close()
+        new_car = Vehicle(
+            title=data.get('title', 'Salvage Vehicle Arrival'),
+            make=data.get('make', 'Unknown'),
+            model=data.get('model', 'Unknown'),
+            year=data.get('year', 'Unknown'),
+            reg=data.get('reg', 'Unknown').upper(),
+            engine=data.get('engine', 'Unknown'),
+            fuel=data.get('fuel', 'Unknown'),
+            transmission=data.get('transmission', 'Unknown'),
+            mileage=data.get('mileage', 'Unknown'),
+            components=data.get('components', 'Engine, Gearbox, Doors'),
+            description=data.get('description', ''),
+            image_url=placeholder_url
+        )
+        
+        db.session.add(new_car)
+        db.session.commit()
+        
+    except Exception as e:
+        print(f"Operational Master Engine Error: {e}")
         
     return redirect(url_for('index'))
 
-@app.route('/delete/<int:id>', methods=['POST'])
-def delete_vehicle(id):
+# THE CORRECTION ROUTE (Allows you to edit anything the AI got wrong)
+@app.route('/edit/<int:car_id>', methods=['POST'])
+def edit_vehicle(car_id):
     if not session.get('logged_in'):
-        return "Unauthorized Access", 403
+        return redirect(url_for('index'))
     
-    db = get_db()
-    db.execute('DELETE FROM vehicle WHERE id = ?', (id,))
-    db.commit()
-    db.close()
+    car = Vehicle.query.get_or_404(car_id)
+    car.title = request.form.get('title')
+    car.make = request.form.get('make')
+    car.model = request.form.get('model')
+    car.year = request.form.get('year')
+    car.reg = request.form.get('reg', '').upper()
+    car.engine = request.form.get('engine')
+    car.fuel = request.form.get('fuel')
+    car.transmission = request.form.get('transmission')
+    car.mileage = request.form.get('mileage')
+    car.components = request.form.get('components')
+    car.description = request.form.get('description')
+    
+    db.session.commit()
+    return redirect(url_for('index'))
+
+@app.route('/delete/<int:car_id>', methods=['POST'])
+def delete_vehicle(car_id):
+    if not session.get('logged_in'):
+        return redirect(url_for('index'))
+    car = Vehicle.query.get_or_404(car_id)
+    db.session.delete(car)
+    db.session.commit()
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
