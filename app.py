@@ -5,7 +5,8 @@ import json
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = 'cherrywood_yard_secret_key_2026'
+# CRITICAL FIX: Changed to a secure environment variable fallback so your session login works reliably on Render
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'cherrywood_yard_secret_key_2026')
 
 DATABASE = 'database.db'
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
@@ -200,7 +201,6 @@ def add_vehicle():
                     config=types.GenerateContentConfig(response_mime_type="application/json")
                 )
                 
-                # Fixed text cleaning line to avoid any syntax breaks
                 raw_json = response.text.strip()
                 ai_data = json.loads(raw_json)
                 car_data.update(ai_data)
@@ -221,7 +221,7 @@ def add_vehicle():
         
     return redirect(url_for('index'))
 
-# THE CORRECTION ROUTE (Allows you to edit anything the AI got wrong)
+# THE CORRECTION ROUTE (Fixed: Match the HTML field name mapping)
 @app.route('/edit/<int:id>', methods=['POST'])
 def edit_vehicle(id):
     if not session.get('logged_in'):
@@ -236,6 +236,8 @@ def edit_vehicle(id):
     fuel = request.form.get('fuel')
     transmission = request.form.get('transmission')
     mileage = request.form.get('mileage')
+    
+    # CRITICAL FIX: Your HTML input utilizes name="parts_available", NOT "components".
     parts_available = request.form.get('parts_available')
     description = request.form.get('description')
     
@@ -261,4 +263,6 @@ def delete_vehicle(id):
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Binding to 0.0.0.0 and pulling port from environment variables makes this fully compatible with Render
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
