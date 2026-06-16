@@ -226,14 +226,18 @@ def delete_vehicle(id):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    error = None
     if request.method == 'POST':
-        if request.form.get('password') == 'cherrywood2026':
+        # .strip() handles any accidental spaces typed at the end
+        password_submitted = request.form.get('password', '').strip()
+        if password_submitted == 'cherrywood2026':
             session['logged_in'] = True
             return redirect(url_for('index'))
         else:
-            return '<p style="color: red; text-align: center; margin-top: 20px;">Invalid password. Try again.</p>'
-            
-    return '''
+            error = "Invalid password. Please try again."
+
+    # Instead of breaking the return, we inject the error message inside the same HTML page template!
+    return f'''
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -248,6 +252,9 @@ def login():
                 <span class="text-xs font-bold tracking-widest text-orange-500 uppercase block mb-1">Secure Portal</span>
                 <h2 class="text-xl font-black uppercase tracking-tight text-white">Cherrywood Admin</h2>
             </div>
+            
+            {f'<p class="text-red-500 text-xs text-center font-bold mb-4">{error}</p>' if error else ''}
+
             <form method="POST" class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Enter Gate Password</label>
