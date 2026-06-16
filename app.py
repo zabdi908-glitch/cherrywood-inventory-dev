@@ -5,7 +5,7 @@ import json
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-# CRITICAL FIX: Changed to a secure environment variable fallback so your session login works reliably on Render
+# Pulls secret key safely or defaults to development bypass framework
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'cherrywood_yard_secret_key_2026')
 
 DATABASE = 'database.db'
@@ -15,7 +15,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Safe Import Layer: Prevents Render from breaking if the library isn't fully compiled yet
+# Safe Import Layer: Google GenAI Integration Wrapper
 try:
     from google import genai
     from google.genai import types
@@ -90,7 +90,6 @@ def index():
     vehicles = [VehicleWrapper(row) for row in rows]
     return render_template('index.html', vehicles=vehicles)
 
-# THE SECRET PORTAL ENTRY WAY (Completely Hidden from Public Eyes)
 @app.route('/cherrywood-gatekeeper', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -145,6 +144,7 @@ def add_vehicle():
         file.save(filepath)
         image_url = f"/{filepath}"
         
+        # Static baseline parameters fallback in case image generation engine fails
         car_data = {
             "title": "Fresh Salvage Stock Arrival", 
             "make": "VAG Group", 
@@ -171,8 +171,8 @@ def add_vehicle():
                 Target checklist:
                 1. Look for the UK registration number plate.
                 2. Identify the vehicle manufacturer make (Audi, Volkswagen, SEAT, or Skoda) and specific model.
-                3. Check for engine type badges (TDI, TSI, TFSI, etc.), fuel type, and transmission. If not fully clear, guess standard specifications logically based on the body shape.
-                4. Create a nice title e.g., '2016 Audi A4 S-Line Breaker'.
+                3. Check for engine type badges (TDI, TSI, TFSI, 2.0T, etc.), fuel type, and transmission. If not fully clear, guess standard specifications logically based on the body shape.
+                4. Create a nice title e.g., '2015 SEAT Leon Tech Pack Breaker'.
                 5. Create a comma-separated list of 6-8 specific parts likely available on this car.
                 6. Write a helpful 2-sentence description about it breaking for parts.
                 
@@ -214,14 +214,13 @@ def add_vehicle():
         ''', (
             car_data["title"], car_data["make"], car_data["model"], car_data["year"], 
             car_data["reg"].upper(), car_data["engine"], car_data["fuel"], car_data["transmission"], 
-            car_data["mileage"], "BreakingDaily", image_url, car_data["parts_available"], car_data["description"]
+            car_data["mileage"], "Breaking Daily", image_url, car_data["parts_available"], car_data["description"]
         ))
         db.commit()
         db.close()
         
     return redirect(url_for('index'))
 
-# THE CORRECTION ROUTE (Fixed: Match the HTML field name mapping)
 @app.route('/edit/<int:id>', methods=['POST'])
 def edit_vehicle(id):
     if not session.get('logged_in'):
@@ -236,8 +235,6 @@ def edit_vehicle(id):
     fuel = request.form.get('fuel')
     transmission = request.form.get('transmission')
     mileage = request.form.get('mileage')
-    
-    # CRITICAL FIX: Your HTML input utilizes name="parts_available", NOT "components".
     parts_available = request.form.get('parts_available')
     description = request.form.get('description')
     
@@ -263,6 +260,5 @@ def delete_vehicle(id):
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    # Binding to 0.0.0.0 and pulling port from environment variables makes this fully compatible with Render
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
