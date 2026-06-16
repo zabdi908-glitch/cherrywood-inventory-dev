@@ -21,7 +21,24 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+def init_db():
+    with sqlite3.connect(DATABASE) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS vehicle (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT,
+                make TEXT,
+                model TEXT,
+                year TEXT,
+                reg TEXT,
+                engine TEXT,
+                mileage TEXT,
+                parts_available TEXT,
+                image_url TEXT
+            )
+        """)
 
+init_db()
 # ---------------- HOME (SALES PAGE) ----------------
 @app.route("/")
 def index():
