@@ -107,7 +107,7 @@ def add_vehicle():
     return redirect(url_for("index"))
 
 
-# ---------------- DELETE ----------------
+# ---------------- DELETE (FIXED) ----------------
 @app.route("/delete/<int:id>", methods=["POST"])
 def delete_vehicle(id):
     if not session.get("logged_in"):
@@ -138,7 +138,7 @@ def login():
     """
 
 
-# ---------------- LOGOUT (ADDED) ----------------
+# ---------------- LOGOUT ----------------
 @app.route("/logout")
 def logout():
     session.clear()
