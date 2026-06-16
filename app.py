@@ -3,8 +3,6 @@ import sqlite3
 import os
 import json
 from werkzeug.utils import secure_filename
-from google import genai
-from google.genai import types
 
 app = Flask(__name__)
 app.secret_key = 'cherrywood_yard_secret_key_2026'
@@ -16,9 +14,16 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Initialize the Gemini Client using your Render environment variable
-api_key = os.environ.get("GEMINI_API_KEY")
-ai_client = genai.Client(api_key=api_key) if api_key else None
+# Safe Import Layer: Prevents Render from crashing if the library isn't fully compiled yet
+try:
+    from google import genai
+    from google.genai import types
+    api_key = os.environ.get("GEMINI_API_KEY")
+    ai_client = genai.Client(api_key=api_key) if api_key else None
+    print("AI Vision Agent initialized successfully.")
+except Exception as e:
+    ai_client = None
+    print(f"AI Vision Agent offline (Using structural fallback framework): {e}")
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
@@ -65,6 +70,7 @@ class VehicleWrapper:
         self.transmission = row['transmission']
         self.mileage = row['mileage']
         self.status = row['status']
+        # Point to your existing local shutter background image if custom photo is missing
         self.image_url = row['image_url'] if row['image_url'] else '/static/shutter-background.jpg'
         self.parts_available = row['parts_available']
         self.description = row['description']
@@ -119,7 +125,6 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-# AUTOMATED AI AGENT IMAGE UPLOAD SYSTEM
 @app.route('/add', methods=['POST'])
 def add_vehicle():
     if not session.get('logged_in'):
@@ -139,16 +144,22 @@ def add_vehicle():
         file.save(filepath)
         image_url = f"/{filepath}"
         
-        # Default data structure if AI is offline or key missing
+        # Clean default text if AI agent is sleeping or processing offline
         car_data = {
-            "title": "New Arrival Breaker", "make": "Unknown", "model": "Unknown",
-            "year": "2026", "reg": "UNKNOWN", "engine": "Unknown",
-            "fuel": "Unknown", "transmission": "Unknown", "mileage": "Unknown",
-            "parts_available": "Engine, Gearbox, Wheels, Door Mirrors, Headlights",
-            "description": "Fresh breaker in stock. Contact the yard desk for current component availability."
+            "title": "Fresh Salvage Stock Arrival", 
+            "make": "VAG Group", 
+            "model": "Breaker Spec",
+            "year": "2026", 
+            "reg": "SCANNING", 
+            "engine": "Pending Check",
+            "fuel": "Petrol/Diesel", 
+            "transmission": "Manual/Auto", 
+            "mileage": "N/A",
+            "parts_available": "Engine, Gearbox, Panels, Lights, Alloy Wheels",
+            "description": "New vehicle arrival entering our yard layout. Contact the sales counter for parts availability."
         }
 
-        # Run AI Vision Extraction Agent
+        # Run AI parsing sequence if client setup is successful
         if ai_client:
             try:
                 with open(filepath, 'rb') as img_file:
@@ -159,7 +170,7 @@ def add_vehicle():
                 Analyze this photo of a breaker vehicle and return a clean JSON specification block.
                 
                 Target checklist:
-                1. Look for the UK registration number plate. 
+                1. Look for the UK registration number plate.
                 2. Identify the vehicle manufacturer make (Audi, Volkswagen, SEAT, or Skoda) and specific model.
                 3. Check for engine type badges (TDI, TSI, TFSI, etc.), fuel type, and transmission. If not fully clear, guess standard specifications logically based on the body shape.
                 4. Create a nice title e.g., '2016 Audi A4 S-Line Breaker'.
@@ -194,9 +205,9 @@ def add_vehicle():
                 ai_data = json.loads(response.text.strip())
                 car_data.update(ai_data)
             except Exception as e:
-                print(f"AI Extraction Failure: {e}")
+                print(f"AI Core parsing skipped temporarily: {e}")
 
-        # Insert extracted metrics straight into sqlite grid
+        # Commit entry smoothly to SQLite
         db = get_db()
         db.execute('''
             INSERT INTO vehicle (title, make, model, year, reg, engine, fuel, transmission, mileage, status, image_url, parts_available, description)
