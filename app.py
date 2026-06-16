@@ -6,16 +6,18 @@ import uuid
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "cherrywood_secret_key"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev_secret")
 
+# ---------------- DB SETUP ----------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DATABASE = os.path.join(BASE_DIR, "database.db")
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-# ---------------- DATABASE ----------------
+
 def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
@@ -43,51 +45,40 @@ def init_db():
         )
         """)
 
+
 init_db()
 
+# ---------------- ROUTES ----------------
 
-# ---------------- HOME + SEARCH ----------------
 @app.route("/")
 def index():
-    query = request.args.get("q", "").lower()
-
     db = get_db()
-
-    if query:
-        rows = db.execute("""
-            SELECT * FROM vehicle
-            WHERE lower(make) LIKE ?
-            OR lower(model) LIKE ?
-            OR lower(reg) LIKE ?
-            ORDER BY id DESC
-        """, (f"%{query}%", f"%{query}%", f"%{query}%")).fetchall()
-    else:
-        rows = db.execute("SELECT * FROM vehicle ORDER BY id DESC").fetchall()
-
+    rows = db.execute("SELECT * FROM vehicle ORDER BY id DESC").fetchall()
     db.close()
-    return render_template("index.html", vehicles=rows, query=query)
+
+    return render_template("index.html", vehicles=rows)
 
 
-# ---------------- ADD VEHICLE ----------------
 @app.route("/add", methods=["POST"])
 def add_vehicle():
     if not session.get("logged_in"):
         return "Unauthorized", 403
 
     file = request.files.get("vehicle_photo")
-    if not file:
+    if not file or file.filename == "":
         return "No file uploaded", 400
 
     filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
     file.save(filepath)
 
     image_url = url_for("static", filename=f"uploads/{filename}")
 
+    # DEFAULT SAFE DATA (NEVER BREAKS APP)
     car_data = {
-        "title": request.form.get("title", "New Stock"),
-        "make": request.form.get("make", ""),
-        "model": request.form.get("model", ""),
+        "title": request.form.get("title", "New Vehicle"),
+        "make": request.form.get("make", "Unknown"),
+        "model": request.form.get("model", "Unknown"),
         "year": request.form.get("year", ""),
         "reg": request.form.get("reg", ""),
         "engine": request.form.get("engine", ""),
@@ -95,9 +86,44 @@ def add_vehicle():
         "transmission": "",
         "mileage": request.form.get("mileage", ""),
         "parts_available": request.form.get("parts_available", ""),
-        "description": request.form.get("description", ""),
+        "description": request.form.get("description", "")
     }
 
+    # OPTIONAL AI (SAFE — NEVER BREAKS APP)
+    try:
+        from google import genai
+        from google.genai import types
+
+        if os.environ.get("GEMINI_API_KEY"):
+            client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+
+            with open(filepath, "rb") as f:
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=[
+                        types.Part.from_bytes(
+                            data=f.read(),
+                            mime_type=file.mimetype
+                        ),
+                        "Return ONLY JSON: title, make, model, year, reg, engine, mileage"
+                    ],
+                )
+
+            text = getattr(response, "text", "")
+
+            # CLEAN JSON (VERY IMPORTANT FIX)
+            text = text.replace("```json", "").replace("```", "").strip()
+
+            try:
+                ai_data = json.loads(text)
+                car_data.update(ai_data)
+            except:
+                pass
+
+    except Exception as e:
+        print("AI ERROR (ignored):", e)
+
+    # SAVE TO DB
     db = get_db()
     db.execute("""
         INSERT INTO vehicle (
@@ -105,7 +131,7 @@ def add_vehicle():
             engine, fuel, transmission, mileage,
             status, image_url, parts_available, description
         )
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         car_data["title"],
         car_data["make"],
@@ -128,35 +154,19 @@ def add_vehicle():
     return redirect(url_for("index"))
 
 
-# ---------------- UPDATE STATUS ----------------
-@app.route("/status/<int:id>/<status>")
-def update_status(id, status):
-    if not session.get("logged_in"):
-        return "Unauthorized", 403
-
-    db = get_db()
-    db.execute("UPDATE vehicle SET status=? WHERE id=?", (status, id))
-    db.commit()
-    db.close()
-
-    return redirect(url_for("index"))
-
-
-# ---------------- DELETE ----------------
 @app.route("/delete/<int:id>", methods=["POST"])
 def delete_vehicle(id):
     if not session.get("logged_in"):
         return "Unauthorized", 403
 
     db = get_db()
-    db.execute("DELETE FROM vehicle WHERE id=?", (id,))
+    db.execute("DELETE FROM vehicle WHERE id = ?", (id,))
     db.commit()
     db.close()
 
     return redirect(url_for("index"))
 
 
-# ---------------- LOGIN ----------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -165,12 +175,12 @@ def login():
             return redirect(url_for("index"))
         return "Wrong password"
 
-    return '''
-    <form method="POST" style="padding:20px">
-        <input name="password" type="password" placeholder="Password">
+    return """
+    <form method="POST">
+        <input type="password" name="password" />
         <button type="submit">Login</button>
     </form>
-    '''
+    """
 
 
 if __name__ == "__main__":
