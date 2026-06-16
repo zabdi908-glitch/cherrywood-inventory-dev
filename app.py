@@ -12,7 +12,6 @@ DATABASE = os.path.join(BASE_DIR, "database.db")
 
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 
@@ -26,18 +25,18 @@ def get_db():
 def init_db():
     with sqlite3.connect(DATABASE) as conn:
         conn.execute("""
-        CREATE TABLE IF NOT EXISTS vehicle (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            make TEXT,
-            model TEXT,
-            year TEXT,
-            reg TEXT,
-            engine TEXT,
-            mileage TEXT,
-            parts_available TEXT,
-            image_url TEXT
-        )
+            CREATE TABLE IF NOT EXISTS vehicle (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT,
+                make TEXT,
+                model TEXT,
+                year TEXT,
+                reg TEXT,
+                engine TEXT,
+                mileage TEXT,
+                parts_available TEXT,
+                image_url TEXT
+            )
         """)
 
 init_db()
@@ -63,6 +62,7 @@ def index():
         rows = db.execute("SELECT * FROM vehicle ORDER BY id DESC").fetchall()
 
     db.close()
+
     return render_template("index.html", vehicles=rows, search=search)
 
 
@@ -132,7 +132,7 @@ def login():
 
     return """
     <form method="POST">
-        <input type="password" name="password">
+        <input type="password" name="password" placeholder="Password">
         <button type="submit">Login</button>
     </form>
     """
