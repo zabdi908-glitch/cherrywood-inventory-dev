@@ -89,12 +89,7 @@ def index():
     
     vehicles = [VehicleWrapper(row) for row in rows]
     return render_template('index.html', vehicles=vehicles)
-
-@app.route('/cherrywood-gatekeeper', methods=['GET', 'POST'])
-
-    session.clear()
-    return redirect(url_for('index'))
-
+    
 @app.route('/add', methods=['POST'])
 def add_vehicle():
     if not session.get('logged_in'):
