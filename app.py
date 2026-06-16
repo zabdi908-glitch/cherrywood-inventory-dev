@@ -14,7 +14,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
+app.secret_key = 'cherrywood_yard_secret_key_2026'
 # Safe Import Layer: Google GenAI Integration Wrapper
 try:
     from google import genai
@@ -258,7 +258,49 @@ def delete_vehicle(id):
     db.commit()
     db.close()
     return redirect(url_for('index'))
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        if request.form.get('password') == 'cherrywood2026':
+            session['logged_in'] = True
+            return redirect(url_for('index'))
+        else:
+            return '<p style="color: red; text-align: center; margin-top: 20px;">Invalid password. Try again.</p>'
+            
+    return '''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Cherrywood Admin Gate</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body class="bg-[#0b0f19] text-slate-100 min-h-screen flex items-center justify-center p-4">
+        <div class="bg-[#172033]/70 border border-slate-800 p-8 rounded-2xl w-full max-w-sm shadow-2xl backdrop-blur-md">
+            <div class="text-center mb-6">
+                <span class="text-xs font-bold tracking-widest text-orange-500 uppercase block mb-1">Secure Portal</span>
+                <h2 class="text-xl font-black uppercase tracking-tight text-white">Cherrywood Admin</h2>
+            </div>
+            <form method="POST" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Enter Gate Password</label>
+                    <input type="password" name="password" placeholder="••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-700 outline-none focus:border-orange-500/50 transition-colors" autofocus required>
+                </div>
+                <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition-all uppercase tracking-wider text-xs">
+                    Unlock Dashboard
+                </button>
+            </form>
+            <a href="/" class="block text-center text-xs text-slate-500 hover:text-slate-400 mt-4">← Back to Public Site</a>
+        </div>
+    </body>
+    </html>
+    '''
 
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    return redirect(url_for('index'))
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
