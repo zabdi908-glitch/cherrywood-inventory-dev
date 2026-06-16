@@ -3,122 +3,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cherrywood Auto Parts | Used Audi, VW, SEAT & Skoda Parts</title>
+    <title>Cherrywood Auto Parts | Used Audi, VW, SEAT & Škoda Parts</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+        .orange-gradient { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
     </style>
 </head>
-<body class="bg-[#0f172a] text-slate-100 min-h-screen flex flex-col justify-between">
+<body class="bg-[#0f172a] text-slate-200 min-h-screen flex flex-col">
 
-    <header class="w-full bg-[#1e293b] border-b border-slate-800 shadow-xl py-4 sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <a href="/" class="flex items-center gap-3">
-                <div class="bg-[#f97316] text-black p-2 rounded-lg font-black text-xl flex items-center justify-center">
-                    <i class="fa-solid fa-wrench"></i>
+    <nav class="bg-[#111827] border-b border-slate-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <svg class="w-8 h-8 text-[#f97316]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                    </svg>
+                    <div>
+                        <span class="font-black text-base tracking-wider block text-white leading-none">CHERRYWOOD</span>
+                        <span class="text-[10px] font-black text-[#f97316] tracking-widest uppercase block mt-0.5">AUTO PARTS</span>
+                    </div>
                 </div>
-                <div>
-                    <h1 class="text-lg font-black uppercase tracking-wider text-white">Cherrywood</h1>
-                    <p class="text-[10px] uppercase font-bold tracking-widest text-[#f97316] -mt-1">Auto Parts</p>
-                </div>
-            </a>
-            
-            <div class="flex items-center gap-3 text-xs font-semibold text-slate-400">
-                <span class="flex items-center gap-1.5"><i class="fa-solid fa-location-dot text-[#f97316]"></i> Birmingham, West Midlands</span>
-                <span class="text-slate-700">|</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="text-xs font-bold text-slate-400 hidden md:inline-flex items-center gap-1.5">
+                    <i class="fa-solid fa-location-dot text-[#f97316]"></i> Birmingham, West Midlands
+                </span>
+                <a href="https://wa.me/447440369576" target="_blank" class="bg-[#22c55e] text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-lg hover:bg-green-600 transition">
+                    <i class="fa-brands fa-whatsapp text-lg"></i> <span class="hidden sm:inline">WhatsApp Us Now</span>
+                </a>
                 {% if session.get('logged_in') %}
-                    <a href="#admin-panel" class="bg-green-600/10 text-green-400 border border-green-500/20 px-3 py-1.5 rounded-md hover:bg-green-600 hover:text-white transition">Agent Active</a>
+                    <a href="/logout" class="text-xs bg-red-600 px-3 py-1.5 rounded font-bold text-white">Logout Admin</a>
                 {% else %}
-                    <a href="/login" class="hover:text-white transition">Portal Login</a>
+                    <a href="/login" class="text-xs text-slate-400 hover:text-white transition font-bold">Portal Login</a>
                 {% endif %}
             </div>
         </div>
-    </header>
+    </nav>
 
-    <main class="flex-grow">
-        <section class="relative bg-gradient-to-b from-slate-900 via-[#0f172a] to-[#0f172a] py-16 text-center border-b border-slate-900">
-            <div class="max-w-3xl mx-auto px-4">
-                <h2 class="text-4xl sm:text-5xl font-black text-white uppercase tracking-tight leading-none mb-4">
-                    Used <span class="text-[#f97316]">Audi, Volkswagen, SEAT</span> <br class="hidden sm:inline">& <span class="text-[#f97316]">Skoda</span> Parts
-                </h2>
-                <p class="text-slate-400 font-medium text-sm sm:text-base max-w-xl mx-auto mb-6">
-                    Need a part for your vehicle? Send us your vehicle registration plate photo and our yard team will verify stock instantly.
-                </p>
+    <div class="relative bg-slate-950 w-full z-10 block overflow-hidden">
+        <div class="absolute inset-0 w-full h-full z-0 pointer-events-none">
+            <img src="{{ url_for('static', filename='shutter-background.jpg') }}" 
+                 alt="Cherrywood Shutter Graffiti" 
+                 class="w-full h-full object-cover object-center filter contrast-115 brightness-[0.28]">
+            <div class="absolute inset-0 bg-[radial-gradient(#f97316_1px,transparent_1px)] opacity-5 [background-size:24px_24px]"></div>
+            <div class="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/40 to-[#0f172a]"></div>
+        </div>
+
+        <header class="relative pt-16 pb-12 md:pt-24 md:pb-16 px-4 text-center z-10">
+            <div class="max-w-4xl mx-auto">
+                <h1 class="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white mb-6 drop-shadow-md">
+                    Used <span class="text-[#f97316]">Audi, Volkswagen, SEAT & Škoda</span> Parts
+                </h1>
                 
-                <div class="flex flex-wrap justify-center gap-3 mb-8">
-                    <span class="bg-slate-800/80 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full text-xs font-bold uppercase flex items-center gap-1.5"><i class="fa-solid fa-truck text-[#f97316]"></i> UK Wide Delivery</span>
-                    <span class="bg-slate-800/80 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full text-xs font-bold uppercase flex items-center gap-1.5"><i class="fa-solid fa-car text-[#f97316]"></i> Vehicles Breaking Daily</span>
-                    <span class="bg-slate-800/80 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full text-xs font-bold uppercase flex items-center gap-1.5"><i class="fa-solid fa-sterling-sign text-[#f97316]"></i> Scrap Collections</span>
+                <p class="text-base sm:text-lg md:text-xl text-slate-200 max-w-2xl mx-auto mb-2 font-medium">
+                    Need a part for your Audi, VW, SEAT or Škoda? 
+                </p>
+                <p class="text-sm sm:text-base text-slate-400 max-w-xl mx-auto mb-8 font-semibold">
+                    Send us your vehicle registration and our yard team will check our shelves instantly.
+                </p>
+
+                <div class="inline-flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-4 py-1.5 rounded-lg text-xs font-bold text-[#f97316] mb-8 backdrop-blur-sm">
+                    <i class="fa-solid fa-boxes-stacked"></i> <span>1,000s of Tested Parts Ready on Shelves</span>
                 </div>
 
-                <div class="flex justify-center gap-4">
-                    <a href="https://wa.me/447123456789" target="_blank" class="px-6 py-3.5 bg-green-600 text-white font-black uppercase text-xs tracking-wider rounded-xl hover:bg-green-500 transition shadow-lg shadow-green-900/20 flex items-center gap-2">
-                        <i class="fa-brands fa-whatsapp text-lg"></i> WhatsApp Us Now
+                <div class="flex flex-wrap justify-center gap-2.5 font-bold text-xs md:text-sm tracking-wide uppercase text-slate-300 mb-10">
+                    <span class="bg-slate-900/80 backdrop-blur-sm px-3.5 py-2 rounded-full border border-slate-800 flex items-center gap-1.5"><i class="fa-solid fa-truck text-[#f97316]"></i> UK Wide Delivery</span>
+                    <span class="bg-slate-900/80 backdrop-blur-sm px-3.5 py-2 rounded-full border border-slate-800 flex items-center gap-1.5"><i class="fa-solid fa-car text-[#f97316]"></i> Vehicles Breaking Daily</span>
+                    <span class="bg-slate-900/80 backdrop-blur-sm px-3.5 py-2 rounded-full border border-slate-800 flex items-center gap-1.5"><i class="fa-solid fa-pound-sign text-[#f97316]"></i> Scrap Collections</span>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-md mx-auto sm:max-w-none">
+                    <a href="https://wa.me/447440369576" target="_blank" class="w-full sm:w-auto px-8 py-3.5 bg-[#22c55e] text-white rounded-xl font-black text-base md:text-lg flex items-center justify-center gap-3 shadow-xl shadow-green-950/40 hover:bg-green-600 transition duration-150">
+                        <i class="fa-brands fa-whatsapp text-2xl"></i> WhatsApp Us
                     </a>
-                    <a href="tel:+441212345678" class="px-6 py-3.5 bg-slate-800 text-white border border-slate-700 font-black uppercase text-xs tracking-wider rounded-xl hover:bg-slate-700 transition flex items-center gap-2">
-                        <i class="fa-solid fa-phone text-slate-400"></i> Call Office
+                    <a href="tel:07440369576" class="w-full sm:w-auto px-8 py-3.5 bg-slate-900/90 backdrop-blur-sm text-white rounded-xl font-black text-base md:text-lg flex items-center justify-center gap-3 border border-slate-800 hover:bg-slate-700 transition duration-150">
+                        <i class="fa-solid fa-phone text-xl text-[#f97316]"></i> Call Office
                     </a>
+                </div>
+            </div>
+        </header>
+
+        <section class="orange-gradient text-black font-black uppercase text-xs sm:text-sm py-3.5 tracking-wider relative z-20 shadow-md">
+            <div class="max-w-7xl mx-auto px-4 flex flex-wrap justify-center items-center gap-x-8 gap-y-2 text-center">
+                <span>✓ Licensed Vehicle Recycler</span>
+                <span>✓ Nationwide UK Delivery</span>
+                <span>✓ Fully Tested Parts</span>
+                <span>✓ Warranty Available</span>
+                <span>✓ Fast WhatsApp Support</span>
+            </div>
+        </section>
+
+        <section class="max-w-3xl mx-auto w-full px-4 pt-12 pb-14 relative z-20">
+            <div class="bg-[#1e293b]/95 backdrop-blur-md p-6 sm:p-8 rounded-2xl border-2 border-[#f97316] shadow-2xl">
+                <h3 class="text-xl font-black uppercase text-[#f97316] tracking-wide mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass"></i> Quick Stock Check Enquiry
+                </h3>
+                <p class="text-xs text-slate-400 mb-6 font-medium">Can't find your vehicle listed below? Send an instant check directly to our yard desk.</p>
+                
+                <form action="https://wa.me/447440369576" method="GET" target="_blank" class="grid grid-cols-1 sm:grid-cols-2 gap-4" onsubmit="handleStockCheck(event)">
+                    <div>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-1.5 tracking-wider">1. Enter UK Registration</label>
+                        <div class="flex shadow-sm rounded-lg overflow-hidden">
+                            <span class="bg-blue-600 text-white px-3.5 flex items-center font-bold text-xs select-none">UK</span>
+                            <input id="form-reg" type="text" placeholder="e.g. AB12 XYZ" class="w-full p-3 bg-yellow-400 text-black font-black uppercase tracking-wider text-lg placeholder-yellow-700/60 outline-none text-center" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-1.5 tracking-wider">2. Part Required</label>
+                        <input id="form-part" type="text" placeholder="e.g. Starter Motor, Gearbox, Headlight" class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white font-medium placeholder-slate-500 focus:border-[#f97316] outline-none" required>
+                    </div>
+                    <div class="sm:col-span-2 mt-2">
+                        <button type="submit" class="w-full p-4 bg-[#f97316] text-black font-black uppercase text-base tracking-wider rounded-xl hover:bg-orange-500 cursor-pointer shadow-lg transition flex items-center justify-center gap-2">
+                            Check Live Stock Availability <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </div> 
+
+    <main class="bg-[#0f172a] flex-1 w-full">
+        <section class="max-w-7xl mx-auto px-4 py-10 w-full">
+            <h2 class="text-2xl font-black uppercase tracking-wider text-center text-white mb-2">Popular Parts In Stock</h2>
+            <p class="text-sm text-center text-slate-400 mb-10 max-w-md mx-auto">We stock thousands of shelved mechanical components ready for collection or shipping.</p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group cursor-pointer" onclick="document.getElementById('form-part').value='Engine'; document.getElementById('form-part').focus();">
+                    <i class="fa-solid fa-car-battery text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
+                    <span class="font-bold text-sm tracking-wide uppercase">Engines</span>
+                </div>
+                <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group cursor-pointer" onclick="document.getElementById('form-part').value='Gearbox'; document.getElementById('form-part').focus();">
+                    <i class="fa-solid fa-gear text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
+                    <span class="font-bold text-sm tracking-wide uppercase">Gearboxes</span>
+                </div>
+                <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group cursor-pointer" onclick="document.getElementById('form-part').value='Turbo'; document.getElementById-[#form-part].focus();">
+                    <i class="fa-solid fa-wind text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
+                    <span class="font-bold text-sm tracking-wide uppercase">Turbos</span>
+                </div>
+                <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group cursor-pointer" onclick="document.getElementById('form-part').value='ECU'; document.getElementById('form-part').focus();">
+                    <i class="fa-solid fa-microchip text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
+                    <span class="font-bold text-sm tracking-wide uppercase">ECUs</span>
+                </div>
+                <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group cursor-pointer" onclick="document.getElementById('form-part').value='Door'; document.getElementById('form-part').focus();">
+                    <i class="fa-solid fa-door-closed text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
+                    <span class="font-bold text-sm tracking-wide uppercase">Doors</span>
                 </div>
             </div>
         </section>
 
-        <section class="max-w-6xl mx-auto px-4 py-12">
-            <h3 class="text-xs font-black uppercase text-[#f97316] tracking-widest mb-2">Latest Salvage Yard Arrivals</h3>
-            <h4 class="text-xl font-black text-white uppercase tracking-wide mb-8">Vehicles Currently Breaking For Spares</h4>
+        <section class="max-w-7xl mx-auto px-4 py-8 border-t border-slate-800 w-full">
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h2 class="text-2xl font-black uppercase tracking-wider text-white">Latest Arrivals & Breakers</h2>
+                    <p class="text-xs text-slate-400 mt-1">Select a matching donor vehicle to request parts directly</p>
+                </div>
+                {% if session.get('logged_in') %}
+                    <button onclick="document.getElementById('admin-panel').scrollIntoView({behavior: 'smooth'})" class="px-4 py-2 bg-green-600 text-white rounded font-bold text-xs uppercase">
+                        + Add New Stock
+                    </button>
+                {% endif %}
+            </div>
 
             {% if not vehicles %}
-            <div class="text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800">
-                <i class="fa-solid fa-car-tunnel text-4xl text-slate-700 mb-3"></i>
-                <p class="text-sm font-bold text-slate-500 uppercase tracking-wider">No breaker listings uploaded yet</p>
-                <p class="text-xs text-slate-600 mt-1">Log into the portal desk to add vehicles via photo automation.</p>
+            <div class="border-2 border-dashed border-slate-700 bg-[#111827] rounded-2xl p-12 text-center">
+                <i class="fa-solid fa-car text-[#f97316] text-3xl mb-4 block"></i>
+                <h4 class="text-lg font-bold text-white uppercase tracking-wider mb-2">No Vehicles Currently Displayed</h4>
+                <p class="text-sm text-slate-400 max-w-md mx-auto mb-6">Log into the admin management panel to snap a photo and list items instantly.</p>
             </div>
             {% else %}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {% for car in vehicles %}
-                <div class="bg-[#1e293b] rounded-2xl overflow-hidden border border-slate-800/80 shadow-xl flex flex-col justify-between relative group">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {% for vehicle in vehicles %}
+                <div class="bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between relative">
                     
                     {% if session.get('logged_in') %}
-                    <form action="/delete/{{ car.id }}" method="POST" class="absolute top-3 right-3 z-10" onsubmit="return confirm('Remove vehicle from website inventory?');">
-                        <button type="submit" class="bg-red-600/90 hover:bg-red-700 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs transition shadow-lg border border-red-500/20 cursor-pointer">
+                    <form action="/delete/{{ vehicle.id }}" method="POST" class="absolute top-3 right-3 z-30" onsubmit="return confirm('Remove this vehicle entirely from listings?');">
+                        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs shadow transition cursor-pointer">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </form>
                     {% endif %}
 
                     <div>
-                        <div class="h-48 w-full bg-slate-900 overflow-hidden relative border-b border-slate-800">
-                            <img src="{{ car.image_url }}" alt="{{ car.title }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
-                            <span class="absolute bottom-3 left-3 bg-[#f97316] text-black font-black uppercase text-[10px] px-2.5 py-1 rounded-md tracking-wider shadow">
-                                {{ car.status }}
+                        <div class="relative h-56 bg-slate-900 border-b border-slate-800">
+                            <img src="{{ vehicle.image_url }}" alt="{{ vehicle.title }}" class="w-full h-full object-cover">
+                            <span class="absolute bottom-3 left-3 bg-[#f97316] text-black font-black text-xs uppercase px-3 py-1 rounded-md tracking-wider">
+                                {{ vehicle.status }}
                             </span>
                         </div>
-
-                        <div class="p-5">
-                            <h5 class="text-base font-black text-white uppercase tracking-wide mb-1 leading-tight">{{ car.title }}</h5>
-                            
-                            <div class="inline-block bg-[#facc15] text-black font-black text-xs px-2.5 py-0.5 rounded border border-black/10 shadow-sm font-mono mb-4">
-                                {{ car.reg }}
+                        <div class="p-6">
+                            <h3 class="text-xl font-black text-white mb-2 leading-tight uppercase">{{ vehicle.title }}</h3>
+                            <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs font-semibold text-slate-400 mb-4 border-b border-slate-800 pb-4">
+                                <div><span class="text-slate-500">Make:</span> <span class="text-white">{{ vehicle.make }}</span></div>
+                                <div><span class="text-slate-500">Model:</span> <span class="text-white">{{ vehicle.model }}</span></div>
+                                <div><span class="text-slate-500">Year:</span> <span class="text-white">{{ vehicle.year }}</span></div>
+                                <div><span class="text-slate-500">Reg:</span> <span class="bg-yellow-400 text-black px-1.5 py-0.5 rounded font-mono font-bold uppercase ml-1 shadow-sm">{{ vehicle.reg }}</span></div>
+                                <div><span class="text-slate-500">Engine:</span> <span class="text-white">{{ vehicle.engine }}</span></div>
+                                <div><span class="text-slate-500">Fuel:</span> <span class="text-white">{{ vehicle.fuel }}</span></div>
+                                <div><span class="text-slate-500">Trans:</span> <span class="text-white">{{ vehicle.transmission }}</span></div>
+                                <div><span class="text-slate-500">Mileage:</span> <span class="text-white">{{ vehicle.mileage }}</span></div>
                             </div>
-
-                            <div class="grid grid-cols-2 gap-y-2 gap-x-4 border-t border-b border-slate-700/50 py-3 mb-4 text-xs font-semibold text-slate-400">
-                                <div><span class="text-slate-500 font-medium">Year:</span> <span class="text-white">{{ car.year }}</span></div>
-                                <div><span class="text-slate-500 font-medium">Engine:</span> <span class="text-white">{{ car.engine }}</span></div>
-                                <div><span class="text-slate-500 font-medium">Fuel:</span> <span class="text-white">{{ car.fuel }}</span></div>
-                                <div><span class="text-slate-500 font-medium">Gearbox:</span> <span class="text-white">{{ car.transmission }}</span></div>
-                            </div>
-
-                            <p class="text-xs text-slate-400 font-medium leading-relaxed mb-4">{{ car.description }}</p>
+                            {% if vehicle.description %}
+                                <p class="text-xs text-slate-300 italic mb-4 leading-relaxed">{{ vehicle.description }}</p>
+                            {% endif %}
                         </div>
                     </div>
 
-                    <div class="px-5 pb-5 pt-0">
-                        <p class="text-[10px] font-black uppercase text-slate-500 tracking-wider mb-2">Available Components:</p>
-                        <div class="flex flex-wrap gap-1.5">
-                            {% for part in car.get_parts_list() %}
-                                <span class="bg-slate-900 text-slate-300 text-[10px] px-2.5 py-1 rounded font-bold border border-slate-800/80">{{ part }}</span>
-                            {% endfor %}
+                    <div class="px-6 pb-6">
+                        {% if vehicle.get_parts_list() %}
+                        <div class="mb-5">
+                            <span class="block text-[10px] font-black uppercase text-slate-500 tracking-wider mb-2">Available Parts:</span>
+                            <div class="flex flex-wrap gap-1">
+                                {% for part in vehicle.get_parts_list() %}
+                                    <span class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[11px] font-medium border border-slate-700/50">{{ part }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="pt-2">
+                            <a href="https://wa.me/447440369576?text=Hi,%20I%20am%20interested%20in%20parts%20from%20the%20{{ vehicle.title }}%20(Reg:%20{{ vehicle.reg }}).%20Do%20you%20have%20parts%20available?" target="_blank" class="w-full bg-green-600 text-white text-center py-3 rounded-lg text-xs font-bold uppercase tracking-wider shadow hover:bg-green-700 transition flex items-center justify-center gap-1.5">
+                                <i class="fa-brands fa-whatsapp text-sm"></i> Request Components
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -126,55 +232,83 @@
             </div>
             {% endif %}
         </section>
-
-        {% if session.get('logged_in') %}
-        <section id="admin-panel" class="bg-[#1e293b] py-12 border-t-4 border-green-500 w-full mt-12">
-            <div class="max-w-xl mx-auto px-4">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-xl font-black text-white uppercase tracking-wider flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span> AI Salvage Agent Portal
-                    </h2>
-                    <a href="/logout" class="text-xs text-red-400 hover:underline">Log Out Portal</a>
-                </div>
-                
-                <div class="bg-[#0f172a] p-6 rounded-xl border border-slate-700/60 shadow-inner">
-                    <p class="text-xs text-slate-400 font-medium mb-4">
-                        Snap or select a photo of the vehicle. Our AI Agent will scan the image, auto-extract specifications, and publish it instantly.
-                    </p>
-
-                    <form action="/add" method="POST" enctype="multipart/form-data" onsubmit="showLoadingSpinner()" class="space-y-4">
-                        <div>
-                            <label class="block text-[11px] font-black uppercase text-slate-400 mb-2 tracking-wider">Upload Donor Car Photo</label>
-                            <input type="file" name="vehicle_photo" accept="image/*" capture="environment" 
-                                   class="w-full text-sm text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-black file:uppercase file:bg-[#f97316] file:text-black hover:file:bg-orange-500 file:cursor-pointer bg-slate-900 p-3 rounded-lg border border-slate-800 outline-none" required>
-                        </div>
-
-                        <div id="upload-btn-container" class="pt-2">
-                            <button type="submit" class="w-full p-3.5 bg-green-600 text-white font-black uppercase text-xs tracking-wider rounded-lg hover:bg-green-500 transition shadow-lg flex items-center justify-center gap-2 cursor-pointer">
-                                <i class="fa-solid fa-robot"></i> Run AI Processing & Publish
-                            </button>
-                        </div>
-
-                        <div id="upload-loader" class="hidden text-center py-4 text-orange-400 font-bold text-xs uppercase tracking-widest animate-pulse">
-                            <i class="fa-solid fa-circle-notch animate-spin text-lg mr-2 inline-block align-middle"></i> AI is parsing image specifications...
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </section>
-
-        <script>
-            function showLoadingSpinner() {
-                document.getElementById('upload-btn-container').classList.add('hidden');
-                document.getElementById('upload-loader').classList.remove('hidden');
-            }
-        </script>
-        {% endif %}
     </main>
 
-    <footer class="bg-slate-950 py-6 border-t border-slate-900 text-center text-xs font-semibold text-slate-600 w-full">
-        <p>&copy; 2026 Cherrywood Auto Parts Inventory Management. Powered by AI Vision Automation.</p>
+    {% if session.get('logged_in') %}
+    <section id="admin-panel" class="bg-[#1e293b] py-12 border-t-4 border-green-500 w-full mt-12">
+        <div class="max-w-xl mx-auto px-4">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-black text-white uppercase tracking-wider flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span> AI Salvage Agent Portal Active
+                </h2>
+                <a href="/logout" class="text-xs text-red-400 hover:underline">Log Out Portal</a>
+            </div>
+            
+            <div class="bg-[#0f172a] p-6 rounded-xl border border-slate-700/60 shadow-inner">
+                <p class="text-xs text-slate-400 font-medium mb-4">
+                    Snap or select a photo of the vehicle. Our AI Agent will scan the image, auto-extract specifications, and publish it instantly.
+                </p>
+
+                <form action="/add" method="POST" enctype="multipart/form-data" onsubmit="showLoadingSpinner()" class="space-y-4">
+                    <div>
+                        <label class="block text-[11px] font-black uppercase text-slate-400 mb-2 tracking-wider">Upload Donor Car Photo</label>
+                        <input type="file" name="vehicle_photo" accept="image/*" capture="environment" 
+                               class="w-full text-sm text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-black file:uppercase file:bg-[#f97316] file:text-black hover:file:bg-orange-500 file:cursor-pointer bg-slate-900 p-3 rounded-lg border border-slate-800 outline-none" required>
+                    </div>
+
+                    <div id="upload-btn-container" class="pt-2">
+                        <button type="submit" class="w-full p-3.5 bg-green-600 text-white font-black uppercase text-xs tracking-wider rounded-lg hover:bg-green-500 transition shadow-lg flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-robot"></i> Run AI Processing & Publish
+                        </button>
+                    </div>
+
+                    <div id="upload-loader" class="hidden text-center py-4 text-orange-400 font-bold text-xs uppercase tracking-widest animate-pulse">
+                        <i class="fa-solid fa-circle-notch animate-spin text-lg mr-2 inline-block align-middle"></i> AI is parsing image specifications...
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        function showLoadingSpinner() {
+            document.getElementById('upload-btn-container').classList.add('hidden');
+            document.getElementById('upload-loader').classList.remove('hidden');
+        }
+    </script>
+    {% endif %}
+
+    <section class="orange-gradient text-black py-12 font-medium w-full">
+        <div class="max-w-4xl mx-auto text-center px-4">
+            <h2 class="text-3xl font-black uppercase mb-2">Can't Find The Part You Need?</h2>
+            <p class="font-bold uppercase text-sm tracking-wide mb-8 opacity-90">Contact Us Today – Let Our Yard Team Find It For You</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto font-black text-sm uppercase">
+                <a href="tel:07440369576" class="bg-black text-white p-4 rounded-xl shadow-lg hover:bg-neutral-900 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-phone text-[#f97316]"></i> 07440 369576
+                </a>
+                <a href="mailto:cherrywoodparts@outlook.com" class="bg-black text-white p-4 rounded-xl shadow-lg hover:bg-neutral-900 transition flex items-center justify-center gap-2 text-xs lowercase">
+                    <i class="fa-solid fa-envelope text-[#f97316]"></i> cherrywoodparts@outlook.com
+                </a>
+                <a href="https://wa.me/447440369576" target="_blank" class="bg-[#22c55e] text-white p-4 rounded-xl shadow-lg hover:bg-green-600 transition flex items-center justify-center gap-2">
+                    <i class="fa-brands fa-whatsapp text-lg"></i> WhatsApp Us
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-[#0b0f19] border-t border-slate-900 py-6 text-center text-slate-500 text-xs font-semibold w-full">
+         <p>&copy; 2026 Cherrywood Auto Parts. All Rights Reserved. Powered by AI Automation.</p>
     </footer>
 
+    <script>
+        function handleStockCheck(e) {
+            e.preventDefault();
+            const reg = document.getElementById('form-reg').value.toUpperCase();
+            const part = document.getElementById('form-part').value;
+            const message = `Hi, checking live stock availability for Reg: ${reg}, Part Needed: ${part}.`;
+            const whatsappUrl = `https://wa.me/447440369576?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+        }
+    </script>
 </body>
 </html>
