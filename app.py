@@ -1,14 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
 import os
-import json
 import uuid
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev_secret")
 
-# ---------------- DB SETUP ----------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DATABASE = os.path.join(BASE_DIR, "database.db")
 
@@ -18,6 +16,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 
+# ---------------- DATABASE ----------------
 def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
@@ -35,30 +34,39 @@ def init_db():
             year TEXT,
             reg TEXT,
             engine TEXT,
-            fuel TEXT,
-            transmission TEXT,
             mileage TEXT,
-            status TEXT,
-            image_url TEXT,
             parts_available TEXT,
-            description TEXT
+            image_url TEXT
         )
         """)
 
-
 init_db()
 
-# ---------------- ROUTES ----------------
 
+# ---------------- HOME ----------------
 @app.route("/")
 def index():
+    search = request.args.get("search", "")
+
     db = get_db()
-    rows = db.execute("SELECT * FROM vehicle ORDER BY id DESC").fetchall()
+
+    if search:
+        rows = db.execute("""
+            SELECT * FROM vehicle
+            WHERE title LIKE ?
+            OR make LIKE ?
+            OR model LIKE ?
+            OR parts_available LIKE ?
+            ORDER BY id DESC
+        """, (f"%{search}%", f"%{search}%", f"%{search}%", f"%{search}%")).fetchall()
+    else:
+        rows = db.execute("SELECT * FROM vehicle ORDER BY id DESC").fetchall()
+
     db.close()
+    return render_template("index.html", vehicles=rows, search=search)
 
-    return render_template("index.html", vehicles=rows)
 
-
+# ---------------- ADD ----------------
 @app.route("/add", methods=["POST"])
 def add_vehicle():
     if not session.get("logged_in"):
@@ -66,7 +74,7 @@ def add_vehicle():
 
     file = request.files.get("vehicle_photo")
     if not file or file.filename == "":
-        return "No file uploaded", 400
+        return "No file", 400
 
     filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
     filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
@@ -74,78 +82,23 @@ def add_vehicle():
 
     image_url = url_for("static", filename=f"uploads/{filename}")
 
-    # DEFAULT SAFE DATA (NEVER BREAKS APP)
-    car_data = {
-        "title": request.form.get("title", "New Vehicle"),
-        "make": request.form.get("make", "Unknown"),
-        "model": request.form.get("model", "Unknown"),
-        "year": request.form.get("year", ""),
-        "reg": request.form.get("reg", ""),
-        "engine": request.form.get("engine", ""),
-        "fuel": "",
-        "transmission": "",
-        "mileage": request.form.get("mileage", ""),
-        "parts_available": request.form.get("parts_available", ""),
-        "description": request.form.get("description", "")
-    }
-
-    # OPTIONAL AI (SAFE — NEVER BREAKS APP)
-    try:
-        from google import genai
-        from google.genai import types
-
-        if os.environ.get("GEMINI_API_KEY"):
-            client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-
-            with open(filepath, "rb") as f:
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=[
-                        types.Part.from_bytes(
-                            data=f.read(),
-                            mime_type=file.mimetype
-                        ),
-                        "Return ONLY JSON: title, make, model, year, reg, engine, mileage"
-                    ],
-                )
-
-            text = getattr(response, "text", "")
-
-            # CLEAN JSON (VERY IMPORTANT FIX)
-            text = text.replace("```json", "").replace("```", "").strip()
-
-            try:
-                ai_data = json.loads(text)
-                car_data.update(ai_data)
-            except:
-                pass
-
-    except Exception as e:
-        print("AI ERROR (ignored):", e)
-
-    # SAVE TO DB
     db = get_db()
     db.execute("""
         INSERT INTO vehicle (
             title, make, model, year, reg,
-            engine, fuel, transmission, mileage,
-            status, image_url, parts_available, description
+            engine, mileage, parts_available, image_url
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-        car_data["title"],
-        car_data["make"],
-        car_data["model"],
-        car_data["year"],
-        car_data["reg"],
-        car_data["engine"],
-        car_data["fuel"],
-        car_data["transmission"],
-        car_data["mileage"],
-        "Breaking",
-        image_url,
-        car_data["parts_available"],
-        car_data["description"]
+        request.form.get("title"),
+        request.form.get("make"),
+        request.form.get("model"),
+        request.form.get("year"),
+        request.form.get("reg"),
+        request.form.get("engine"),
+        request.form.get("mileage"),
+        request.form.get("parts_available"),
+        image_url
     ))
 
     db.commit()
@@ -154,6 +107,7 @@ def add_vehicle():
     return redirect(url_for("index"))
 
 
+# ---------------- DELETE ----------------
 @app.route("/delete/<int:id>", methods=["POST"])
 def delete_vehicle(id):
     if not session.get("logged_in"):
@@ -167,6 +121,7 @@ def delete_vehicle(id):
     return redirect(url_for("index"))
 
 
+# ---------------- LOGIN ----------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -177,10 +132,17 @@ def login():
 
     return """
     <form method="POST">
-        <input type="password" name="password" />
+        <input type="password" name="password">
         <button type="submit">Login</button>
     </form>
     """
+
+
+# ---------------- LOGOUT (ADDED) ----------------
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("index"))
 
 
 if __name__ == "__main__":
