@@ -5,9 +5,9 @@ import json
 from werkzeug.utils import secure_filename
 from flask_wtf.csrf import CSRFProtect
 
- app = Flask(__name__)
- csrf = CSRFProtect(app)
- # Pulls secret key safely or defaults to development...
+app = Flask(__name__)
+csrf = CSRFProtect(app)
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'cherrywood_yard_secret_key_2026')
 
 DATABASE = 'database.db'
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
@@ -224,7 +224,6 @@ def delete_vehicle(id):
     db.commit()
     db.close()
     return redirect(url_for('index'))
-
 @app.route('/login', methods=['GET', 'POST'])
 @csrf.exempt
 def login():
