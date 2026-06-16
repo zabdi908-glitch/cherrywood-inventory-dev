@@ -3,186 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Specialist used Audi, Volkswagen, SEAT & Škoda parts. Thousands of tested parts in stock. UK wide delivery from Birmingham.">
-    <title>Cherrywood Auto Parts | Used Audi, VW, SEAT & Škoda Parts</title>
-
-    <link rel="preload" href="{{ url_for('static', filename='shutter-background.jpg') }}" as="image">
-
+    <title>Cherrywood Auto Parts | Live Salvage Inventory</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-        .hero-bg {
-            background-image: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.95)),
-                              url('{{ url_for("static", filename="shutter-background.jpg") }}');
-        }
-        .card-hover {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .card-hover:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.2), 0 8px 10px -6px rgb(0 0 0 / 0.2);
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #0b0f19; }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(249, 115, 22, 0.15); }
+        .glass-card { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.05); }
     </style>
 </head>
+<body class="text-slate-100 min-h-screen selection:bg-orange-500 selection:text-white">
 
-<body class="bg-[#0f172a] text-slate-200 min-h-screen flex flex-col">
-    <nav class="bg-[#111827] border-b border-slate-800 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2">
-                    <svg class="w-8 h-8 text-[#f97316]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                    </svg>
-                    <div>
-                        <span class="font-black text-base tracking-wider block text-white leading-none">CHERRYWOOD</span>
-                        <span class="text-[10px] font-black text-[#f97316] tracking-widest uppercase block -mt-0.5">AUTO PARTS</span>
-                    </div>
-                </div>
+    <div class="bg-slate-950 border-b border-slate-800 text-xs text-slate-400 py-2.5 px-4">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div class="flex items-center gap-4">
+                <span class="flex items-center gap-1.5 text-orange-500 font-medium">
+                    <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+                    ✓ LICENSED VEHICLE RECYCLER
+                </span>
+                <span>📍 Birmingham, West Midlands</span>
             </div>
             <div class="flex items-center gap-4">
-                <span class="text-xs font-bold text-slate-400 hidden md:flex items-center gap-1.5">
-                    <i class="fa-solid fa-location-dot text-[#f97316]"></i> Birmingham, West Midlands
-                </span>
-                <a href="https://wa.me/447440369576" target="_blank"
-                   class="bg-[#22c55e] hover:bg-green-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all active:scale-95">
-                    <i class="fa-brands fa-whatsapp text-lg"></i>
-                    <span class="hidden sm:inline">WhatsApp Us Now</span>
+                <a href="https://wa.me/YOUR_NUMBER" target="_blank" class="bg-green-600 hover:bg-green-500 text-white font-bold py-1 px-3 rounded text-[11px] transition-all flex items-center gap-1">
+                    💬 WhatsApp Us Now
                 </a>
                 {% if session.get('logged_in') %}
-                    <a href="/logout" class="text-xs bg-red-600 hover:bg-red-700 px-4 py-2 rounded-xl font-bold text-white transition">Logout</a>
+                    <a href="/logout" class="bg-red-600 hover:bg-red-500 text-white font-bold py-1 px-3 rounded text-[11px] transition-all">Logout Admin</a>
                 {% endif %}
             </div>
         </div>
-    </nav>
-
-    <div class="relative hero-bg bg-cover bg-center bg-no-repeat text-center pt-16 pb-16 md:pt-24 md:pb-24">
-        <div class="max-w-4xl mx-auto px-4 relative z-10">
-            <h1 class="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter text-white mb-6">
-                Used <span class="text-[#f97316]">Audi, VW, SEAT & Škoda</span> Parts
-            </h1>
-            <p class="text-lg md:text-xl text-slate-200 max-w-2xl mx-auto mb-3">
-                Need a part for your Audi, Volkswagen, SEAT or Škoda?
-            </p>
-            <p class="text-slate-400 max-w-xl mx-auto mb-8">
-                Send us your registration — our yard team checks stock instantly.
-            </p>
-            <div class="inline-flex items-center gap-2 bg-slate-900/90 border border-slate-700 px-5 py-2 rounded-2xl text-sm font-bold text-[#f97316] mb-8">
-                <i class="fa-solid fa-boxes-stacked"></i>
-                1,000s of Tested Parts Ready On Shelves
-            </div>
-            <div class="flex flex-wrap justify-center gap-3 mb-10">
-                <div class="bg-slate-900/80 backdrop-blur-sm px-5 py-2.5 rounded-2xl border border-slate-700 flex items-center gap-2 text-sm">
-                    <i class="fa-solid fa-truck text-[#f97316]"></i> UK Wide Delivery
-                </div>
-                <div class="bg-slate-900/80 backdrop-blur-sm px-5 py-2.5 rounded-2xl border border-slate-700 flex items-center gap-2 text-sm">
-                    <i class="fa-solid fa-car text-[#f97316]"></i> Vehicles Breaking Daily
-                </div>
-                <div class="bg-slate-900/80 backdrop-blur-sm px-5 py-2.5 rounded-2xl border border-slate-700 flex items-center gap-2 text-sm">
-                    <i class="fa-solid fa-shield-halved text-[#f97316]"></i> Warranty Available
-                </div>
-            </div>
-            <div class="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
-                <a href="https://wa.me/447440369576" target="_blank"
-                   class="flex-1 sm:flex-none px-8 py-4 bg-[#22c55e] hover:bg-green-600 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-green-900/30">
-                    <i class="fa-brands fa-whatsapp text-2xl"></i>
-                    WhatsApp Us
-                </a>
-                <a href="tel:07440369576"
-                   class="flex-1 sm:flex-none px-8 py-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all">
-                    <i class="fa-solid fa-phone text-xl text-[#f97316]"></i>
-                    Call Office
-                </a>
-            </div>
-        </div>
     </div>
 
-    <div class="bg-gradient-to-r from-orange-500 to-orange-600 text-black py-4 text-sm font-black uppercase tracking-wider z-10 relative shadow-md">
-        <div class="max-w-7xl mx-auto px-4 flex flex-wrap justify-center items-center gap-x-8 gap-y-2 text-center">
-            <span>✓ Licensed Vehicle Recycler</span>
-            <span>✓ Nationwide UK Delivery</span>
-            <span>✓ Fully Tested Parts</span>
-            <span>✓ Warranty Available</span>
-            <span>✓ Fast WhatsApp Support</span>
-        </div>
-    </div>
-
-    <section class="max-w-3xl mx-auto w-full px-4 -mt-12 mb-12 relative z-30">
-        <div class="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-3xl p-6 md:p-8 shadow-2xl">
-            <h2 class="text-2xl font-black text-[#f97316] mb-2 flex items-center gap-3">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                Quick Stock Check Enquiry
-            </h2>
-            <p class="text-slate-400 mb-6 text-sm">Can't find your vehicle listed below? Send an instant check directly to our yard desk.</p>
+    <header class="relative border-b border-slate-800/80 bg-gradient-to-b from-slate-950 to-slate-900/50 px-4 py-8">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+                <div class="flex items-center gap-2.5 mb-2">
+                    <span class="text-3xl">🛠️</span>
+                    <h1 class="text-2xl font-extrabold tracking-tight text-white uppercase">
+                        Cherrywood <span class="text-orange-500">Auto Parts</span>
+                    </h1>
+                </div>
+                <p class="text-sm text-slate-400 max-w-xl">Premium vehicle dismantlers and salvage experts. Search our live breaker arrivals processed natively by on-site computer vision intelligence.</p>
+            </div>
             
-            <form id="stock-form" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">1. Enter UK Registration</label>
-                    <div class="flex rounded-2xl overflow-hidden shadow-inner border border-slate-800">
-                        <span class="bg-blue-600 text-white px-5 flex items-center font-bold text-xs select-none">UK</span>
-                        <input id="form-reg" type="text" placeholder="e.g. AB12 XYZ"
-                               class="flex-1 bg-yellow-400 text-black font-black uppercase tracking-widest text-xl py-4 px-5 outline-none placeholder:text-yellow-800/50 text-center" required>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">2. Part Required</label>
-                    <input id="form-part" type="text" placeholder="e.g. Starter Motor, Gearbox, Headlight"
-                           class="w-full bg-[#0f172a] border border-slate-700 rounded-2xl py-4 px-5 text-slate-100 outline-none focus:border-[#f97316] transition-colors placeholder:text-slate-500" required>
-                </div>
-                <div class="sm:col-span-2">
-                    <button type="submit"
-                            class="w-full py-4 bg-[#f97316] hover:bg-orange-500 text-black font-black uppercase tracking-widest rounded-2xl text-base transition-all active:scale-[0.985] shadow-lg flex items-center justify-center gap-2 cursor-pointer">
-                        Check Live Stock Availability <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </div>
-            </form>
+            {% if session.get('logged_in') %}
+            <div>
+                <button id="addStockBtn" class="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 shadow-lg shadow-green-900/20 transition-all text-sm uppercase tracking-wider scale-100 hover:scale-[1.02] active:scale-[0.98]">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+                    </svg>
+                    + Add New Stock (AI Scan)
+                </button>
+            </div>
+            {% endif %}
         </div>
-    </section>
+    </header>
 
-    <main class="bg-[#0f172a] flex-1 w-full">
-        <section class="max-w-7xl mx-auto px-4 py-8 border-t border-slate-800 w-full">
-            <div class="flex items-center justify-between mb-8">
-                <div>
-                    <h2 class="text-2xl font-black uppercase tracking-wider text-white">Latest Arrivals & Breakers</h2>
-                    <p class="text-xs text-slate-400 mt-1">Select a matching donor vehicle to request parts directly</p>
-                </div>
-                {% if session.get('logged_in') %}
-                    <button onclick="document.getElementById('admin-panel').scrollIntoView({behavior: 'smooth'})" class="px-4 py-2 bg-green-600 text-white rounded-xl font-bold text-xs uppercase shadow hover:bg-green-500 transition">
-                        + Add New Stock
-                    </button>
-                {% endif %}
+    <main class="max-w-7xl mx-auto px-4 py-12 space-y-16">
+        
+        <section class="space-y-6">
+            <div class="flex justify-between items-baseline border-b border-slate-800 pb-4">
+                <h2 class="text-xl font-bold tracking-tight uppercase text-white flex items-center gap-2">
+                    <span class="text-orange-500">⚡</span> Latest Arrivals & Breakers
+                </h2>
+                <p class="text-xs text-slate-400">Showing newest yard intakes first</p>
             </div>
 
             {% if not vehicles %}
-            <div class="border-2 border-dashed border-slate-700 bg-[#111827] rounded-3xl p-12 text-center">
-                <i class="fa-solid fa-car text-[#f97316] text-3xl mb-4 block"></i>
-                <h4 class="text-lg font-bold text-white uppercase tracking-wider mb-2">No Vehicles Currently Displayed</h4>
+            <div class="border border-slate-800 bg-slate-900/20 rounded-2xl p-16 text-center max-w-md mx-auto space-y-4">
+                <span class="text-5xl block opacity-40">🚘</span>
+                <h3 class="text-slate-200 font-semibold text-lg">No Vehicles Logged Yet</h3>
+                <p class="text-sm text-slate-500">The breaker yard database is currently empty. Use the admin gateway portal to initialize an AI scan on your first vehicle arrival.</p>
             </div>
             {% else %}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {% for vehicle in vehicles %}
-                <div class="bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between relative card-hover">
-                    {% if session.get('logged_in') %}
-                    <div class="absolute top-3 right-3 z-30 flex items-center gap-2">
-                        <button onclick="openEditModal('{{ vehicle.id }}', '{{ vehicle.title|e }}', '{{ vehicle.make|e }}', '{{ vehicle.model|e }}', '{{ vehicle.year|e }}', '{{ vehicle.reg|e }}', '{{ vehicle.engine|e }}', '{{ vehicle.fuel|e }}', '{{ vehicle.transmission|e }}', '{{ vehicle.mileage|e }}', '{{ vehicle.parts_available|e }}', '{{ vehicle.description|e }}')" 
-                                class="bg-blue-600 hover:bg-blue-700 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs shadow transition cursor-pointer">
-                            <i class="fa-solid fa-pencil"></i>
-                        </button>
-                        <form action="/delete/{{ vehicle.id }}" method="POST" onsubmit="return confirm('Remove this vehicle entirely from listings?');">
-                            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs shadow transition cursor-pointer">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </form>
-                    </div>
-                    {% endif %}
-                    <div class="relative h-56 bg-slate-900 border-b border-slate-800">
-                        <img src="{{ vehicle.image_url }}" alt="{{ vehicle.title }}" class="w-full h-full object-cover" loading="lazy">
-                        <span class="absolute bottom-3 left-3 bg-[#f97316] text-black font-black text-xs uppercase px-3 py-1 rounded-md tracking-wider">
+                <div class="glass-card rounded-2xl overflow-hidden flex flex-col group hover:border-orange-500/20 transition-all duration-300 shadow-xl">
+                    <div class="h-52 w-full relative overflow-hidden bg-slate-950 border-b border-slate-800">
+                        <img src="{{ vehicle.image_url }}" alt="{{ vehicle.title }}" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500">
+                        <span class="absolute top-3 right-3 bg-orange-600/90 text-white font-bold tracking-widest text-[10px] px-2.5 py-1 rounded-md uppercase backdrop-blur-sm">
                             {{ vehicle.status }}
                         </span>
+                    </div>
+
+                    <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
+                        <div class="space-y-2">
+                            <h3 class="font-bold text-lg text-white leading-tight group-hover:text-orange-400 transition-colors">{{ vehicle.title }}</h3>
+                            <div class="inline-block bg-slate-800 text-orange-400 font-mono font-bold tracking-wider text-sm px-2.5 py-0.5 rounded border border-slate-700">
+                                Reg: {{ vehicle.reg }}
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 text-xs font-medium">
+                            <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800/60">
+                                <span class="text-slate-500 block text-[10px] uppercase">Make / Model</span>
+                                <span class="text-slate-200 truncate block">{{ vehicle.make }} {{ vehicle.model }}</span>
+                            </div>
+                            <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800/60">
+                                <span class="text-slate-500 block text-[10px] uppercase">Year / Engine</span>
+                                <span class="text-slate-200 truncate block">{{ vehicle.year }} | {{ vehicle.engine }}</span>
+                            </div>
+                            <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800/60">
+                                <span class="text-slate-500 block text-[10px] uppercase">Fuel System</span>
+                                <span class="text-slate-200 truncate block">{{ vehicle.fuel }}</span>
+                            </div>
+                            <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800/60">
+                                <span class="text-slate-500 block text-[10px] uppercase">Gearbox Type</span>
+                                <span class="text-slate-200 truncate block">{{ vehicle.transmission }}</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Shelved Components Available:</span>
+                            <div class="flex flex-wrap gap-1">
+                                {% for part in vehicle.get_parts_list() %}
+                                <span class="bg-emerald-950/40 border border-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-md font-medium">
+                                    ✓ {{ part }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <p class="text-xs text-slate-400 line-clamp-3 bg-slate-950/30 p-3 rounded-lg border border-slate-900 italic">
+                            "{{ vehicle.description }}"
+                        </p>
+
+                        {% if session.get('logged_in') %}
+                        <div class="pt-4 border-t border-slate-800/80 flex gap-2">
+                            <button onclick="openEditModal('{{ vehicle.id }}', '{{ vehicle.title|escapejs }}', '{{ vehicle.make|escapejs }}', '{{ vehicle.model|escapejs }}', '{{ vehicle.year|escapejs }}', '{{ vehicle.reg|escapejs }}', '{{ vehicle.engine|escapejs }}', '{{ vehicle.fuel|escapejs }}', '{{ vehicle.transmission|escapejs }}', '{{ vehicle.mileage|escapejs }}', '{{ vehicle.parts_available|escapejs }}', '{{ vehicle.description|escapejs }}')" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold py-2 px-3 rounded-lg text-xs transition-colors uppercase tracking-wider">
+                                ✏️ Edit Specs
+                            </button>
+                            <form action="/delete/{{ vehicle.id }}" method="POST" onsubmit="return confirm('Are you sure you want to permanently delete this vehicle from stock?');">
+                                <button type="submit" class="bg-red-950/60 hover:bg-red-900/80 border border-red-500/30 text-red-400 p-2 rounded-lg text-xs transition-colors" title="Delete Stock">
+                                    🗑️
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 {% endfor %}
@@ -191,72 +149,186 @@
         </section>
     </main>
 
-    <section class="bg-gradient-to-r from-orange-500 to-orange-600 text-black py-12 font-medium w-full">
-        <div class="max-w-4xl mx-auto text-center px-4">
-            <h2 class="text-3xl font-black uppercase mb-2">Can't Find The Part You Need?</h2>
-            <p class="font-bold uppercase text-sm tracking-wide mb-8 opacity-90">Contact Us Today – Let Our Yard Team Find It For You</p>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto font-black text-sm uppercase">
-                <a href="tel:07440369576" class="bg-black text-white p-4 rounded-xl shadow-lg hover:bg-neutral-900 transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-phone text-[#f97316]"></i> 07440 369576
-                </a>
-                <a href="mailto:cherrywoodparts@outlook.com" class="bg-black text-white p-4 rounded-xl shadow-lg hover:bg-neutral-900 transition flex items-center justify-center gap-2 text-xs lowercase tracking-normal">
-                    <i class="fa-solid fa-envelope text-[#f97316]"></i> cherrywoodparts@outlook.com
-                </a>
-                <a href="https://wa.me/447440369576" target="_blank" class="bg-[#22c55e] text-white p-4 rounded-xl shadow-lg hover:bg-green-600 transition flex items-center justify-center gap-2">
-                    <i class="fa-brands fa-whatsapp text-lg"></i> WhatsApp Us
-                </a>
+    {% if session.get('logged_in') %}
+    <div id="uploadModal" class="fixed inset-0 bg-black/85 backdrop-blur-md hidden justify-center items-center z-50 p-4">
+        <div class="bg-slate-900 border border-orange-500/30 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden transform transition-all">
+            <div class="bg-gradient-to-r from-orange-600 to-amber-600 p-4 flex justify-between items-center">
+                <h3 class="text-white font-bold uppercase tracking-wider text-sm flex items-center gap-2">
+                    ⚡ Initialize AI Stock Scan Engine
+                </h3>
+                <button id="closeModalBtn" class="text-white/80 hover:text-white text-2xl font-light leading-none">&times;</button>
             </div>
+            
+            <form action="/add" method="POST" enctype="multipart/form-data" class="p-6 space-y-5">
+                <div class="border-2 border-dashed border-slate-700 hover:border-orange-500/40 rounded-xl p-8 text-center cursor-pointer transition-colors relative bg-slate-950/50 group">
+                    <input type="file" name="vehicle_photo" id="fileInput" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" required>
+                    <div id="uploadPrompt" class="space-y-3">
+                        <span class="text-4xl block group-hover:scale-110 transition-transform">📸</span>
+                        <p class="text-sm font-medium text-slate-200">Select or drop breaker vehicle photo here</p>
+                        <p class="text-xs text-slate-500">Google Gemini will instantly read registration plate and parse specifications</p>
+                    </div>
+                    <div id="imagePreviewContainer" class="hidden space-y-2">
+                        <img id="imagePreview" src="#" alt="Preview" class="max-h-40 mx-auto rounded-lg object-contain border border-slate-700">
+                        <p class="text-xs text-orange-400 font-medium">Photo linked successfully. Ready for computer parsing scan.</p>
+                    </div>
+                </div>
+                
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-500 text-white py-3.5 px-4 rounded-xl font-bold uppercase tracking-wider transition-all shadow-lg shadow-green-900/30 flex justify-center items-center gap-2 text-xs">
+                    🚀 Run Deep Image Engine Scan
+                </button>
+            </form>
         </div>
-    </section>
+    </div>
 
-    <footer class="bg-[#0b0f19] border-t border-slate-900 py-6 text-center text-slate-500 text-xs font-semibold w-full">
-        <p>&copy; 2026 Cherrywood Auto Parts. All Rights Reserved. Powered by AI Automation.</p>
-    </footer>
+    <div id="editModal" class="fixed inset-0 bg-black/85 backdrop-blur-md hidden justify-center items-center z-50 p-4 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-xl rounded-2xl shadow-2xl my-8 overflow-hidden">
+            <div class="bg-slate-800 p-4 flex justify-between items-center border-b border-slate-700">
+                <h3 class="text-white font-bold uppercase tracking-wider text-sm">✏️ Adjust Logged Specifications</h3>
+                <button onclick="closeEditModal()" class="text-slate-400 hover:text-white text-2xl font-light leading-none">&times;</button>
+            </div>
+            <form id="editForm" method="POST" class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div class="sm:col-span-2">
+                    <label class="block text-slate-400 uppercase tracking-wider font-bold mb-1">Display Title</label>
+                    <input type="text" name="title" id="edit_title" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white outline-none focus:border-orange-500" required>
+                </div>
+                <div>
+                    <label class="block text-slate-400 uppercase tracking-wider font-bold mb-1">Manufacturer Make</label>
+                    <input type="text" name="make" id="edit_make" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white outline-none focus:border-orange-500" required>
+                </div>
+                <div>
+                    <label class="block text-slate-400 uppercase tracking-wider font-bold mb-1">Specific Model</label>
+                    <input type="text" name="model" id="edit_model" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white outline-none focus:border-orange-500" required>
+                </div>
+                <div>
+                    <label class="block text-slate-400 uppercase tracking-wider font-bold mb-1">Year</label>
+                    <input type="text" name="year" id="edit_year" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white outline-none focus:border-orange-500" required>
+                </div>
+                <div>
+                    <label class="block text-slate-400 uppercase tracking-wider font-bold mb-1">Registration Index</label>
+                    <input type="text" name="reg" id="edit_reg" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white outline-none focus:border-orange-500" required>
+                </div>
+                <div>
+                    <label class="block text-slate-400 uppercase tracking-wider font-bold mb-1">Engine Size / Badge</label>
+                    <input type="text" name="engine" id="edit_engine" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white outline-none focus:border-orange-500" required>
+                </div>
+                <div>
+                    <label class="block text-slate-400 uppercase tracking-wider font-bold mb-1">Fuel Type</label>
+                    <input type="text" name="fuel" id="edit_fuel" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white outline-none focus:border-orange-500" required>
+                </div>
+                <div>
+                    <label class="block text-slate-400 uppercase tracking-wider font-bold mb-1">Transmission</label>
+                    <input type="text" name="transmission" id="edit_transmission" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white outline-none focus:border-orange-500" required>
+                </div>
+                <div>
+                    <label class="block text-slate-400 uppercase tracking-wider font-bold mb-1">Mileage</label>
+                    <input type="text" name="mileage" id="edit_mileage" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white outline-none focus:border-orange-500" required>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-slate-400 uppercase tracking-wider font-bold mb-1">Shelved Parts (Comma Separated)</label>
+                    <input type="text" name="parts_available" id="edit_parts_available" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white outline-none focus:border-orange-500" required>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-slate-400 uppercase tracking-wider font-bold mb-1">Public Display Description</label>
+                    <textarea name="description" id="edit_description" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white outline-none focus:border-orange-500 resize-none" required></textarea>
+                </div>
+                <div class="sm:col-span-2 pt-2">
+                    <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white py-3 rounded-xl font-bold uppercase tracking-wider transition-colors text-xs">
+                        💾 Save Modified Parameters
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
 
     <script>
-        function showLoadingSpinner() {
-            document.getElementById('upload-btn-container').classList.add('hidden');
-            document.getElementById('upload-loader').classList.remove('hidden');
+        // Modal State Triggers
+        const addBtn = document.getElementById('addStockBtn');
+        const uploadModal = document.getElementById('uploadModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const fileInput = document.getElementById('fileInput');
+        const uploadPrompt = document.getElementById('uploadPrompt');
+        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+
+        if (addBtn && uploadModal) {
+            addBtn.addEventListener('click', () => {
+                uploadModal.classList.remove('hidden');
+                uploadModal.classList.add('flex');
+            });
         }
 
-        function openEditModal(id, title, make, model, year, reg, engine, fuel, transmission, mileage, partsAvailable, description) {
-            document.getElementById('edit-form').action = '/edit/' + id;
-            document.getElementById('edit-title').value = title;
-            document.getElementById('edit-make').value = make;
-            document.getElementById('edit-model').value = model;
-            document.getElementById('edit-year').value = year;
-            document.getElementById('edit-reg').value = reg;
-            document.getElementById('edit-engine').value = engine;
-            document.getElementById('edit-fuel').value = fuel;
-            document.getElementById('edit-transmission').value = transmission;
-            document.getElementById('edit-mileage').value = mileage;
-            document.getElementById('edit-components').value = partsAvailable;
-            document.getElementById('edit-description').value = description;
-            document.getElementById('edit-modal').classList.remove('hidden');
+        if (closeModalBtn && uploadModal) {
+            closeModalBtn.addEventListener('click', () => {
+                uploadModal.classList.add('hidden');
+                uploadModal.classList.remove('flex');
+                resetUploadInput();
+            });
+        }
+
+        // Live Image File Upload Preview Upgrade
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                const file = this.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagePreview.src = e.target.result;
+                        uploadPrompt.classList.add('hidden');
+                        imagePreviewContainer.classList.remove('hidden');
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        function resetUploadInput() {
+            if(fileInput) fileInput.value = "";
+            if(uploadPrompt) uploadPrompt.classList.remove('hidden');
+            if(imagePreviewContainer) imagePreviewContainer.classList.add('hidden');
+        }
+
+        // Edit Manual Adjustment Triggers
+        const editModal = document.getElementById('editModal');
+        const editForm = document.getElementById('editForm');
+
+        function openEditModal(id, title, make, model, year, reg, engine, fuel, transmission, mileage, parts, desc) {
+            if (!editModal) return;
+            editForm.action = '/edit/' + id;
+            document.getElementById('edit_title').value = title;
+            document.getElementById('edit_make').value = make;
+            document.getElementById('edit_model').value = model;
+            document.getElementById('edit_year').value = year;
+            document.getElementById('edit_reg').value = reg;
+            document.getElementById('edit_engine').value = engine;
+            document.getElementById('edit_fuel').value = fuel;
+            document.getElementById('edit_transmission').value = transmission;
+            document.getElementById('edit_mileage').value = mileage;
+            document.getElementById('edit_parts_available').value = parts;
+            document.getElementById('edit_description').value = desc;
+
+            editModal.classList.remove('hidden');
+            editModal.classList.add('flex');
         }
 
         function closeEditModal() {
-            document.getElementById('edit-modal').classList.add('hidden');
+            if (editModal) {
+                editModal.classList.add('hidden');
+                editModal.classList.remove('flex');
+            }
         }
 
-        function init() {
-            document.getElementById('stock-form').addEventListener('submit', function(e) {
-                e.preventDefault();
-                const reg = document.getElementById('form-reg').value.trim().toUpperCase();
-                const part = document.getElementById('form-part').value.trim();
-                
-                if (!reg || !part) return;
-                
-                const message = `Hi, checking stock for Reg: ${reg}\nPart Needed: ${part}`;
-                window.open(`https://wa.me/447440369576?text=${encodeURIComponent(message)}`, '_blank');
-            });
-
-            document.addEventListener('keydown', function(e) {
-                if (e.key === "Escape") closeEditModal();
-            });
-        }
-
-        window.onload = init;
+        // Close windows if backdrop clicked
+        window.addEventListener('click', (e) => {
+            if (e.target === uploadModal) {
+                uploadModal.classList.add('hidden');
+                uploadModal.classList.remove('flex');
+                resetUploadInput();
+            }
+            if (e.target === editModal) {
+                closeEditModal();
+            }
+        });
     </script>
 </body>
 </html>
