@@ -2,165 +2,94 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cherrywood Auto Parts</title>
-
+<title>Cherrywood Salvage Yard</title>
 <script src="https://cdn.tailwindcss.com"></script>
-
-<style>
-body{
-    background:#0f172a;
-    background-image:
-    linear-gradient(rgba(15,23,42,.85),rgba(15,23,42,.92)),
-    url('/static/shutter-background.jpg');
-    background-size:cover;
-    background-position:center;
-    background-attachment:fixed;
-}
-</style>
 </head>
 
-<body class="text-white">
+<body class="bg-slate-900 text-white">
 
-<!-- TOP BAR -->
-<header class="border-b border-slate-700 bg-slate-900/70">
+<!-- HEADER -->
+<div class="p-6 border-b border-slate-700 flex justify-between items-center">
 
-<div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+<h1 class="font-bold text-xl">Cherrywood Salvage Yard</h1>
 
-<div>
-<h1 class="text-2xl font-black">
-CHERRYWOOD <span class="text-orange-500">AUTO PARTS</span>
-</h1>
-<p class="text-xs text-slate-400">
-Audi • Volkswagen • SEAT • Škoda Specialists
-</p>
-</div>
+<form method="GET" class="flex gap-2">
+<input name="q"
+value="{{ query }}"
+placeholder="Search make, model, reg..."
+class="p-2 rounded text-black">
 
-<div class="flex gap-2">
-
-<a href="https://wa.me/447440369576"
-class="bg-green-600 px-4 py-2 rounded-lg text-sm font-bold">
-WhatsApp
-</a>
-
-<a href="tel:+447440369576"
-class="bg-slate-700 px-4 py-2 rounded-lg text-sm font-bold">
-Call
-</a>
+<button class="bg-orange-600 px-4 rounded">
+Search
+</button>
+</form>
 
 {% if session.get('logged_in') %}
 <button onclick="document.getElementById('modal').classList.remove('hidden')"
-class="bg-orange-600 px-4 py-2 rounded-lg font-bold">
+class="bg-green-600 px-4 py-2 rounded">
 Add Vehicle
 </button>
+{% else %}
+<a href="/login" class="text-orange-400">Login</a>
 {% endif %}
 
 </div>
-</div>
-</header>
 
-<!-- HERO -->
-<section class="text-center py-20 px-6 max-w-5xl mx-auto">
 
-<h2 class="text-5xl font-extrabold">
-Used <span class="text-orange-500">Audi, VW, SEAT & Škoda</span> Parts
-</h2>
-
-<p class="text-slate-300 mt-4">
-Vehicles breaking daily. Engines, gearboxes, body panels & more.
-</p>
-
-<div class="flex justify-center gap-3 mt-6 flex-wrap">
-
-<div class="bg-slate-800 px-4 py-2 rounded-full">🚚 UK Delivery</div>
-<div class="bg-slate-800 px-4 py-2 rounded-full">🚗 Vehicles Breaking Daily</div>
-<div class="bg-slate-800 px-4 py-2 rounded-full">♻️ Scrap Collection</div>
-
-</div>
-</section>
-
-<!-- INVENTORY -->
-<section class="max-w-7xl mx-auto px-6 pb-20">
-
-<h3 class="text-2xl font-bold mb-6">Live Inventory</h3>
-
-<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- GRID -->
+<div class="p-6 grid md:grid-cols-3 gap-4">
 
 {% for v in vehicles %}
-<div class="bg-slate-800 rounded-xl overflow-hidden">
 
-<img src="{{ v.image_url }}" class="w-full h-52 object-cover">
+<div class="bg-slate-800 p-4 rounded">
 
-<div class="p-5">
+<img src="{{ v.image_url }}" class="w-full h-40 object-cover rounded">
 
-<h2 class="font-bold text-xl">{{ v.title }}</h2>
+<h2 class="font-bold text-lg mt-2">{{ v.title }}</h2>
 
 <p>{{ v.make }} {{ v.model }}</p>
-<p class="text-sm text-slate-300">Year: {{ v.year }}</p>
-<p class="text-sm text-slate-300">Reg: {{ v.reg }}</p>
-<p class="text-sm text-slate-300">Engine: {{ v.engine }}</p>
-<p class="text-sm text-slate-300">Mileage: {{ v.mileage }}</p>
+<p class="text-sm">Reg: {{ v.reg }}</p>
+<p class="text-sm">Engine: {{ v.engine }}</p>
+<p class="text-sm">Mileage: {{ v.mileage }}</p>
 
-<p class="text-sm text-slate-400 mt-2">
-Parts: {{ v.parts_available }}
-</p>
+<!-- STATUS -->
+<div class="mt-2">
+<span class="text-xs px-2 py-1 rounded bg-orange-600">
+{{ v.status }}
+</span>
+</div>
 
-<a href="https://wa.me/447440369576"
-class="block bg-green-600 text-center py-2 rounded-lg mt-4 font-bold">
-Enquire
-</a>
-
+<!-- STATUS BUTTONS -->
 {% if session.get('logged_in') %}
-<form method="POST" action="/delete/{{ v.id }}">
-<button class="w-full bg-red-600 py-2 rounded-lg mt-2">
+<div class="flex gap-2 mt-2 text-xs">
+
+<a href="/status/{{ v.id }}/Breaking" class="bg-orange-500 px-2 py-1 rounded">Breaking</a>
+<a href="/status/{{ v.id }}/Reserved" class="bg-yellow-500 px-2 py-1 rounded">Reserved</a>
+<a href="/status/{{ v.id }}/Sold" class="bg-red-500 px-2 py-1 rounded">Sold</a>
+
+</div>
+
+<form method="POST" action="/delete/{{ v.id }}" class="mt-2">
+<button class="bg-red-700 px-3 py-1 rounded w-full">
 Delete
 </button>
 </form>
 {% endif %}
 
 </div>
-</div>
+
 {% endfor %}
 
 </div>
-</section>
 
-<!-- FOOTER -->
-<footer class="bg-slate-950 border-t border-slate-800 p-10 text-sm text-slate-400">
-
-<div class="max-w-6xl mx-auto grid md:grid-cols-3 gap-6">
-
-<div>
-<h3 class="text-orange-500 font-bold mb-2">Opening Hours</h3>
-<p>Mon–Fri: 09:00–17:30</p>
-<p>Sat: 09:00–14:00</p>
-<p>Sun: Closed</p>
-</div>
-
-<div>
-<h3 class="text-orange-500 font-bold mb-2">Services</h3>
-<p>Used Parts</p>
-<p>Vehicle Breaking</p>
-<p>Scrap Collection</p>
-</div>
-
-<div>
-<h3 class="text-orange-500 font-bold mb-2">Contact</h3>
-<p>Cherrywood Auto Parts</p>
-<p>Birmingham, UK</p>
-<p>07440 369576</p>
-</div>
-
-</div>
-</footer>
 
 <!-- MODAL -->
-<div id="modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center">
+<div id="modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center">
 
 <form action="/add" method="POST" enctype="multipart/form-data"
-class="bg-slate-800 p-6 rounded-xl w-96 space-y-3">
+class="bg-slate-800 p-6 rounded w-96 space-y-2">
 
-<input type="file" name="vehicle_photo" required class="w-full">
+<input type="file" name="vehicle_photo" class="w-full" required>
 
 <input name="title" placeholder="Title" class="w-full p-2 text-black">
 <input name="make" placeholder="Make" class="w-full p-2 text-black">
@@ -169,10 +98,10 @@ class="bg-slate-800 p-6 rounded-xl w-96 space-y-3">
 <input name="reg" placeholder="Reg" class="w-full p-2 text-black">
 <input name="engine" placeholder="Engine" class="w-full p-2 text-black">
 <input name="mileage" placeholder="Mileage" class="w-full p-2 text-black">
+<textarea name="parts_available" placeholder="Parts" class="w-full p-2 text-black"></textarea>
+<textarea name="description" placeholder="Description" class="w-full p-2 text-black"></textarea>
 
-<textarea name="parts_available" class="w-full p-2 text-black" placeholder="Parts"></textarea>
-
-<button class="bg-orange-600 w-full py-2 rounded-lg font-bold">
+<button class="bg-green-600 w-full py-2 rounded">
 Save Vehicle
 </button>
 
