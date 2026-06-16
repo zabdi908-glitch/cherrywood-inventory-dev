@@ -68,13 +68,43 @@ def add_vehicle():
                     contents=[types.Part.from_bytes(data=f.read(), mime_type=file.mimetype), "Return ONLY valid JSON with keys: title, make, model, year, reg, engine, fuel, transmission, mileage, parts_available, description"])
                 
                 text = getattr(response, "text", "").strip()
-                # Remove Markdown code block wrappers if they exist
-                if text.startswith("
-http://googleusercontent.com/immersive_entry_chip/0
+                # FIX: String literals closed correctly
+                if text.startswith("```"): 
+                    text = text.split("```")[1].replace("json", "").strip()
+                car_data.update(json.loads(text))
+        except Exception as e:
+            print("JSON PARSE ERROR:", e)
 
-### 🚀 Final Execution Checklist
-1.  **Delete `database.db`:** You **must** do this on your server (via the terminal/shell in Render) before redeploying. This forces the table to be created with the new columns correctly.
-2.  **Commit & Deploy:** Click "Clear build cache & deploy" on Render.
-3.  **Logs:** If you see a blank page or error, go straight to the **"Logs"** tab on Render. Because we added the `raise` and `print` statements, the error will be in plain English.
+    db = get_db()
+    try:
+        db.execute('INSERT INTO vehicle (title, make, model, year, reg, engine, fuel, transmission, mileage, status, image_url, parts_available, description) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)', 
+                   (car_data["title"], car_data["make"], car_data["model"], car_data["year"], car_data["reg"], car_data["engine"], car_data["fuel"], car_data["transmission"], car_data["mileage"], "Breaking", image_url, car_data["parts_available"], car_data["description"]))
+        db.commit()
+    except Exception as e:
+        print("DB INSERT ERROR:", e)
+        raise 
+    finally:
+        db.close()
+    return redirect(url_for('index'))
 
-You are ready. Go hit that deploy button and finish your project!
+@app.route('/delete/<int:id>', methods=['POST'])
+@csrf.exempt
+def delete_vehicle(id):
+    if not session.get('logged_in'): return "Unauthorized", 403
+    db = get_db()
+    db.execute('DELETE FROM vehicle WHERE id = ?', (id,))
+    db.commit(); db.close()
+    return redirect(url_for('index'))
+
+@app.route('/login', methods=['GET', 'POST'])
+@csrf.exempt
+def login():
+    if request.method == 'POST':
+        if request.form.get('password') == 'cherrywood2026':
+            session['logged_in'] = True
+            return redirect(url_for('index'))
+        return "Invalid Password"
+    return '''<form method="POST"><input type="password" name="password"><button type="submit">Login</button></form>'''
+
+if __name__ == '__main__':
+    app.run(debug=True)
