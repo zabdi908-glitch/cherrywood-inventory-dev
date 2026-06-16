@@ -1,150 +1,141 @@
-from flask import Flask, render_template, request, redirect, url_for, session
-import sqlite3
-import os
-import uuid
-from werkzeug.utils import secure_filename
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Cherrywood Auto Parts</title>
+<script src="https://cdn.tailwindcss.com"></script>
 
-app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev_secret")
+<style>
+body {
+    background: linear-gradient(rgba(10,15,30,0.92), rgba(10,15,30,0.92)),
+    url("/static/shutter-background.jpg");
+    background-size: cover;
+    background-attachment: fixed;
+}
+</style>
+</head>
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-DATABASE = os.path.join(BASE_DIR, "database.db")
+<body class="text-white">
 
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+<!-- HEADER -->
+<div class="p-6 flex justify-between border-b border-slate-700">
+    <h1 class="font-bold text-xl">
+        Cherrywood Auto Parts
+    </h1>
 
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+    <div class="space-x-3">
+        {% if session.get('logged_in') %}
+            <a href="/logout" class="text-red-400">Logout</a>
+            <button onclick="document.getElementById('modal').classList.remove('hidden')"
+                    class="bg-orange-600 px-4 py-2 rounded">
+                Add Stock
+            </button>
+        {% else %}
+            <a href="/login" class="text-orange-400">Login</a>
+        {% endif %}
+    </div>
+</div>
 
-
-# ---------------- DATABASE ----------------
-def get_db():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def init_db():
-    with sqlite3.connect(DATABASE) as conn:
-        conn.execute("""
-        CREATE TABLE IF NOT EXISTS vehicle (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            make TEXT,
-            model TEXT,
-            year TEXT,
-            reg TEXT,
-            engine TEXT,
-            mileage TEXT,
-            parts_available TEXT,
-            image_url TEXT
-        )
-        """)
-
-init_db()
-
-
-# ---------------- HOME ----------------
-@app.route("/")
-def index():
-    search = request.args.get("search", "")
-
-    db = get_db()
-
-    if search:
-        rows = db.execute("""
-            SELECT * FROM vehicle
-            WHERE title LIKE ?
-            OR make LIKE ?
-            OR model LIKE ?
-            OR parts_available LIKE ?
-            ORDER BY id DESC
-        """, (f"%{search}%", f"%{search}%", f"%{search}%", f"%{search}%")).fetchall()
-    else:
-        rows = db.execute("SELECT * FROM vehicle ORDER BY id DESC").fetchall()
-
-    db.close()
-    return render_template("index.html", vehicles=rows, search=search)
-
-
-# ---------------- ADD ----------------
-@app.route("/add", methods=["POST"])
-def add_vehicle():
-    if not session.get("logged_in"):
-        return "Unauthorized", 403
-
-    file = request.files.get("vehicle_photo")
-    if not file or file.filename == "":
-        return "No file", 400
-
-    filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
-    filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-    file.save(filepath)
-
-    image_url = url_for("static", filename=f"uploads/{filename}")
-
-    db = get_db()
-    db.execute("""
-        INSERT INTO vehicle (
-            title, make, model, year, reg,
-            engine, mileage, parts_available, image_url
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        request.form.get("title"),
-        request.form.get("make"),
-        request.form.get("model"),
-        request.form.get("year"),
-        request.form.get("reg"),
-        request.form.get("engine"),
-        request.form.get("mileage"),
-        request.form.get("parts_available"),
-        image_url
-    ))
-
-    db.commit()
-    db.close()
-
-    return redirect(url_for("index"))
-
-
-# ---------------- DELETE ----------------
-@app.route("/delete/<int:id>", methods=["POST"])
-def delete_vehicle(id):
-    if not session.get("logged_in"):
-        return "Unauthorized", 403
-
-    db = get_db()
-    db.execute("DELETE FROM vehicle WHERE id = ?", (id,))
-    db.commit()
-    db.close()
-
-    return redirect(url_for("index"))
-    return redirect(url_for("index"))
-
-
-# ---------------- LOGIN ----------------
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        if request.form.get("password") == "cherrywood2026":
-            session["logged_in"] = True
-            return redirect(url_for("index"))
-        return "Wrong password"
-
-    return """
-    <form method="POST">
-        <input type="password" name="password">
-        <button type="submit">Login</button>
+<!-- SEARCH -->
+<div class="p-4">
+    <form method="GET" class="flex gap-2">
+        <input name="search" value="{{ search }}"
+               placeholder="Search vehicle, model or part"
+               class="w-full p-2 text-black rounded">
+        <button class="bg-orange-600 px-4 rounded">Search</button>
     </form>
-    """
+</div>
 
+<!-- EMPTY STATE -->
+{% if not vehicles %}
+<div class="p-6 text-center text-slate-300">
+    <h2 class="text-lg font-bold">Inventory Upload In Progress</h2>
+    <p class="mt-2">New vehicles are currently being added.</p>
 
-# ---------------- LOGOUT (ADDED) ----------------
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("index"))
+    <p class="mt-4 font-bold">Need a part now?</p>
+    <p>Contact us with:</p>
+    <p>✓ Registration Number</p>
+    <p>✓ Vehicle Model</p>
+    <p>✓ Part Required</p>
+</div>
+{% endif %}
 
+<!-- GRID -->
+<div class="p-6 grid md:grid-cols-3 gap-4">
 
-if __name__ == "__main__":
-    app.run(debug=True)
+{% for v in vehicles %}
+<div class="bg-slate-900/80 p-4 rounded">
+
+    <img src="{{ v.image_url }}" class="w-full h-40 object-cover rounded mb-2">
+
+    <h2 class="font-bold">{{ v.title }}</h2>
+
+    <p>{{ v.make }} {{ v.model }} ({{ v.year }})</p>
+
+    <p class="text-sm">Reg: {{ v.reg }}</p>
+    <p class="text-sm">Stock: CW-{{ v.id }}</p>
+    <p class="text-sm">Engine: {{ v.engine }}</p>
+    <p class="text-sm">Mileage: {{ v.mileage }}</p>
+
+    <p class="text-xs text-slate-400 mt-2">
+        Parts: {{ v.parts_available }}
+    </p>
+
+    <!-- WHATSAPP ENQUIRY -->
+    <a href="https://wa.me/447440369576?text=I'm interested in {{ v.title }} (Stock CW-{{ v.id }})"
+       class="block mt-3 bg-green-600 text-center py-2 rounded">
+       💬 Enquire on WhatsApp
+    </a>
+
+    {% if session.get('logged_in') %}
+    <form method="POST" action="/delete/{{ v.id }}" class="mt-2">
+        <button class="bg-red-600 w-full py-1 rounded text-sm">
+            Delete
+        </button>
+    </form>
+    {% endif %}
+
+</div>
+{% endfor %}
+
+</div>
+
+<!-- FAQ -->
+<div class="p-6 border-t border-slate-700">
+    <h2 class="font-bold mb-2">FAQ</h2>
+
+    <p>✔ UK wide delivery available</p>
+    <p>✔ Parts tested before dispatch</p>
+    <p>✔ Collection available from yard</p>
+    <p>✔ Returns accepted on faulty items</p>
+</div>
+
+<!-- MODAL -->
+<div id="modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center">
+
+<form action="/add" method="POST" enctype="multipart/form-data"
+      class="bg-slate-800 p-6 rounded w-96 space-y-3">
+
+    <input type="file" name="vehicle_photo" class="w-full" required>
+
+    <input name="title" placeholder="Title" class="w-full p-2 text-black">
+    <input name="make" placeholder="Make" class="w-full p-2 text-black">
+    <input name="model" placeholder="Model" class="w-full p-2 text-black">
+    <input name="year" placeholder="Year" class="w-full p-2 text-black">
+    <input name="reg" placeholder="Reg" class="w-full p-2 text-black">
+    <input name="engine" placeholder="Engine" class="w-full p-2 text-black">
+    <input name="mileage" placeholder="Mileage" class="w-full p-2 text-black">
+
+    <textarea name="parts_available" placeholder="Parts"
+              class="w-full p-2 text-black"></textarea>
+
+    <button class="bg-orange-600 w-full py-2 rounded">
+        Save Stock
+    </button>
+
+</form>
+
+</div>
+
+</body>
+</html>
