@@ -3,10 +3,11 @@ import sqlite3
 import os
 import json
 from werkzeug.utils import secure_filename
+from flask_wtf.csrf import CSRFProtect
 
-app = Flask(__name__)
-# Pulls secret key safely or defaults to development bypass framework
-app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'cherrywood_yard_secret_key_2026')
+ app = Flask(__name__)
+ csrf = CSRFProtect(app)
+ # Pulls secret key safely or defaults to development...
 
 DATABASE = 'database.db'
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
@@ -225,19 +226,17 @@ def delete_vehicle(id):
     return redirect(url_for('index'))
 
 @app.route('/login', methods=['GET', 'POST'])
+@csrf.exempt
 def login():
-    error = None
     if request.method == 'POST':
-        # .strip() handles any accidental spaces typed at the end
         password_submitted = request.form.get('password', '').strip()
         if password_submitted == 'cherrywood2026':
             session['logged_in'] = True
             return redirect(url_for('index'))
         else:
-            error = "Invalid password. Please try again."
+            return '<p style="color: red; text-align: center; margin-top: 20px;">Invalid password. <a href="/login">Try again</a>.</p>'
 
-    # Instead of breaking the return, we inject the error message inside the same HTML page template!
-    return f'''
+    return '''
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -252,9 +251,6 @@ def login():
                 <span class="text-xs font-bold tracking-widest text-orange-500 uppercase block mb-1">Secure Portal</span>
                 <h2 class="text-xl font-black uppercase tracking-tight text-white">Cherrywood Admin</h2>
             </div>
-            
-            {f'<p class="text-red-500 text-xs text-center font-bold mb-4">{error}</p>' if error else ''}
-
             <form method="POST" class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Enter Gate Password</label>
