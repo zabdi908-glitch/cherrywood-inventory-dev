@@ -91,37 +91,7 @@ def index():
     return render_template('index.html', vehicles=vehicles)
 
 @app.route('/cherrywood-gatekeeper', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        
-        if username == 'admin' and password == 'cherrywood123':
-            session['logged_in'] = True
-            return redirect(url_for('index'))
-        else:
-            return '<script>alert("Invalid details! Try again."); window.location.href="/cherrywood-gatekeeper";</script>'
-            
-    return '''
-        <div style="background:#0f172a; color:#fff; height:100vh; display:flex; justify-content:center; align-items:center; font-family:sans-serif;">
-            <form method="POST" style="background:#1e293b; padding:35px; border-radius:12px; border:2px solid #f97316; width:320px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-                <h2 style="margin-top:0; color:#f97316; text-transform:uppercase; font-size:22px; letter-spacing:1px; text-align:center;">Cherrywood Admin</h2>
-                <p style="color:#94a3b8; font-size:12px; text-align:center; margin-bottom:20px;">Log in to access secret breaker controls</p>
-                
-                <label style="font-size:11px; text-transform:uppercase; color:#94a3b8; font-weight:bold;">Username</label>
-                <input type="text" name="username" style="width:100%; padding:11px; margin: 6px 0 15px 0; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#fff; outline:none;" required>
-                
-                <label style="font-size:11px; text-transform:uppercase; color:#94a3b8; font-weight:bold;">Password</label>
-                <input type="password" name="password" style="width:100%; padding:11px; margin: 6px 0 20px 0; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#fff; outline:none;" required>
-                
-                <button type="submit" style="width:100%; padding:12px; background:#22c55e; color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:14px; cursor:pointer; text-transform:uppercase;">Sign Into Portal</button>
-                <a href="/" style="display:block; text-align:center; margin-top:15px; color:#94a3b8; font-size:12px; text-decoration:none;">← Back to Public Website</a>
-            </form>
-        </div>
-    '''
 
-@app.route('/logout')
-def logout():
     session.clear()
     return redirect(url_for('index'))
 
