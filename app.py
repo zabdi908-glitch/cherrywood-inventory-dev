@@ -242,8 +242,8 @@ def edit_vehicle(id):
     db.execute('''
         UPDATE vehicle 
         SET title=?, make=?, model=?, year=?, reg=?, engine=?, fuel=?, transmission=?, mileage=?, parts_available=?, description=?
-        WHERE id=?
-    ''', (title, make, model, year, reg, engine, fuel, transmission, mileage, parts_available, description, id))
+WHERE id = ?
+    ''', (title, make, model, year, reg, engine, fuel, transmission, mileage, parts_available, status, image_url, id))
     db.commit()
     db.close()
     return redirect(url_for('index'))
@@ -252,12 +252,13 @@ def edit_vehicle(id):
 def delete_vehicle(id):
     if not session.get('logged_in'):
         return "Unauthorized Access", 403
-    
+        
     db = get_db()
     db.execute('DELETE FROM vehicle WHERE id = ?', (id,))
     db.commit()
     db.close()
     return redirect(url_for('index'))
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -301,6 +302,7 @@ def login():
 def logout():
     session.pop('logged_in', None)
     return redirect(url_for('index'))
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
