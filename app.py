@@ -20,23 +20,27 @@ def get_db():
 
 # Database init function (only runs if table doesn't exist)
 def init_db():
-    if not os.path.exists(DATABASE):
-        with sqlite3.connect(DATABASE) as conn:
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS vehicle (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT, make TEXT, model TEXT, year TEXT, reg TEXT, 
-                    engine TEXT, fuel TEXT, transmission TEXT, mileage TEXT, 
-                    status TEXT, image_url TEXT, parts_available TEXT, description TEXT
-                )
-            ''')
+    # Connect and create table if it doesn't exist
+    with sqlite3.connect(DATABASE) as conn:
+        conn.execute('''CREATE TABLE IF NOT EXISTS vehicle (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, 
+            title TEXT, make TEXT, model TEXT, year TEXT, reg TEXT, 
+            engine TEXT, fuel TEXT, transmission TEXT, mileage TEXT, 
+            status TEXT, image_url TEXT, parts_available TEXT, description TEXT
+        )''')
+        conn.commit()
 
+# Call the initialization once
 init_db()
 
 @app.route('/')
 def index():
     db = get_db()
-    rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
+    # Use try/except to catch issues if the table is missing
+    try:
+        rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
+    except sqlite3.OperationalError:
+        rows = []
     db.close()
     return render_template('index.html', vehicles=rows)
 
