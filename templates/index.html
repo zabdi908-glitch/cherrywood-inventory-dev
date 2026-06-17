@@ -120,7 +120,9 @@
                 </form>
             </div>
         </section>
-    </div> <main class="bg-[#0f172a] flex-1 w-full">
+    </div>
+
+    <main class="bg-[#0f172a] flex-1 w-full">
         <section class="max-w-7xl mx-auto px-4 py-10 w-full">
             <h2 class="text-2xl font-black uppercase tracking-wider text-center text-white mb-2">Popular Parts In Stock</h2>
             <p class="text-sm text-center text-slate-400 mb-10 max-w-md mx-auto">We stock thousands of shelved mechanical components ready for collection or shipping.</p>
@@ -167,33 +169,32 @@
                 </div>
             </div>
         </section>
-<section class="max-w-7xl mx-auto px-4 py-8 border-t border-slate-800 w-full">
-    <div class="flex items-center justify-between mb-8">
-        <div>
-            <h2 class="text-2xl font-black uppercase tracking-wider text-white">Latest Arrivals & Breakers</h2>
-            <p class="text-xs text-slate-400 mt-1">Select a matching donor vehicle to request parts directly</p>
-        </div>
-        {% if session.get('logged_in') %}
-            <button onclick="document.getElementById('admin-panel').scrollIntoView({behavior: 'smooth'})" class="px-4 py-2 bg-green-600 text-white rounded font-bold text-xs uppercase">
-                + Add New Stock
-            </button>
-        {% endif %}
-    </div>
 
-    <!-- VEHICLE CARDS START -->
-    {% if not vehicles %}
-        <div class="border-2 border-dashed border-slate-700 bg-[#111827] rounded-2xl p-12 text-center">
-            <i class="fa-solid fa-circle-notch animate-spin text-[#f97316] text-3xl mb-4 block"></i>
-            <h4 class="text-lg font-bold text-white uppercase tracking-wider mb-2">Inventory Upload In Progress</h4>
-            <p class="text-sm text-slate-400 max-w-md mx-auto mb-6">New donor vehicles are being added to our database right now.</p>
-            <button onclick="window.scrollTo({top: 450, behavior: 'smooth'}); document.getElementById('form-reg').focus();" class="px-6 py-2.5 bg-[#f97316] text-black font-black text-xs uppercase tracking-wide rounded-lg hover:bg-orange-500 transition">
-                Contact us with your registration instead
-            </button>
-        </div>
-    {% else %}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {% for vehicle in vehicles %}
-                <!-- VEHICLE CARD -->
+        <section class="max-w-7xl mx-auto px-4 py-8 border-t border-slate-800 w-full">
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h2 class="text-2xl font-black uppercase tracking-wider text-white">Latest Arrivals & Breakers</h2>
+                    <p class="text-xs text-slate-400 mt-1">Select a matching donor vehicle to request parts directly</p>
+                </div>
+                {% if session.get('logged_in') %}
+                    <button onclick="document.getElementById('admin-panel').scrollIntoView({behavior: 'smooth'})" class="px-4 py-2 bg-green-600 text-white rounded font-bold text-xs uppercase">
+                        + Add New Stock
+                    </button>
+                {% endif %}
+            </div>
+
+            {% if not vehicles %}
+            <div class="border-2 border-dashed border-slate-700 bg-[#111827] rounded-2xl p-12 text-center">
+                <i class="fa-solid fa-circle-notch animate-spin text-[#f97316] text-3xl mb-4 block"></i>
+                <h4 class="text-lg font-bold text-white uppercase tracking-wider mb-2">Inventory Upload In Progress</h4>
+                <p class="text-sm text-slate-400 max-w-md mx-auto mb-6">New donor vehicles are being added to our database right now.</p>
+                <button onclick="window.scrollTo({top: 450, behavior: 'smooth'}); document.getElementById('form-reg').focus();" class="px-6 py-2.5 bg-[#f97316] text-black font-black text-xs uppercase tracking-wide rounded-lg hover:bg-orange-500 transition">
+                    Contact us with your registration instead
+                </button>
+            </div>
+            {% else %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {% for vehicle in vehicles %}
                 <div class="bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col">
                     <div class="relative h-56 bg-slate-900">
                         <img src="{{ vehicle.image_url }}" alt="{{ vehicle.title }}" class="w-full h-full object-cover">
@@ -247,12 +248,9 @@
                         {% endif %}
                     </div>
                 </div>
-                <!-- END VEHICLE CARD -->
-            {% endfor %}
-        </div>
-    {% endif %}
-    <!-- VEHICLE CARDS END -->
-</section>
+                {% endfor %}
+            </div>
+            {% endif %}
         </section>
 
         <section class="bg-[#111827] py-16 border-t border-b border-slate-800 w-full">
@@ -306,8 +304,8 @@
                 <a href="tel:07440369576" class="bg-black text-white p-4 rounded-xl shadow-lg hover:bg-neutral-900 transition flex items-center justify-center gap-2">
                     <i class="fa-solid fa-phone text-[#f97316]"></i> 07440 369576
                 </a>
-                <a href="mailto:cherryvagparts@gmail.com" class="bg-black text-white p-4 rounded-xl shadow-lg hover:bg-neutral-900 transition flex items-center justify-center gap-2 text-xs lowercase">
-                    <i class="fa-solid fa-envelope text-[#f97316]"></i> cherryvagparts@gmail.com
+                <a href="mailto:cherrywoodparts@outlook.com" class="bg-black text-white p-4 rounded-xl shadow-lg hover:bg-neutral-900 transition flex items-center justify-center gap-2 text-xs lowercase">
+                    <i class="fa-solid fa-envelope text-[#f97316]"></i> cherrywoodparts@outlook.com
                 </a>
                 <a href="https://wa.me/447440369576" target="_blank" class="bg-[#22c55e] text-white p-4 rounded-xl shadow-lg hover:bg-green-600 transition flex items-center justify-center gap-2">
                     <i class="fa-brands fa-whatsapp text-lg"></i> WhatsApp Us
@@ -402,7 +400,7 @@
             <div>
                 <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Quick Contact</span>
                 <p class="text-slate-400 font-medium mb-1">Phone: 07440 369576</p>
-                <p class="text-slate-400 font-medium">Email: cherryvagparts@gmail.com</p>
+                <p class="text-slate-400 font-medium">Email: cherrywoodparts@outlook.com</p>
             </div>
         </div>
         <div class="max-w-7xl mx-auto px-4 mt-8 pt-8 border-t border-slate-900/40 text-center text-[11px] text-slate-600 font-medium">
@@ -417,7 +415,7 @@
         <a href="https://wa.me/447440369576" target="_blank" class="py-3 bg-green-600/20 border-r border-slate-800 hover:bg-green-600/30 transition flex flex-col items-center gap-0.5 text-green-400">
             <i class="fa-brands fa-whatsapp text-base"></i> WhatsApp
         </a>
-        <a href="mailto:cherryvagparts@gmail.com" class="py-3 hover:bg-slate-800 transition flex flex-col items-center gap-0.5">
+        <a href="mailto:cherrywoodparts@outlook.com" class="py-3 hover:bg-slate-800 transition flex flex-col items-center gap-0.5">
             <i class="fa-solid fa-envelope text-sm text-[#f97316]"></i> Email Us
         </a>
     </div>
