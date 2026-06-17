@@ -3,99 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cherrywood Autos | Secure Login</title>
+    <title>Admin Login - Cherrywood Auto Parts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: #0a2342;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .login-card {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            width: 100%;
-            max-width: 360px;
-            text-align: center;
-        }
-        .logo {
-            font-size: 1.6rem;
-            font-weight: bold;
-            color: #0a2342;
-            letter-spacing: 1px;
-            margin-bottom: 5px;
-        }
-        .subtitle {
-            color: #666;
-            font-size: 0.9rem;
-            margin-bottom: 25px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-        label {
-            font-weight: bold;
-            font-size: 0.85rem;
-            color: #444;
-            display: block;
-            margin-bottom: 8px;
-        }
-        input[type="password"] {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 1rem;
-        }
-        .btn-login {
-            width: 100%;
-            background: #007bff;
-            color: white;
-            padding: 12px;
-            border: none;
-            border-radius: 6px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .btn-login:hover { background: #0056b3; }
-        .error-msg {
-            color: #dc3545;
-            background: #fce8e6;
-            padding: 10px;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            margin-bottom: 20px;
-            font-weight: bold;
-        }
+        body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+        .orange-gradient { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
     </style>
 </head>
-<body>
+<body class="bg-[#0f172a] min-h-screen flex items-center justify-center px-4">
+    
+    <!-- WhatsApp Floating Button (matches index.html) -->
+    <a href="https://wa.me/447440369576" target="_blank" class="fixed bottom-6 right-6 z-50 bg-[#22c55e] text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-3xl hover:bg-green-600 hover:scale-110 transition duration-200" title="Chat on WhatsApp">
+        <i class="fa-brands fa-whatsapp"></i>
+    </a>
 
-    <div class="login-card">
-        <div class="logo">CHERRYWOOD AUTOS</div>
-        <div class="subtitle">Inventory Access Gate</div>
-        
-        {% if error %}
-            <div class="error-msg">{{ error }}</div>
-        {% endif %}
-
-        <form method="POST">
-            <div class="form-group">
-                <label for="password">Enter Garage Password</label>
-                <input type="password" id="password" name="password" placeholder="••••••••" required autofocus>
+    <div class="max-w-md w-full">
+        <!-- Logo matching index.html -->
+        <div class="text-center mb-8">
+            <div class="flex items-center justify-center gap-2 mb-4">
+                <svg class="w-12 h-12 text-[#f97316]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                </svg>
+                <div>
+                    <span class="font-black text-2xl tracking-wider block text-white leading-none">CHERRYWOOD</span>
+                    <span class="text-[11px] font-black text-[#f97316] tracking-widest uppercase block mt-0.5">AUTO PARTS</span>
+                </div>
             </div>
-            <button type="submit" class="btn-login">Unlock Dashboard</button>
-        </form>
-    </div>
+            <h1 class="text-xl font-black text-white tracking-wider">Admin Portal</h1>
+            <p class="text-sm text-slate-400 mt-1">Enter your credentials to manage inventory</p>
+        </div>
 
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-3 rounded-lg text-sm font-bold {% if category == 'error' %}bg-red-600/20 text-red-400 border border-red-600/30{% else %}bg-green-600/20 text-green-400 border border-green-600/30{% endif %}">
+                        <i class="fa-solid {% if category == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} mr-2"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Login Form -->
+        <form method="POST" class="bg-[#111827] border border-slate-800 rounded-2xl p-8 shadow-xl">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1.5 tracking-wider">
+                        <i class="fa-solid fa-user text-[#f97316] mr-1"></i> Username
+                    </label>
+                    <input type="text" name="username" required 
+                           placeholder="Enter username"
+                           class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white font-medium placeholder-slate-500 focus:border-[#f97316] outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1.5 tracking-wider">
+                        <i class="fa-solid fa-lock text-[#f97316] mr-1"></i> Password
+                    </label>
+                    <input type="password" name="password" required 
+                           placeholder="Enter password"
+                           class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white font-medium placeholder-slate-500 focus:border-[#f97316] outline-none transition">
+                </div>
+                <button type="submit" class="w-full p-3.5 orange-gradient text-black font-black uppercase text-sm tracking-wider rounded-xl hover:opacity-90 transition shadow-lg flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-lock-open"></i> Login to Dashboard
+                </button>
+                <div class="text-center mt-4">
+                    <a href="/" class="text-xs text-slate-500 hover:text-slate-300 transition">
+                        <i class="fa-solid fa-arrow-left mr-1"></i> Back to Website
+                    </a>
+                </div>
+            </div>
+        </form>
+        
+        <!-- Footer -->
+        <div class="text-center mt-8">
+            <p class="text-[10px] text-slate-600 font-semibold">© 2026 Cherrywood Auto Parts. All Rights Reserved.</p>
+        </div>
+    </div>
 </body>
 </html>
