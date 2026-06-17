@@ -6,8 +6,12 @@ app = Flask(__name__)
 # Use an environment variable for security
 app.secret_key = os.getenv('SECRET_KEY', 'cherrywood_yard_secret_key_2026')
 
+# Use an environment variable for security
+app.secret_key = os.getenv('SECRET_KEY', 'cherrywood_yard_secret_2026')
+
 # Use the persistent storage path for Render
-DATABASE = '/var/data/database.db'
+import os
+DATABASE = os.path.join(os.getcwd(), 'inventory.db')
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
