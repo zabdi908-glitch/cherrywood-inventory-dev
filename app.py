@@ -1,3 +1,4 @@
+
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import sqlite3
 import os
@@ -10,7 +11,7 @@ app.secret_key = os.getenv('SECRET_KEY', 'cherrywood_yard_secret_key_2026')
 
 # Database path - works on Render AND locally
 if os.getenv('RENDER'):
-    DATABASE = os.path.join('/tmp', 'inventory.db')  # Render uses /tmp
+    DATABASE = os.path.join('/tmp', 'inventory.db')
 else:
     DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inventory.db')
 
@@ -57,7 +58,12 @@ def index():
         vehicles_data = []
         for row in rows:
             v = dict(row)
-            v['parts_list'] = v.get('parts_available', '').split(',') if v.get('parts_available') else []
+            # Helper to handle the parts list safely (your original method)
+            def get_parts():
+                return v.get('parts_available', '').split(',') if v.get('parts_available') else []
+            
+            # Add the helper to the dictionary
+            v['get_parts_list'] = get_parts
             vehicles_data.append(v)
             
         return render_template('index.html', vehicles=vehicles_data)
