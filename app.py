@@ -5,8 +5,8 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import sqlite3
 import os
 from functools import wraps
-from smart_agent import smart_agent  # <-- NEW IMPORT
-import json                         # <-- NEW IMPORT
+from smart_agent import smart_agent
+import json
 
 app = Flask(__name__)
 
@@ -54,44 +54,127 @@ def init_db():
 init_db()
 
 # ============================================
-# 4. PUBLIC ROUTES (Your existing routes)
+# 4. PUBLIC ROUTES
 # ============================================
+
 @app.route('/')
 def index():
-    # Your existing index route
-    # ... (keep your current code here)
+    try:
+        db = get_db()
+        rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
+        db.close()
+        
+        vehicles_data = []
+        for row in rows:
+            v = dict(row)
+            def get_parts():
+                return v.get('parts_available', '').split(',') if v.get('parts_available') else []
+            v['get_parts_list'] = get_parts
+            vehicles_data.append(v)
+            
+        return render_template('index.html', vehicles=vehicles_data)
+    except Exception as e:
+        flash(f'Error loading vehicles: {e}', 'error')
+        return render_template('index.html', vehicles=[])
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # Your existing login route
-    # ... (keep your current code here)
+    if session.get('logged_in'):
+        return redirect(url_for('index'))
+        
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        admin_password = os.getenv('ADMIN_PASSWORD', 'cherrywood123')
+        
+        if username == 'admin' and password == admin_password:
+            session['logged_in'] = True
+            flash('Logged in successfully!', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('Invalid username or password', 'error')
+            return render_template('login.html')
+    
+    return render_template('login.html')
 
 @app.route('/logout')
 def logout():
-    # Your existing logout route
-    # ... (keep your current code here)
+    session.pop('logged_in', None)
+    flash('Logged out successfully', 'success')
+    return redirect(url_for('index'))
 
 @app.route('/add', methods=['POST'])
 @login_required
 def add_vehicle():
-    # Your existing add route
-    # ... (keep your current code here)
+    if request.method == 'POST':
+        try:
+            db = get_db()
+            db.execute('''INSERT INTO vehicle 
+                         (title, make, model, year, reg, engine, fuel, 
+                          transmission, mileage, status, image_url, parts_available, description) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                      (request.form['title'], request.form['make'], request.form['model'],
+                       request.form['year'], request.form['reg'], request.form['engine'],
+                       request.form['fuel'], request.form['transmission'], request.form['mileage'],
+                       request.form['status'], request.form['image_url'],
+                       request.form['parts_available'], request.form['description']))
+            db.commit()
+            db.close()
+            flash('Vehicle added successfully!', 'success')
+        except Exception as e:
+            flash(f'Error adding vehicle: {e}', 'error')
+    return redirect(url_for('index'))
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_vehicle(id):
-    # Your existing edit route
-    # ... (keep your current code here)
+    db = get_db()
+    vehicle = db.execute('SELECT * FROM vehicle WHERE id = ?', (id,)).fetchone()
+    
+    if not vehicle:
+        flash('Vehicle not found', 'error')
+        db.close()
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        try:
+            db.execute('''UPDATE vehicle SET title=?, make=?, model=?, year=?, reg=?, 
+                          engine=?, fuel=?, transmission=?, mileage=?, status=?, 
+                          image_url=?, parts_available=?, description=? WHERE id=?''',
+                       (request.form['title'], request.form['make'], request.form['model'], 
+                        request.form['year'], request.form['reg'], request.form['engine'], 
+                        request.form['fuel'], request.form['transmission'], request.form['mileage'], 
+                        request.form['status'], request.form['image_url'], 
+                        request.form['parts_available'], request.form['description'], id))
+            db.commit()
+            db.close()
+            flash('Vehicle updated successfully!', 'success')
+            return redirect(url_for('index'))
+        except Exception as e:
+            flash(f'Error updating vehicle: {e}', 'error')
+            db.close()
+            return render_template('edit.html', vehicle=dict(vehicle))
+    
+    db.close()
+    return render_template('edit.html', vehicle=vehicle)
 
 @app.route('/delete/<int:id>', methods=['POST'])
 @login_required
 def delete_vehicle(id):
-    # Your existing delete route
-    # ... (keep your current code here)
+    try:
+        db = get_db()
+        db.execute('DELETE FROM vehicle WHERE id = ?', (id,))
+        db.commit()
+        db.close()
+        flash('Vehicle deleted successfully!', 'success')
+    except Exception as e:
+        flash(f'Error deleting vehicle: {e}', 'error')
+    return redirect(url_for('index'))
 
 # ============================================
-# 5. ADMIN ROUTES (NEW - Paste here)
+# 5. ADMIN ROUTES (SMART AGENT)
 # ============================================
+
 @app.route('/admin/smart-add', methods=['GET', 'POST'])
 @login_required
 def smart_add_vehicle():
@@ -136,8 +219,9 @@ def smart_add_vehicle():
     return render_template('smart_add.html')
 
 # ============================================
-# 6. RUN THE APP (BOTTOM)
+# 6. RUN THE APP
 # ============================================
+
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
