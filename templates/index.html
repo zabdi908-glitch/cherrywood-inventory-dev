@@ -231,19 +231,19 @@
                             <a href="https://wa.me/447440369576?text={{ 'Hi, I am interested in parts from the ' | urlencode }}{{ vehicle.title | urlencode }}{{ ' (Reg: ' | urlencode }}{{ vehicle.reg | urlencode }}{{ '). Do you have parts available?' | urlencode }}" target="_blank" class="flex-1 bg-green-600 text-white text-center py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider shadow hover:bg-green-700 transition flex items-center justify-center gap-1.5">
                                 <i class="fa-brands fa-whatsapp text-sm"></i> Request Parts
                             </a>
-                            {% if session.get('logged_in') %}
-                            <form action="/delete/{{ vehicle.id }}" method="POST" onsubmit="return confirm('Remove this vehicle entirely from listings?');">
-                                <button type="submit" class="bg-red-600/20 text-red-400 border border-red-500/30 px-3 py-2.5 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white transition">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </form>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
+                           {% if session.get('logged_in') %}
+    <div class="flex space-x-2 mt-2">
+        <a href="/edit/{{ vehicle.id }}" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+            Edit
+        </a>
+        
+        <form action="/delete/{{ vehicle.id }}" method="POST" onsubmit="return confirm('Are you sure?');">
+            <button type="submit" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
+                Delete
+            </button>
+        </form>
+    </div>
+{% endif %}
         </section>
 
         <section class="bg-[#111827] py-16 border-t border-b border-slate-800 w-full">
