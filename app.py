@@ -36,14 +36,22 @@ init_db()
 @app.route('/')
 def index():
     db = get_db()
-    # Use try/except to catch issues if the table is missing
-    try:
-        rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
-    except sqlite3.OperationalError:
-        rows = []
+    rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
     db.close()
-    return render_template('index.html', vehicles=rows)
-
+    
+    # Transform rows into a list of dictionaries
+    vehicles_data = []
+    for row in rows:
+        v = dict(row)
+        # Helper to handle the parts list safely
+        def get_parts():
+            return v.get('parts_available', '').split(',') if v.get('parts_available') else []
+        
+        # Add the helper to the dictionary
+        v['get_parts_list'] = get_parts
+        vehicles_data.append(v)
+        
+    return render_template('index.html', vehicles=vehicles_data)
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
