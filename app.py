@@ -8,8 +8,11 @@ app = Flask(__name__)
 # Security - use environment variables
 app.secret_key = os.getenv('SECRET_KEY', 'cherrywood_yard_secret_key_2026')
 
-# Database path - better for production
-DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inventory.db')
+# Database path - works on Render AND locally
+if os.getenv('RENDER'):
+    DATABASE = os.path.join('/tmp', 'inventory.db')  # Render uses /tmp
+else:
+    DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inventory.db')
 
 # Login decorator for protected routes
 def login_required(f):
@@ -37,7 +40,7 @@ def init_db():
                 status TEXT, image_url TEXT, parts_available TEXT, description TEXT
             )''')
             conn.commit()
-            print("Database initialized successfully")
+            print(f"Database initialized successfully at {DATABASE}")
     except Exception as e:
         print(f"Database initialization error: {e}")
 
@@ -54,7 +57,6 @@ def index():
         vehicles_data = []
         for row in rows:
             v = dict(row)
-            # Convert parts string to list
             v['parts_list'] = v.get('parts_available', '').split(',') if v.get('parts_available') else []
             vehicles_data.append(v)
             
@@ -89,7 +91,7 @@ def logout():
     flash('Logged out successfully', 'success')
     return redirect(url_for('index'))
 
-@app.route('/add', methods=['GET', 'POST'])
+@app.route('/add', methods=['POST'])
 @login_required
 def add_vehicle():
     if request.method == 'POST':
@@ -107,12 +109,9 @@ def add_vehicle():
             db.commit()
             db.close()
             flash('Vehicle added successfully!', 'success')
-            return redirect(url_for('index'))
         except Exception as e:
             flash(f'Error adding vehicle: {e}', 'error')
-            return render_template('add.html')
-    
-    return render_template('add.html')
+    return redirect(url_for('index'))
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -160,26 +159,7 @@ def delete_vehicle(id):
         flash(f'Error deleting vehicle: {e}', 'error')
     return redirect(url_for('index'))
 
-@app.route('/vehicle/<int:id>')
-def view_vehicle(id):
-    try:
-        db = get_db()
-        vehicle = db.execute('SELECT * FROM vehicle WHERE id = ?', (id,)).fetchone()
-        db.close()
-        
-        if not vehicle:
-            flash('Vehicle not found', 'error')
-            return redirect(url_for('index'))
-        
-        v = dict(vehicle)
-        v['parts_list'] = v.get('parts_available', '').split(',') if v.get('parts_available') else []
-        return render_template('view.html', vehicle=v)
-    except Exception as e:
-        flash(f'Error loading vehicle: {e}', 'error')
-        return redirect(url_for('index'))
-
 if __name__ == '__main__':
-    # For production, use debug=False
-    # For development, set debug=True
+    port = int(os.getenv('PORT', 5000))
     debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
-    app.run(debug=debug_mode, host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)
