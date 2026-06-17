@@ -6,6 +6,7 @@ import json
 import re
 from PIL import Image
 import io
+import numpy as np
 from datetime import datetime
 
 class SmartVehicleAgent:
@@ -29,6 +30,9 @@ class SmartVehicleAgent:
             # Download image
             image = self.download_image(image_url)
             
+            if image is None:
+                return {'success': False, 'error': 'Could not download image'}
+            
             # Extract license plate
             plate_text = self.extract_license_plate(image)
             
@@ -47,7 +51,7 @@ class SmartVehicleAgent:
                 'plate': plate_text,
                 'description': description,
                 'suggested_parts': parts,
-                'status': 'Breaking'  # Default status
+                'status': 'Breaking'
             }
         except Exception as e:
             return {'success': False, 'error': str(e)}
@@ -55,7 +59,7 @@ class SmartVehicleAgent:
     def download_image(self, image_url):
         """Download image from URL"""
         try:
-            response = requests.get(image_url)
+            response = requests.get(image_url, timeout=10)
             img = Image.open(io.BytesIO(response.content))
             return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
         except:
@@ -72,9 +76,9 @@ class SmartVehicleAgent:
             
             # Clean up - look for UK plate format
             patterns = [
-                r'[A-Z]{2}[0-9]{2}\s?[A-Z]{3}',  # Standard UK format
-                r'[A-Z]{2}[0-9]{2}\s?[A-Z]{2}',   # Older UK format
-                r'[A-Z][0-9]{3}\s?[A-Z]{3}'       # NI format
+                r'[A-Z]{2}[0-9]{2}\s?[A-Z]{3}',
+                r'[A-Z]{2}[0-9]{2}\s?[A-Z]{2}',
+                r'[A-Z][0-9]{3}\s?[A-Z]{3}'
             ]
             
             for pattern in patterns:
@@ -88,41 +92,34 @@ class SmartVehicleAgent:
     
     def identify_vehicle(self, image, plate):
         """Identify vehicle from image"""
-        # This is simplified - in production you'd use:
-        # 1. TensorFlow/Keras model
-        # 2. Google Cloud Vision API
-        # 3. AWS Rekognition
-        
-        # For now, we'll try to extract from plate if possible
-        # In reality, you'd use a trained model
-        
-        # Try to detect from plate prefix (UK)
+        # This is simplified - in production you'd use AI models
+        # For now, try to extract from plate if possible
         vehicle_details = {
             'make': 'Unknown',
             'model': 'Unknown',
             'year': self.extract_year_from_plate(plate),
-            'fuel': 'Diesel',  # Default
-            'transmission': 'Manual'  # Default
+            'fuel': 'Diesel',
+            'transmission': 'Manual',
+            'engine': 'Unknown',
+            'mileage': 'Unknown'
         }
         
         return vehicle_details
     
     def extract_year_from_plate(self, plate):
         """Extract year from UK registration plate"""
-        # UK plate format: AB12 ABC
-        # 12 = 2012, 22 = 2022, etc.
         try:
             if len(plate) >= 4:
                 year_code = plate[2:4]
                 if year_code.isdigit():
                     year = int(year_code)
                     if year >= 50:
-                        return f"20{year - 50}"  # e.g., 22 -> 2022
+                        return f"20{year - 50}"
                     else:
-                        return f"20{year}"       # e.g., 12 -> 2012
+                        return f"20{year}"
         except:
             pass
-        return '2015'  # Default
+        return '2015'
     
     def generate_description(self, vehicle):
         """Generate auto-description"""
@@ -147,7 +144,6 @@ class SmartVehicleAgent:
             'Alloy Wheels', 'Seats', 'Steering Wheel'
         ]
         
-        # If it's a diesel, add diesel-specific parts
         if vehicle.get('fuel', '').lower() == 'diesel':
             common_parts.extend(['DPF', 'EGR Valve', 'Diesel Pump'])
         
@@ -161,7 +157,7 @@ class SmartVehicleAgent:
         vehicle = analysis_result['vehicle']
         
         return {
-            'title': f"{vehicle.get('year', '')} {vehicle.get('make', '')} {vehicle.get('model', '')} Breaker",
+            'title': f"{vehicle.get('year', '')} {vehicle.get('make', '')} {vehicle.get('model', '')} Breaker - All Parts Available",
             'make': vehicle.get('make', 'Unknown'),
             'model': vehicle.get('model', 'Unknown'),
             'year': vehicle.get('year', '2015'),
@@ -171,7 +167,7 @@ class SmartVehicleAgent:
             'transmission': vehicle.get('transmission', 'Manual'),
             'mileage': vehicle.get('mileage', 'Unknown'),
             'status': analysis_result.get('status', 'Breaking'),
-            'image_url': '',  # Will be filled by user
+            'image_url': '',
             'parts_available': analysis_result.get('suggested_parts', ''),
             'description': analysis_result.get('description', '')
         }
