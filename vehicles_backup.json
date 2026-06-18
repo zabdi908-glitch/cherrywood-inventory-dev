@@ -1,0 +1,32 @@
+[
+  {
+    "title": "2015 Audi A3 2.0 TDI Breaker",
+    "make": "Audi",
+    "model": "A3",
+    "year": "2015",
+    "reg": "AB15 XYZ",
+    "engine": "2.0 TDI",
+    "fuel": "Diesel",
+    "transmission": "Manual",
+    "mileage": "82,000",
+    "status": "Breaking",
+    "image_url": "https://via.placeholder.com/400x300/1a1a2e/ffffff?text=Audi+A3",
+    "parts_available": "Engine, Gearbox, Headlights, Doors, Seats",
+    "description": "Complete breakage of Audi A3 2.0 TDI. All parts tested."
+  },
+  {
+    "title": "2017 Volkswagen Golf GTI Parts Donor",
+    "make": "Volkswagen",
+    "model": "Golf GTI",
+    "year": "2017",
+    "reg": "CD17 EFG",
+    "engine": "2.0 TSI",
+    "fuel": "Petrol",
+    "transmission": "DSG",
+    "mileage": "45,000",
+    "status": "Breaking",
+    "image_url": "https://via.placeholder.com/400x300/1a1a2e/ffffff?text=Golf+GTI",
+    "parts_available": "Turbo, ECU, Alloy Wheels, Bumper, Tailgate",
+    "description": "Low mileage Golf GTI being broken for parts."
+  }
+]
