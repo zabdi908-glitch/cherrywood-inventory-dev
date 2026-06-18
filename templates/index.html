@@ -233,19 +233,24 @@
                             <a href="https://wa.me/447440369576?text={{ 'Hi, I am interested in parts from the ' | urlencode }}{{ vehicle.title | urlencode }}{{ ' (Reg: ' | urlencode }}{{ vehicle.reg | urlencode }}{{ '). Do you have parts available?' | urlencode }}" target="_blank" class="flex-1 bg-green-600 text-white text-center py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider shadow hover:bg-green-700 transition flex items-center justify-center gap-1.5">
                                 <i class="fa-brands fa-whatsapp text-sm"></i> Request Parts
                             </a>
-                           {% if session.get('logged_in') %}
-    <div class="flex space-x-2 mt-2">
-        <a href="/edit/{{ vehicle.id }}" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
-            Edit
-        </a>
-        
-        <form action="/delete/{{ vehicle.id }}" method="POST" onsubmit="return confirm('Are you sure?');">
-            <button type="submit" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
-                Delete
-            </button>
-        </form>
-    </div>
-{% endif %}
+                            {% if session.get('logged_in') %}
+                            <div class="flex space-x-2 mt-2">
+                                <a href="/edit/{{ vehicle.id }}" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                                    Edit
+                                </a>
+                                <form action="/delete/{{ vehicle.id }}" method="POST" onsubmit="return confirm('Are you sure?');">
+                                    <button type="submit" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
         </section>
 
         <section class="bg-[#111827] py-16 border-t border-b border-slate-800 w-full">
@@ -382,41 +387,36 @@
     </section>
     {% endif %}
 
-   <footer class="bg-[#0b0f19] border-t border-slate-900 py-12 text-slate-500 text-xs font-semibold w-full pb-24 md:pb-12">
-    <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-4 gap-8">
-        <!-- Column 1: About -->
-        <div>
-            <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Cherrywood Auto Parts</span>
-            <p class="leading-relaxed text-slate-400 font-medium">Genuine recycled Audi, VW, SEAT and Škoda parts. Delivering throughout the UK.</p>
+    <footer class="bg-[#0b0f19] border-t border-slate-900 py-12 text-slate-500 text-xs font-semibold w-full pb-24 md:pb-12">
+        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-4 gap-8">
+            <div>
+                <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Cherrywood Auto Parts</span>
+                <p class="leading-relaxed text-slate-400 font-medium">Genuine recycled Audi, VW, SEAT and Škoda parts. Delivering throughout the UK.</p>
+            </div>
+            <div>
+                <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Opening Hours</span>
+                <p class="text-slate-400 font-medium">Mon - Fri: 8:00am - 5:00pm<br>Sat: 8:00am - 1:00pm<br>Sun: Closed</p>
+            </div>
+            <div>
+                <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Quick Contact</span>
+                <p class="text-slate-400 font-medium mb-1">Phone: 07440 369576</p>
+                <p class="text-slate-400 font-medium">Email: cherrywoodparts@outlook.com</p>
+            </div>
+            <div>
+                <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Licensed &amp; Compliant</span>
+                <p class="text-[10px] text-slate-400 leading-relaxed">
+                    <span class="text-[#f97316]">✓</span> Environment Agency Licence: <span class="text-white">102422</span><br>
+                    <span class="text-[#f97316]">✓</span> EPR Ref: <span class="text-white">TP3398VM</span><br>
+                    <span class="text-[#f97316]">✓</span> Waste Transfer &amp; Treatment<br>
+                    <span class="text-[#f97316]">✓</span> Compliance Band: B (100%)
+                </p>
+            </div>
         </div>
-        <!-- Column 2: Opening Hours -->
-        <div>
-            <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Opening Hours</span>
-            <p class="text-slate-400 font-medium">Mon - Fri: 8:00am - 5:00pm<br>Sat: 8:00am - 1:00pm<br>Sun: Closed</p>
+        <div class="max-w-7xl mx-auto px-4 mt-8 pt-8 border-t border-slate-900/40 text-center text-[11px] text-slate-600 font-medium">
+            <p>Cherrywood Autos · 110-112 Cherrywood Road, Bordesley Green, Birmingham, B9 4UH</p>
+            <p class="mt-1">© 2026 Cherrywood Auto Parts. All Rights Reserved. Managed inventory portal.</p>
         </div>
-        <!-- Column 3: Contact -->
-        <div>
-            <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Quick Contact</span>
-            <p class="text-slate-400 font-medium mb-1">Phone: 07440 369576</p>
-            <p class="text-slate-400 font-medium">Email: cherrywoodparts@outlook.com</p>
-        </div>
-        <!-- Column 4: ✅ NEW Trust Signals -->
-        <div>
-            <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Licensed &amp; Compliant</span>
-            <p class="text-[10px] text-slate-400 leading-relaxed">
-                <span class="text-[#f97316]">✓</span> Environment Agency Licence: <span class="text-white">102422</span><br>
-                <span class="text-[#f97316]">✓</span> EPR Ref: <span class="text-white">TP3398VM</span><br>
-                <span class="text-[#f97316]">✓</span> Waste Transfer &amp; Treatment<br>
-                <span class="text-[#f97316]">✓</span> Compliance Band: B (100%)
-            </p>
-        </div>
-    </div>
-    <!-- Copyright -->
-    <div class="max-w-7xl mx-auto px-4 mt-8 pt-8 border-t border-slate-900/40 text-center text-[11px] text-slate-600 font-medium">
-        <p>Cherrywood Autos · 110-112 Cherrywood Road, Bordesley Green, Birmingham, B9 4UH</p>
-        <p class="mt-1">© 2026 Cherrywood Auto Parts. All Rights Reserved. Managed inventory portal.</p>
-    </div>
-</footer>
+    </footer>
 
     <div class="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-[#111827]/95 backdrop-blur-md border-t border-slate-800 grid grid-cols-3 font-black text-[10px] tracking-wider text-center uppercase text-white shadow-2xl">
         <a href="tel:07440369576" class="py-3 border-r border-slate-800 hover:bg-slate-800 transition flex flex-col items-center gap-0.5">
