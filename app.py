@@ -138,7 +138,7 @@ def restore_on_startup():
     except Exception as e:
         print(f"❌ Restore on startup failed: {e}")
 
-restore_on_startup()  # Auto-restore on every deploy!
+restore_on_startup()
 
 # ============================================
 # PUBLIC ROUTES
@@ -323,6 +323,30 @@ def restore_vehicles():
     else:
         flash('❌ No backup found or restore failed', 'error')
     return redirect(url_for('index'))
+
+# ✅ NEW: Backup Now Route
+@app.route('/admin/backup-now', methods=['POST'])
+@login_required
+def backup_now():
+    """Manually create a backup file"""
+    try:
+        db = get_db()
+        rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
+        db.close()
+        
+        vehicles = []
+        for row in rows:
+            vehicles.append(dict(row))
+        
+        backup_file = 'vehicles_backup.json'
+        with open(backup_file, 'w') as f:
+            json.dump(vehicles, f, indent=2)
+        
+        flash(f'✅ Backup created with {len(vehicles)} vehicles! Now commit and push to GitHub.', 'success')
+        return redirect(url_for('index'))
+    except Exception as e:
+        flash(f'❌ Backup failed: {e}', 'error')
+        return redirect(url_for('index'))
 
 # ============================================
 # INFORMATION PAGES
