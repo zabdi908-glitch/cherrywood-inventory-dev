@@ -306,7 +306,13 @@ def restore_vehicles():
     else:
         flash('❌ No backup found or restore failed', 'error')
     return redirect(url_for('index'))
+@app.route('/about')
+def about():
+    return render_template('about.html')
 
+@app.route('/warranty')
+def warranty():
+    return render_template('warranty.html')
 # ============================================
 # RUN THE APP
 # ============================================
