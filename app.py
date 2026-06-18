@@ -53,7 +53,7 @@ def init_db():
 init_db()
 
 # ============================================
-# AUTO-BACKUP SYSTEM (No Disk Needed)
+# AUTO-BACKUP SYSTEM
 # ============================================
 
 def auto_backup_vehicles():
@@ -273,7 +273,7 @@ def edit_vehicle(id):
             db.commit()
             db.close()
             flash('Vehicle updated successfully!', 'success')
-            auto_backup_vehicles()  # Backup after edit
+            auto_backup_vehicles()
             return redirect(url_for('index'))
         except Exception as e:
             flash(f'Error updating vehicle: {e}', 'error')
@@ -292,7 +292,7 @@ def delete_vehicle(id):
         db.commit()
         db.close()
         flash('Vehicle deleted successfully!', 'success')
-        auto_backup_vehicles()  # Backup after delete
+        auto_backup_vehicles()
     except Exception as e:
         flash(f'Error deleting vehicle: {e}', 'error')
     return redirect(url_for('index'))
@@ -306,6 +306,11 @@ def restore_vehicles():
     else:
         flash('❌ No backup found or restore failed', 'error')
     return redirect(url_for('index'))
+
+# ============================================
+# INFORMATION PAGES
+# ============================================
+
 @app.route('/about')
 def about():
     return render_template('about.html')
@@ -313,6 +318,11 @@ def about():
 @app.route('/warranty')
 def warranty():
     return render_template('warranty.html')
+
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
+
 # ============================================
 # RUN THE APP
 # ============================================
