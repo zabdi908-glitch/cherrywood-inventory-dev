@@ -53,7 +53,7 @@ def init_db():
 init_db()
 
 # ============================================
-# AUTO-BACKUP SYSTEM
+# AUTO-BACKUP & RESTORE SYSTEM
 # ============================================
 
 def auto_backup_vehicles():
@@ -120,6 +120,26 @@ def backup_after_change(func):
         return result
     return wrapper
 
+def restore_on_startup():
+    """Auto-restore vehicles from backup on startup"""
+    try:
+        db = get_db()
+        count = db.execute('SELECT COUNT(*) FROM vehicle').fetchone()[0]
+        db.close()
+        
+        if count == 0:
+            print("⚠️ Database is empty, attempting to restore from backup...")
+            if restore_from_backup():
+                print("✅ Vehicles restored from backup on startup!")
+            else:
+                print("ℹ️ No backup found - database is empty")
+        else:
+            print(f"✅ Database has {count} vehicles")
+    except Exception as e:
+        print(f"❌ Restore on startup failed: {e}")
+
+restore_on_startup()  # Auto-restore on every deploy!
+
 # ============================================
 # PUBLIC ROUTES
 # ============================================
@@ -146,7 +166,6 @@ def index():
 
 @app.route('/search')
 def search():
-    """Search vehicles by make, model, or parts"""
     query = request.args.get('q', '').strip()
     
     if not query:
@@ -179,7 +198,6 @@ def search():
 
 @app.route('/vehicle/<int:id>')
 def view_vehicle(id):
-    """View full details of a single vehicle"""
     try:
         db = get_db()
         vehicle = db.execute('SELECT * FROM vehicle WHERE id = ?', (id,)).fetchone()
@@ -224,7 +242,7 @@ def logout():
     return redirect(url_for('index'))
 
 # ============================================
-# ADMIN ROUTES (With Auto-Backup)
+# ADMIN ROUTES
 # ============================================
 
 @app.route('/add', methods=['POST'])
@@ -300,7 +318,6 @@ def delete_vehicle(id):
 @app.route('/admin/restore', methods=['POST'])
 @login_required
 def restore_vehicles():
-    """Restore vehicles from backup"""
     if restore_from_backup():
         flash('✅ Vehicles restored from backup!', 'success')
     else:
