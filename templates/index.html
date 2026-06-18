@@ -4,9 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cherrywood Auto Parts | Used Audi, VW, SEAT & Škoda Parts</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- ✅ SEO: Meta Description -->
+    <meta name="description" content="Cherrywood Auto Parts - Used Audi, VW, SEAT and Škoda parts. UK wide delivery. Quality tested parts available. Call 07440 369576.">
+    
+    <!-- ✅ PERFORMANCE: Async Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com" async></script>
+    
+    <!-- ✅ PERFORMANCE: Defer Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" defer>
+    
+    <!-- ✅ PERFORMANCE: Font Display Swap -->
     <style>
+        @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css') font-display: swap;
+        
         body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
         .orange-gradient { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
     </style>
@@ -44,7 +55,8 @@
         <div class="absolute inset-0 w-full h-full z-0 pointer-events-none">
             <img src="{{ url_for('static', filename='shutter-background.jpg') }}" 
                  alt="Cherrywood Shutter Graffiti" 
-                 class="w-full h-full object-cover object-center filter contrast-115 brightness-[0.28]">
+                 class="w-full h-full object-cover object-center filter contrast-115 brightness-[0.28]"
+                 fetchpriority="high">
             <div class="absolute inset-0 bg-[radial-gradient(#f97316_1px,transparent_1px)] opacity-5 [background-size:24px_24px]"></div>
             <div class="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/40 to-[#0f172a]"></div>
         </div>
@@ -95,9 +107,9 @@
 
         <section class="max-w-3xl mx-auto w-full px-4 pt-12 pb-14 relative z-20">
             <div class="bg-[#1e293b]/95 backdrop-blur-md p-6 sm:p-8 rounded-2xl border-2 border-[#f97316] shadow-2xl">
-                <h3 class="text-xl font-black uppercase text-[#f97316] tracking-wide mb-2 flex items-center gap-2">
+                <h2 class="text-xl font-black uppercase text-[#f97316] tracking-wide mb-2 flex items-center gap-2">
                     <i class="fa-solid fa-magnifying-glass"></i> Quick Stock Check Enquiry
-                </h3>
+                </h2>
                 <p class="text-xs text-slate-400 mb-6 font-medium">Can't find your vehicle listed below? Send an instant check directly to our yard desk.</p>
                 
                 <form onsubmit="handleStockCheck(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -123,7 +135,6 @@
     </div>
 
     <main class="bg-[#0f172a] flex-1 w-full">
-        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -140,7 +151,6 @@
             <h2 class="text-2xl font-black uppercase tracking-wider text-center text-white mb-2">Popular Parts In Stock</h2>
             <p class="text-sm text-center text-slate-400 mb-10 max-w-md mx-auto">We stock thousands of shelved mechanical components ready for collection or shipping.</p>
             
-            <!-- 🔍 SEARCH BAR -->
             <div class="max-w-2xl mx-auto mb-10">
                 <form action="/search" method="GET" class="flex flex-col sm:flex-row gap-3">
                     <div class="flex-1">
@@ -236,7 +246,7 @@
                 {% for vehicle in vehicles %}
                 <div class="bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col">
                     <div class="relative h-56 bg-slate-900">
-                        <img src="{{ vehicle.image_url }}" alt="{{ vehicle.title }}" class="w-full h-full object-cover">
+                        <img src="{{ vehicle.image_url }}" alt="{{ vehicle.title }}" loading="lazy" class="w-full h-full object-cover">
                         <span class="absolute top-3 right-3 bg-[#f97316] text-black font-black text-xs uppercase px-3 py-1 rounded-md tracking-wider">
                             {{ vehicle.status }}
                         </span>
@@ -348,8 +358,8 @@
                 <a href="tel:07440369576" class="bg-black text-white p-4 rounded-xl shadow-lg hover:bg-neutral-900 transition flex items-center justify-center gap-2">
                     <i class="fa-solid fa-phone text-[#f97316]"></i> 07440 369576
                 </a>
-                <a href="mailto:cherryvagparts@gmail.com" class="bg-black text-white p-4 rounded-xl shadow-lg hover:bg-neutral-900 transition flex items-center justify-center gap-2 text-xs lowercase">
-                    <i class="fa-solid fa-envelope text-[#f97316]"></i> cherryvagparts@gmail.com
+                <a href="mailto:cherrywoodparts@outlook.com" class="bg-black text-white p-4 rounded-xl shadow-lg hover:bg-neutral-900 transition flex items-center justify-center gap-2 text-xs lowercase">
+                    <i class="fa-solid fa-envelope text-[#f97316]"></i> cherrywoodparts@outlook.com
                 </a>
                 <a href="https://wa.me/447440369576" target="_blank" class="bg-[#22c55e] text-white p-4 rounded-xl shadow-lg hover:bg-green-600 transition flex items-center justify-center gap-2">
                     <i class="fa-brands fa-whatsapp text-lg"></i> WhatsApp Us
@@ -441,9 +451,9 @@
     {% endif %}
 
     <footer class="bg-[#0b0f19] border-t border-slate-900 py-12 text-slate-500 text-xs font-semibold w-full pb-24 md:pb-12">
-        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-3 gap-8">
+        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-4 gap-8">
             <div>
-                <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Cherrywood Auto Parts</span>
+                <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Cherrywood Autos</span>
                 <p class="leading-relaxed text-slate-400 font-medium">Genuine recycled Audi, VW, SEAT and Škoda parts. Delivering throughout the UK.</p>
             </div>
             <div>
@@ -453,11 +463,21 @@
             <div>
                 <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Quick Contact</span>
                 <p class="text-slate-400 font-medium mb-1">Phone: 07440 369576</p>
-                <p class="text-slate-400 font-medium">Email: cherryvagparts@gmail.com</p>
+                <p class="text-slate-400 font-medium">Email: cherrywoodparts@outlook.com</p>
+            </div>
+            <div>
+                <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Licensed &amp; Compliant</span>
+                <p class="text-[10px] text-slate-400 leading-relaxed">
+                    <span class="text-[#f97316]">✓</span> Environment Agency Licence: <span class="text-white">102422</span><br>
+                    <span class="text-[#f97316]">✓</span> EPR Ref: <span class="text-white">TP3398VM</span><br>
+                    <span class="text-[#f97316]">✓</span> Waste Transfer &amp; Treatment<br>
+                    <span class="text-[#f97316]">✓</span> Compliance Band: B (100%)
+                </p>
             </div>
         </div>
         <div class="max-w-7xl mx-auto px-4 mt-8 pt-8 border-t border-slate-900/40 text-center text-[11px] text-slate-600 font-medium">
-            © 2026 Cherrywood Auto Parts. All Rights Reserved. Managed inventory portal.
+            <p>Cherrywood Autos · 110-112 Cherrywood Road, Bordesley Green, Birmingham, B9 4UH</p>
+            <p class="mt-1">© 2026 Cherrywood Autos. All Rights Reserved. Managed inventory portal.</p>
         </div>
     </footer>
 
@@ -468,7 +488,7 @@
         <a href="https://wa.me/447440369576" target="_blank" class="py-3 bg-green-600/20 border-r border-slate-800 hover:bg-green-600/30 transition flex flex-col items-center gap-0.5 text-green-400">
             <i class="fa-brands fa-whatsapp text-base"></i> WhatsApp
         </a>
-        <a href="mailto:cherryvagparts@gmail.com" class="py-3 hover:bg-slate-800 transition flex flex-col items-center gap-0.5">
+        <a href="mailto:cherrywoodparts@outlook.com" class="py-3 hover:bg-slate-800 transition flex flex-col items-center gap-0.5">
             <i class="fa-solid fa-envelope text-sm text-[#f97316]"></i> Email Us
         </a>
     </div>
