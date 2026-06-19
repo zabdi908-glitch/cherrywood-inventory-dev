@@ -166,6 +166,7 @@ def index():
 
 @app.route('/search')
 def search():
+    """Search vehicles by make, model, or parts"""
     query = request.args.get('q', '').strip()
     
     if not query:
@@ -242,7 +243,7 @@ def logout():
     return redirect(url_for('index'))
 
 # ============================================
-# ADMIN ROUTES
+# ADMIN ROUTES (With Auto-Backup)
 # ============================================
 
 @app.route('/add', methods=['POST'])
@@ -324,7 +325,6 @@ def restore_vehicles():
         flash('❌ No backup found or restore failed', 'error')
     return redirect(url_for('index'))
 
-# ✅ NEW: Backup Now Route
 @app.route('/admin/backup-now', methods=['POST'])
 @login_required
 def backup_now():
@@ -349,6 +349,66 @@ def backup_now():
         return redirect(url_for('index'))
 
 # ============================================
+# GALLERY PAGE
+# ============================================
+
+@app.route('/gallery')
+def gallery():
+    """Gallery page - all vehicles"""
+    try:
+        db = get_db()
+        rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
+        db.close()
+        
+        vehicles_data = []
+        for row in rows:
+            v = dict(row)
+            def get_parts():
+                return v.get('parts_available', '').split(',') if v.get('parts_available') else []
+            v['get_parts_list'] = get_parts
+            vehicles_data.append(v)
+        
+        return render_template('gallery.html', vehicles=vehicles_data)
+    except Exception as e:
+        flash(f'Error loading gallery: {e}', 'error')
+        return render_template('gallery.html', vehicles=[])
+
+# ============================================
+# PART ENQUIRY PAGE
+# ============================================
+
+@app.route('/enquiry', methods=['GET', 'POST'])
+def enquiry():
+    """Part Enquiry page - customers can request parts"""
+    if request.method == 'POST':
+        # Get form data
+        name = request.form.get('name')
+        email = request.form.get('email')
+        phone = request.form.get('phone')
+        reg = request.form.get('reg')
+        vehicle = request.form.get('vehicle')
+        parts = request.form.get('parts')
+        message = request.form.get('message')
+        
+        # Build WhatsApp message
+        whatsapp_message = f"Hi Cherrywood, I have a part enquiry:\n\n"
+        whatsapp_message += f"Name: {name}\n"
+        whatsapp_message += f"Email: {email}\n"
+        if phone:
+            whatsapp_message += f"Phone: {phone}\n"
+        whatsapp_message += f"Reg: {reg}\n"
+        if vehicle:
+            whatsapp_message += f"Vehicle: {vehicle}\n"
+        whatsapp_message += f"Parts Required: {parts}\n"
+        if message:
+            whatsapp_message += f"Additional Info: {message}\n"
+        
+        # Redirect to WhatsApp with pre-filled message
+        return redirect(f"https://wa.me/447440369576?text={whatsapp_message.replace(' ', '%20').replace('\n', '%0A')}")
+    
+    return render_template('enquiry.html')
+
+# ============================================
 # INFORMATION PAGES
 # ============================================
 
@@ -363,6 +423,14 @@ def warranty():
 @app.route('/privacy')
 def privacy():
     return render_template('privacy.html')
+
+@app.route('/faqs')
+def faqs():
+    return render_template('faqs.html')
+
+@app.route('/contact')
+def contact():
+    return render_template('contact.html')
 
 # ============================================
 # RUN THE APP
