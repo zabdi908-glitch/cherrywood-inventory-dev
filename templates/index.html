@@ -9,439 +9,304 @@
     <style>
         body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
         .orange-gradient { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+        .bg-dark-card { background-color: #111827; }
+        .border-dark { border-color: #1e293b; }
+        .text-orange { color: #f97316; }
     </style>
 </head>
 <body class="bg-[#0f172a] text-slate-200 min-h-screen flex flex-col">
 
-<nav class="bg-[#111827] border-b border-slate-800 sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <!-- Logo -->
-        <a href="/" class="flex items-center gap-2">
-            <svg class="w-8 h-8 text-[#f97316]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-            </svg>
-            <div>
-                <span class="font-black text-base tracking-wider block text-white leading-none">CHERRYWOOD</span>
-                <span class="text-[10px] font-black text-[#f97316] tracking-widest uppercase block mt-0.5">AUTO PARTS</span>
-            </div>
-        </a>
-
-        <!-- Desktop Navigation -->
-        <div class="hidden md:flex items-center gap-6">
-            <a href="/" class="text-sm text-[#f97316] font-bold transition">Home</a>
-            <a href="/gallery" class="text-sm text-slate-300 hover:text-[#f97316] transition">Gallery</a>
-            <a href="/enquiry" class="text-sm text-slate-300 hover:text-[#f97316] transition">Part Enquiry</a>
-            <a href="/about" class="text-sm text-slate-300 hover:text-[#f97316] transition">About</a>
-            <a href="/contact" class="text-sm text-slate-300 hover:text-[#f97316] transition">Contact</a>
-        </div>
-
-        <!-- Right side buttons -->
-        <div class="flex items-center gap-3">
-            <a href="https://wa.me/447440369576" target="_blank" class="bg-[#22c55e] text-white px-3 py-1.5 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-green-600 transition">
-                <i class="fa-brands fa-whatsapp"></i> <span class="hidden sm:inline">WhatsApp</span>
-            </a>
-            {% if session.get('logged_in') %}
-                <a href="/logout" class="text-xs bg-red-600 px-3 py-1.5 rounded font-bold text-white hover:bg-red-700 transition">Logout</a>
-            {% endif %}
-            <!-- Mobile menu button -->
-            <button id="mobile-menu-btn" class="md:hidden text-white text-xl">
-                <i class="fa-solid fa-bars"></i>
-            </button>
-        </div>
-    </div>
-
-    <!-- Mobile Navigation -->
-    <div id="mobile-menu" class="hidden md:hidden bg-[#1e293b] border-t border-slate-700 py-3 px-4">
-        <div class="flex flex-col gap-2">
-            <a href="/" class="text-sm text-[#f97316] font-bold transition py-1">Home</a>
-            <a href="/gallery" class="text-sm text-slate-300 hover:text-[#f97316] transition py-1">Gallery</a>
-            <a href="/enquiry" class="text-sm text-slate-300 hover:text-[#f97316] transition py-1">Part Enquiry</a>
-            <a href="/about" class="text-sm text-slate-300 hover:text-[#f97316] transition py-1">About</a>
-            <a href="/contact" class="text-sm text-slate-300 hover:text-[#f97316] transition py-1">Contact</a>
-        </div>
-    </div>
-</nav>
-    <div class="relative bg-slate-950 w-full z-10 block overflow-hidden">
-        <div class="absolute inset-0 w-full h-full z-0 pointer-events-none">
-            <img src="{{ url_for('static', filename='shutter-background.jpg') }}" 
-                 alt="Cherrywood Shutter Graffiti" 
-                 class="w-full h-full object-cover object-center filter contrast-115 brightness-[0.28]">
-            <div class="absolute inset-0 bg-[radial-gradient(#f97316_1px,transparent_1px)] opacity-5 [background-size:24px_24px]"></div>
-            <div class="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/40 to-[#0f172a]"></div>
-        </div>
-
-        <header class="relative pt-16 pb-12 md:pt-24 md:pb-16 px-4 text-center z-10">
-            <div class="max-w-4xl mx-auto">
-                <h1 class="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white mb-6 drop-shadow-md">
-                    Used <span class="text-[#f97316]">Audi, Volkswagen, SEAT & Škoda</span> Parts
-                </h1>
-                
-                <p class="text-base sm:text-lg md:text-xl text-slate-200 max-w-2xl mx-auto mb-2 font-medium">
-                    Need a part for your Audi, VW, SEAT or Škoda? 
-                </p>
-                <p class="text-sm sm:text-base text-slate-400 max-w-xl mx-auto mb-8 font-semibold">
-                    Send us your vehicle registration and our yard team will check our shelves instantly.
-                </p>
-
-                <div class="inline-flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-4 py-1.5 rounded-lg text-xs font-bold text-[#f97316] mb-8 backdrop-blur-sm">
-                    <i class="fa-solid fa-boxes-stacked"></i> <span>1,000s of Tested Parts Ready on Shelves</span>
-                </div>
-
-                <div class="flex flex-wrap justify-center gap-2.5 font-bold text-xs md:text-sm tracking-wide uppercase text-slate-300 mb-10">
-                    <span class="bg-slate-900/80 backdrop-blur-sm px-3.5 py-2 rounded-full border border-slate-800 flex items-center gap-1.5"><i class="fa-solid fa-truck text-[#f97316]"></i> UK Wide Delivery</span>
-                    <span class="bg-slate-900/80 backdrop-blur-sm px-3.5 py-2 rounded-full border border-slate-800 flex items-center gap-1.5"><i class="fa-solid fa-car text-[#f97316]"></i> Vehicles Breaking Daily</span>
-                    <span class="bg-slate-900/80 backdrop-blur-sm px-3.5 py-2 rounded-full border border-slate-800 flex items-center gap-1.5"><i class="fa-solid fa-pound-sign text-[#f97316]"></i> Scrap Collections</span>
-                </div>
-                
-                <div class="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-md mx-auto sm:max-w-none">
-                    <a href="https://wa.me/447440369576" target="_blank" class="w-full sm:w-auto px-8 py-3.5 bg-[#22c55e] text-white rounded-xl font-black text-base md:text-lg flex items-center justify-center gap-3 shadow-xl shadow-green-950/40 hover:bg-green-600 transition duration-150">
-                        <i class="fa-brands fa-whatsapp text-2xl"></i> WhatsApp Us
-                    </a>
-                    <a href="tel:07440369576" class="w-full sm:w-auto px-8 py-3.5 bg-slate-900/90 backdrop-blur-sm text-white rounded-xl font-black text-base md:text-lg flex items-center justify-center gap-3 border border-slate-800 hover:bg-slate-700 transition duration-150">
-                        <i class="fa-solid fa-phone text-xl text-[#f97316]"></i> Call Office
-                    </a>
-                </div>
-            </div>
-        </header>
-
-        <section class="bg-[#f97316] text-black font-black uppercase text-xs sm:text-sm py-3.5 tracking-wider relative z-20 shadow-md">
-            <div class="max-w-7xl mx-auto px-4 flex flex-wrap justify-center items-center gap-x-8 gap-y-2 text-center">
-                <span>✓ Licensed Vehicle Recycler</span>
-                <span>✓ Nationwide UK Delivery</span>
-                <span>✓ Fully Tested Parts</span>
-                <span>✓ Warranty Available</span>
-                <span>✓ Fast WhatsApp Support</span>
-            </div>
-        </section>
-
-        <section class="max-w-3xl mx-auto w-full px-4 pt-12 pb-14 relative z-20">
-            <div class="bg-[#1e293b]/95 backdrop-blur-md p-6 sm:p-8 rounded-2xl border-2 border-[#f97316] shadow-2xl">
-                <h3 class="text-xl font-black uppercase text-[#f97316] tracking-wide mb-2 flex items-center gap-2">
-                    <i class="fa-solid fa-magnifying-glass"></i> Quick Stock Check Enquiry
-                </h3>
-                <p class="text-xs text-slate-400 mb-6 font-medium">Can't find your vehicle listed below? Send an instant check directly to our yard desk.</p>
-                
-                <form onsubmit="handleStockCheck(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1.5 tracking-wider">1. Enter UK Registration</label>
-                        <div class="flex shadow-sm rounded-lg overflow-hidden">
-                            <span class="bg-blue-600 text-white px-3.5 flex items-center font-bold text-xs select-none">UK</span>
-                            <input id="form-reg" type="text" placeholder="e.g. AB12 XYZ" class="w-full p-3 bg-yellow-400 text-black font-black uppercase tracking-wider text-lg placeholder-yellow-700/60 outline-none text-center" required>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1.5 tracking-wider">2. Part Required</label>
-                        <input id="form-part" type="text" placeholder="e.g. Starter Motor, Gearbox, Headlight" class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white font-medium placeholder-slate-500 focus:border-[#f97316] outline-none" required>
-                    </div>
-                    <div class="sm:col-span-2 mt-2">
-                        <button type="submit" class="w-full p-4 bg-[#f97316] text-black font-black uppercase text-base tracking-wider rounded-xl hover:bg-orange-500 cursor-pointer shadow-lg transition flex items-center justify-center gap-2">
-                            Check Live Stock Availability <i class="fa-solid fa-arrow-right"></i>
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </section>
-    </div>
-
-    <main class="bg-[#0f172a] flex-1 w-full">
-        <section class="max-w-7xl mx-auto px-4 py-10 w-full">
-            <h2 class="text-2xl font-black uppercase tracking-wider text-center text-white mb-2">Popular Parts In Stock</h2>
-            <p class="text-sm text-center text-slate-400 mb-10 max-w-md mx-auto">We stock thousands of shelved mechanical components ready for collection or shipping.</p>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group cursor-pointer" onclick="document.getElementById('form-part').value='Engine'; document.getElementById('form-part').focus();">
-                    <i class="fa-solid fa-engine text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
-                    <span class="font-bold text-sm tracking-wide uppercase">Engines</span>
-                </div>
-                <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group cursor-pointer" onclick="document.getElementById('form-part').value='Gearbox'; document.getElementById('form-part').focus();">
-                    <i class="fa-solid fa-gear text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
-                    <span class="font-bold text-sm tracking-wide uppercase">Gearboxes</span>
-                </div>
-                <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group cursor-pointer" onclick="document.getElementById('form-part').value='Turbo'; document.getElementById('form-part').focus();">
-                    <i class="fa-solid fa-wind text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
-                    <span class="font-bold text-sm tracking-wide uppercase">Turbos</span>
-                </div>
-                <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group cursor-pointer" onclick="document.getElementById('form-part').value='ECU'; document.getElementById('form-part').focus();">
-                    <i class="fa-solid fa-microchip text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
-                    <span class="font-bold text-sm tracking-wide uppercase">ECUs</span>
-                </div>
-                <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group cursor-pointer" onclick="document.getElementById('form-part').value='Door'; document.getElementById('form-part').focus();">
-                    <i class="fa-solid fa-door-closed text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
-                    <span class="font-bold text-sm tracking-wide uppercase">Doors</span>
-                </div>
-                <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group cursor-pointer" onclick="document.getElementById('form-part').value='Headlight'; document.getElementById('form-part').focus();">
-                    <i class="fa-solid fa-lightbulb text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
-                    <span class="font-bold text-sm tracking-wide uppercase">Headlights</span>
-                </div>
-                <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group cursor-pointer" onclick="document.getElementById('form-part').value='Tailgate'; document.getElementById('form-part').focus();">
-                    <i class="fa-solid fa-box text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
-                    <span class="font-bold text-sm tracking-wide uppercase">Tailgates</span>
-                </div>
-                <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group cursor-pointer" onclick="document.getElementById('form-part').value='Alloy Wheels'; document.getElementById('form-part').focus();">
-                    <i class="fa-solid fa-circle-dot text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
-                    <span class="font-bold text-sm tracking-wide uppercase">Wheels</span>
-                </div>
-                <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group cursor-pointer" onclick="document.getElementById('form-part').value='Seats'; document.getElementById('form-part').focus();">
-                    <i class="fa-solid fa-chair text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
-                    <span class="font-bold text-sm tracking-wide uppercase">Seats</span>
-                </div>
-                <div class="bg-[#111827] border border-slate-800 p-6 rounded-xl text-center hover:border-[#f97316] transition group cursor-pointer" onclick="document.getElementById('form-part').value='Interior Trim'; document.getElementById('form-part').focus();">
-                    <i class="fa-solid fa-couch text-3xl text-slate-500 group-hover:text-[#f97316] mb-3 block"></i>
-                    <span class="font-bold text-sm tracking-wide uppercase">Interiors</span>
-                </div>
-            </div>
-        </section>
-
-        <section class="max-w-7xl mx-auto px-4 py-8 border-t border-slate-800 w-full">
-            <div class="flex items-center justify-between mb-8">
+    <!-- ===== NAVIGATION ===== -->
+    <nav class="bg-[#111827] border-b border-slate-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-2">
+                <svg class="w-8 h-8 text-[#f97316]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                </svg>
                 <div>
-                    <h2 class="text-2xl font-black uppercase tracking-wider text-white">Latest Arrivals & Breakers</h2>
-                    <p class="text-xs text-slate-400 mt-1">Select a matching donor vehicle to request parts directly</p>
+                    <span class="font-black text-base tracking-wider block text-white leading-none">CHERRYWOOD</span>
+                    <span class="text-[10px] font-black text-[#f97316] tracking-widest uppercase block mt-0.5">AUTO PARTS</span>
                 </div>
-                {% if session.get('logged_in') %}
-                    <button onclick="document.getElementById('admin-panel').scrollIntoView({behavior: 'smooth'})" class="px-4 py-2 bg-green-600 text-white rounded font-bold text-xs uppercase">
-                        + Add New Stock
-                    </button>
-                {% endif %}
+            </a>
+            <div class="hidden md:flex items-center gap-6">
+                <a href="/" class="text-sm text-[#f97316] font-bold transition">Home</a>
+                <a href="/gallery" class="text-sm text-slate-300 hover:text-[#f97316] transition">Gallery</a>
+                <a href="/enquiry" class="text-sm text-slate-300 hover:text-[#f97316] transition">Part Enquiry</a>
+                <a href="/about" class="text-sm text-slate-300 hover:text-[#f97316] transition">About</a>
+                <a href="/contact" class="text-sm text-slate-300 hover:text-[#f97316] transition">Contact</a>
             </div>
-
-            {% if not vehicles %}
-            <div class="border-2 border-dashed border-slate-700 bg-[#111827] rounded-2xl p-12 text-center">
-                <i class="fa-solid fa-circle-notch animate-spin text-[#f97316] text-3xl mb-4 block"></i>
-                <h4 class="text-lg font-bold text-white uppercase tracking-wider mb-2">Inventory Upload In Progress</h4>
-                <p class="text-sm text-slate-400 max-w-md mx-auto mb-6">New donor vehicles are being added to our database right now.</p>
-                <button onclick="window.scrollTo({top: 450, behavior: 'smooth'}); document.getElementById('form-reg').focus();" class="px-6 py-2.5 bg-[#f97316] text-black font-black text-xs uppercase tracking-wide rounded-lg hover:bg-orange-500 transition">
-                    Contact us with your registration instead
+            <div class="flex items-center gap-3">
+                <a href="https://wa.me/447440369576" target="_blank" class="bg-[#22c55e] text-white px-3 py-1.5 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-green-600 transition">
+                    <i class="fa-brands fa-whatsapp"></i> <span class="hidden sm:inline">WhatsApp</span>
+                </a>
+                {% if session.get('logged_in') %}
+                    <a href="/logout" class="text-xs bg-red-600 px-3 py-1.5 rounded font-bold text-white">Logout</a>
+                {% endif %}
+                <button id="mobile-menu-btn" class="md:hidden text-white text-xl">
+                    <i class="fa-solid fa-bars"></i>
                 </button>
             </div>
-            {% else %}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {% for vehicle in vehicles %}
-                <div class="bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col">
-                    <div class="relative h-56 bg-slate-900">
-                        <img src="{{ vehicle.image_url }}" alt="{{ vehicle.title }}" class="w-full h-full object-cover">
-                        <span class="absolute top-3 right-3 bg-[#f97316] text-black font-black text-xs uppercase px-3 py-1 rounded-md tracking-wider">
-                            {{ vehicle.status }}
-                        </span>
-                    </div>
-                    <div class="p-6 flex-1 flex flex-col">
-                        <h3 class="text-xl font-black text-white mb-2 leading-tight">{{ vehicle.title }}</h3>
-                        <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs font-semibold text-slate-400 mb-4 border-b border-slate-800 pb-4">
-                            <div><span class="text-slate-500">Make:</span> {{ vehicle.make }}</div>
-                            <div><span class="text-slate-500">Model:</span> {{ vehicle.model }}</div>
-                            <div><span class="text-slate-500">Year:</span> {{ vehicle.year }}</div>
-                            <div><span class="text-slate-500">Reg:</span> <span class="bg-yellow-400 text-black px-1 rounded font-bold uppercase">{{ vehicle.reg }}</span></div>
-                            <div><span class="text-slate-500">Engine:</span> {{ vehicle.engine }}</div>
-                            <div><span class="text-slate-500">Fuel:</span> {{ vehicle.fuel }}</div>
-                            <div><span class="text-slate-500">Trans:</span> {{ vehicle.transmission }}</div>
-                            <div><span class="text-slate-500">Mileage:</span> {{ vehicle.mileage }}</div>
-                        </div>
-                        {% if vehicle.description %}
-                            <p class="text-xs text-slate-300 italic mb-4 line-clamp-2">{{ vehicle.description }}</p>
-                        {% endif %}
-                        
-                        {% if vehicle.get_parts_list() %}
-                        <div class="mb-6 flex-1">
-                            <span class="block text-[10px] font-black uppercase text-slate-500 tracking-wider mb-1.5">Available Parts:</span>
-                            <div class="flex flex-wrap gap-1">
-                                {% for part in vehicle.get_parts_list() %}
-                                    <span class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[11px] font-medium border border-slate-700/50">{{ part }}</span>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endif %}
+        </div>
+        <div id="mobile-menu" class="hidden md:hidden bg-[#1e293b] border-t border-slate-700 py-3 px-4">
+            <div class="flex flex-col gap-2">
+                <a href="/" class="text-sm text-[#f97316] font-bold transition py-1">Home</a>
+                <a href="/gallery" class="text-sm text-slate-300 hover:text-[#f97316] transition py-1">Gallery</a>
+                <a href="/enquiry" class="text-sm text-slate-300 hover:text-[#f97316] transition py-1">Part Enquiry</a>
+                <a href="/about" class="text-sm text-slate-300 hover:text-[#f97316] transition py-1">About</a>
+                <a href="/contact" class="text-sm text-slate-300 hover:text-[#f97316] transition py-1">Contact</a>
+            </div>
+        </div>
+    </nav>
 
-                        <div class="mt-auto pt-4 flex gap-2">
-                            <a href="https://wa.me/447440369576?text={{ 'Hi, I am interested in parts from the ' | urlencode }}{{ vehicle.title | urlencode }}{{ ' (Reg: ' | urlencode }}{{ vehicle.reg | urlencode }}{{ '). Do you have parts available?' | urlencode }}" target="_blank" class="flex-1 bg-green-600 text-white text-center py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider shadow hover:bg-green-700 transition flex items-center justify-center gap-1.5">
-                                <i class="fa-brands fa-whatsapp text-sm"></i> Request Parts
-                            </a>
-                            {% if session.get('logged_in') %}
-                            <div class="flex space-x-2 mt-2">
-                                <a href="/edit/{{ vehicle.id }}" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
-                                    Edit
-                                </a>
-                                <form action="/delete/{{ vehicle.id }}" method="POST" onsubmit="return confirm('Are you sure?');">
-                                    <button type="submit" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
-                                        Delete
-                                    </button>
-                                </form>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
+    <!-- ===== HERO SECTION ===== -->
+    <section class="relative bg-slate-950 w-full overflow-hidden">
+        <div class="absolute inset-0 w-full h-full z-0 pointer-events-none">
+            <img src="{{ url_for('static', filename='shutter-background.jpg') }}" 
+                 alt="Cherrywood Auto Parts" 
+                 class="w-full h-full object-cover object-center filter contrast-115 brightness-[0.25]">
+            <div class="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/40 to-[#0f172a]"></div>
+        </div>
+        <div class="relative z-10 max-w-7xl mx-auto px-4 py-20 md:py-32">
+            <div class="max-w-3xl">
+                <p class="text-[#f97316] font-bold text-sm uppercase tracking-wider mb-2">Welcome To</p>
+                <h1 class="text-4xl sm:text-5xl md:text-6xl font-black text-white leading-tight">
+                    Cherrywood Auto Parts
+                </h1>
+                <p class="text-lg sm:text-xl text-slate-300 mt-4 font-medium">
+                    Established in 2020, we specialise in breaking Audi, Volkswagen, SEAT & Škoda vehicles.
+                </p>
+                <div class="flex flex-wrap gap-4 mt-8">
+                    <a href="/gallery" class="px-8 py-3 bg-[#f97316] text-black font-black rounded-lg hover:bg-orange-500 transition">
+                        View Our Stock
+                    </a>
+                    <a href="tel:07440369576" class="px-8 py-3 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-700 transition">
+                        Call Us: 07440 369576
+                    </a>
                 </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-        </section>
-
-        <section class="bg-[#111827] py-16 border-t border-b border-slate-800 w-full">
-            <div class="max-w-7xl mx-auto px-4">
-                <h2 class="text-2xl font-black uppercase tracking-wider text-center text-white mb-2">Our Services</h2>
-                <p class="text-sm text-center text-slate-400 mb-12 max-w-md mx-auto">Straightforward vehicle dismantling running 6 days a week.</p>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-[#0f172a] p-6 rounded-xl border border-slate-800">
-                        <div class="w-12 h-12 rounded-lg bg-orange-600/10 flex items-center justify-center mb-4"><i class="fa-solid fa-wrench text-xl text-[#f97316]"></i></div>
-                        <h3 class="text-lg font-bold uppercase text-white mb-2">Used Parts</h3>
-                        <p class="text-xs text-slate-400 leading-relaxed">Quality used parts shelved and ready for collection or nationwide delivery.</p>
-                    </div>
-                    <div class="bg-[#0f172a] p-6 rounded-xl border border-slate-800">
-                        <div class="w-12 h-12 rounded-lg bg-orange-600/10 flex items-center justify-center mb-4"><i class="fa-solid fa-car-on text-xl text-[#f97316]"></i></div>
-                        <h3 class="text-lg font-bold uppercase text-white mb-2">Vehicle Breaking</h3>
-                        <p class="text-xs text-slate-400 leading-relaxed">Breaking Audi, VW, SEAT and Škoda vehicles daily. Off-the-shelf components ready to go.</p>
-                    </div>
-                    <div class="bg-[#0f172a] p-6 rounded-xl border border-slate-800">
-                        <div class="w-12 h-12 rounded-lg bg-orange-600/10 flex items-center justify-center mb-4"><i class="fa-solid fa-dumpster text-xl text-[#f97316]"></i></div>
-                        <h3 class="text-lg font-bold uppercase text-white mb-2">Scrap Car Collection</h3>
-                        <p class="text-xs text-slate-400 leading-relaxed">We buy damaged, non-running or scrap VAG models for breaking. Contact us for a quote.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="max-w-3xl mx-auto px-4 py-16 w-full">
-            <h2 class="text-2xl font-black uppercase tracking-wider text-center text-white mb-10">Frequently Asked Questions</h2>
-            <div class="space-y-4">
-                <details class="bg-[#111827] border border-slate-800 rounded-xl p-4 group cursor-pointer">
-                    <summary class="font-bold text-sm text-white uppercase flex justify-between items-center outline-none">
-                        Do you deliver nationwide across the UK? <i class="fa-solid fa-chevron-down text-xs text-[#f97316] group-open:rotate-180 transition"></i>
-                    </summary>
-                    <p class="text-xs text-slate-400 mt-2 leading-relaxed">Yes. We arrange fast tracked courier shipping for smaller loose items and secure commercial heavy pallet delivery options for engines, transmissions, and heavy door panels.</p>
-                </details>
-                <details class="bg-[#111827] border border-slate-800 rounded-xl p-4 group cursor-pointer">
-                    <summary class="font-bold text-sm text-white uppercase flex justify-between items-center outline-none">
-                        Do you buy scrap cars? <i class="fa-solid fa-chevron-down text-xs text-[#f97316] group-open:rotate-180 transition"></i>
-                    </summary>
-                    <p class="text-xs text-slate-400 mt-2 leading-relaxed">Yes. We buy accident damaged, faulty, or MOT failure Audi, VW, SEAT, and Škoda models for breaking. Contact our team with details for an instant quote pay-out.</p>
-                </details>
-            </div>
-        </section>
-    </main>
-
-    <section class="orange-gradient text-black py-16 font-medium mt-auto w-full">
-        <div class="max-w-4xl mx-auto text-center px-4">
-            <h2 class="text-3xl font-black uppercase mb-2">Can't Find The Part You Need?</h2>
-            <p class="font-bold uppercase text-sm tracking-wide mb-8 opacity-90">Contact Us Today – Let Our Yard Team Find It For You</p>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto font-black text-sm uppercase">
-                <a href="tel:07440369576" class="bg-black text-white p-4 rounded-xl shadow-lg hover:bg-neutral-900 transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-phone text-[#f97316]"></i> 07440 369576
-                </a>
-                <a href="mailto:zabdi908@gmail.com" class="bg-black text-white p-4 rounded-xl shadow-lg hover:bg-neutral-900 transition flex items-center justify-center gap-2 text-xs lowercase">
-                    <i class="fa-solid fa-envelope text-[#f97316]"></i> zabdi908@gmail.com
-                </a>
-                <a href="https://wa.me/447440369576" target="_blank" class="bg-[#22c55e] text-white p-4 rounded-xl shadow-lg hover:bg-green-600 transition flex items-center justify-center gap-2">
-                    <i class="fa-brands fa-whatsapp text-lg"></i> WhatsApp Us
-                </a>
             </div>
         </div>
     </section>
 
-    {% if session.get('logged_in') %}
-<section id="admin-panel" class="bg-[#1e293b] py-12 border-t-4 border-green-500 w-full">
-    <div class="max-w-3xl mx-auto px-4">
-        <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-black text-white uppercase tracking-wider flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span> Admin Management Portal
-            </h2>
-            <div class="flex gap-3">
-                <!-- ✅ NEW: Backup Now Button -->
-                <form action="/admin/backup-now" method="POST" style="display:inline;">
-                    <button type="submit" class="text-xs bg-blue-600 px-3 py-1.5 rounded font-bold text-white hover:bg-blue-700 transition">
-                        <i class="fa-solid fa-download mr-1"></i> Backup Now
-                    </button>
-                </form>
-                <!-- Restore Button -->
-                <form action="/admin/restore" method="POST" onsubmit="return confirm('⚠️ This will replace all current data with the backup. Continue?');" style="display:inline;">
-                    <button type="submit" class="text-xs bg-orange-600 px-3 py-1.5 rounded font-bold text-white hover:bg-orange-700 transition">
-                        <i class="fa-solid fa-rotate-left mr-1"></i> Restore Backup
-                    </button>
-                </form>
-                <a href="/logout" class="text-xs bg-red-600 px-3 py-1.5 rounded font-bold text-white hover:bg-red-700 transition">
-                    Log Out Portal
+    <!-- ===== ABOUT US SNIPPET ===== -->
+    <section class="max-w-7xl mx-auto px-4 py-16 w-full">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div>
+                <p class="text-[#f97316] font-bold text-sm uppercase tracking-wider mb-2">About Us</p>
+                <h2 class="text-3xl font-black text-white mb-4">Sell or Scrap A Car for Cash</h2>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    Cherrywood Auto Parts is a leading provider of salvage solutions for trade and the public. 
+                    Established in 2020, we specialise in breaking Audi, Volkswagen, SEAT & Škoda vehicles.
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    We operate from our yard in Birmingham, offering quality used parts and scrap car collection services.
+                </p>
+                <a href="/about" class="inline-block mt-6 text-[#f97316] font-bold hover:underline">
+                    About Us →
                 </a>
             </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-[#111827] border border-slate-800 rounded-xl p-6 text-center hover:border-[#f97316] transition">
+                    <i class="fa-solid fa-car text-3xl text-[#f97316] mb-3 block"></i>
+                    <p class="font-bold text-white text-sm">Scrap Car Collection</p>
+                </div>
+                <div class="bg-[#111827] border border-slate-800 rounded-xl p-6 text-center hover:border-[#f97316] transition">
+                    <i class="fa-solid fa-wrench text-3xl text-[#f97316] mb-3 block"></i>
+                    <p class="font-bold text-white text-sm">Used Parts</p>
+                </div>
+                <div class="bg-[#111827] border border-slate-800 rounded-xl p-6 text-center hover:border-[#f97316] transition">
+                    <i class="fa-solid fa-truck text-3xl text-[#f97316] mb-3 block"></i>
+                    <p class="font-bold text-white text-sm">Nationwide Delivery</p>
+                </div>
+                <div class="bg-[#111827] border border-slate-800 rounded-xl p-6 text-center hover:border-[#f97316] transition">
+                    <i class="fa-solid fa-shield-halved text-3xl text-[#f97316] mb-3 block"></i>
+                    <p class="font-bold text-white text-sm">90-Day Warranty</p>
+                </div>
+            </div>
         </div>
-        
-        <form action="/add" method="POST" class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-bold text-slate-300">
-            <div class="sm:col-span-3">
-                <label class="block text-[10px] uppercase text-slate-400 mb-1">Listing Display Title</label>
-                <input type="text" name="title" placeholder="e.g. 2015 SEAT Ibiza Breaker - All Parts Available" class="w-full p-2.5 bg-[#0f172a] rounded border border-slate-700 outline-none text-white font-medium" required>
-            </div>
+    </section>
+
+    <!-- ===== LATEST VEHICLES ===== -->
+    <section class="max-w-7xl mx-auto px-4 py-12 w-full">
+        <div class="flex items-center justify-between mb-8">
             <div>
-                <label class="block text-[10px] uppercase text-slate-400 mb-1">Make</label>
-                <input type="text" name="make" placeholder="e.g. SEAT" class="w-full p-2.5 bg-[#0f172a] rounded border border-slate-700 outline-none text-white font-medium" required>
+                <p class="text-[#f97316] font-bold text-sm uppercase tracking-wider">Latest Stock</p>
+                <h2 class="text-2xl font-black text-white">Our Latest Arrivals</h2>
             </div>
-            <div>
-                <label class="block text-[10px] uppercase text-slate-400 mb-1">Model</label>
-                <input type="text" name="model" placeholder="e.g. Ibiza" class="w-full p-2.5 bg-[#0f172a] rounded border border-slate-700 outline-none text-white font-medium" required>
+            <a href="/gallery" class="text-sm text-[#f97316] font-bold hover:underline">View All →</a>
+        </div>
+
+        {% if not vehicles %}
+        <div class="text-center py-12 bg-[#111827] rounded-2xl border border-slate-800">
+            <i class="fa-solid fa-car text-4xl text-slate-600 mb-4 block"></i>
+            <p class="text-slate-400">No vehicles available yet. Check back soon!</p>
+        </div>
+        {% else %}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {% for vehicle in vehicles[:3] %}
+            <div class="bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#f97316] transition">
+                <div class="h-48 bg-slate-900 relative">
+                    <img src="{{ vehicle.image_url or 'https://via.placeholder.com/400x300/1a1a2e/ffffff?text=No+Image' }}" 
+                         alt="{{ vehicle.title }}" 
+                         class="w-full h-full object-cover">
+                    <span class="absolute top-3 right-3 bg-[#f97316] text-black font-black text-xs uppercase px-3 py-1 rounded-md">
+                        {{ vehicle.status }}
+                    </span>
+                </div>
+                <div class="p-4">
+                    <h3 class="text-lg font-black text-white mb-2">{{ vehicle.title }}</h3>
+                    <div class="grid grid-cols-2 gap-1 text-xs text-slate-400">
+                        <div><span class="text-slate-500">Make:</span> {{ vehicle.make }}</div>
+                        <div><span class="text-slate-500">Model:</span> {{ vehicle.model }}</div>
+                        <div><span class="text-slate-500">Year:</span> {{ vehicle.year }}</div>
+                        <div><span class="text-slate-500">Reg:</span> {{ vehicle.reg }}</div>
+                    </div>
+                    <div class="flex gap-2 mt-3">
+                        <a href="/vehicle/{{ vehicle.id }}" class="flex-1 bg-[#f97316] text-black text-center py-2 rounded-lg text-xs font-bold uppercase hover:bg-orange-500 transition">
+                            View Details
+                        </a>
+                        <a href="https://wa.me/447440369576?text={{ 'Hi, I am interested in the ' | urlencode }}{{ vehicle.title | urlencode }}" target="_blank" class="flex-1 bg-green-600 text-white text-center py-2 rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition">
+                            <i class="fa-brands fa-whatsapp"></i> Enquire
+                        </a>
+                    </div>
+                </div>
             </div>
-            <div>
-                <label class="block text-[10px] uppercase text-slate-400 mb-1">Year</label>
-                <input type="text" name="year" placeholder="e.g. 2015" class="w-full p-2.5 bg-[#0f172a] rounded border border-slate-700 outline-none text-white font-medium" required>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- ===== CONTACT SECTION ===== -->
+    <section class="max-w-7xl mx-auto px-4 py-16 w-full">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <!-- Contact Form -->
+            <div class="bg-[#111827] border border-slate-800 rounded-2xl p-8">
+                <h2 class="text-2xl font-black text-white mb-2">Drop Us a Line</h2>
+                <p class="text-sm text-slate-400 mb-6">Fill in the form and we'll get back to you quickly.</p>
+
+                <form action="/enquiry" method="POST" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Name *</label>
+                        <input type="text" name="name" placeholder="Your name" required
+                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-[#f97316] outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Email *</label>
+                        <input type="email" name="email" placeholder="your@email.com" required
+                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-[#f97316] outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Message *</label>
+                        <textarea name="message" rows="3" placeholder="What part are you looking for?" required
+                                  class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-[#f97316] outline-none"></textarea>
+                    </div>
+                    <div class="flex gap-3">
+                        <button type="submit" class="flex-1 p-3 bg-[#f97316] text-black font-black rounded-lg hover:bg-orange-500 transition">
+                            Send
+                        </button>
+                        <button type="reset" class="p-3 bg-slate-700 text-white font-bold rounded-lg hover:bg-slate-600 transition">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
             </div>
-            <div>
-                <label class="block text-[10px] uppercase text-slate-400 mb-1">Registration</label>
-                <input type="text" name="reg" placeholder="e.g. PX15 WVY" class="w-full p-2.5 bg-[#0f172a] rounded border border-slate-700 outline-none text-white font-medium" required>
+
+            <!-- Contact Info -->
+            <div class="space-y-6">
+                <div>
+                    <h2 class="text-2xl font-black text-white mb-2">Contact Us</h2>
+                    <p class="text-slate-400 text-sm">Get in touch with our team</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="flex items-start gap-4">
+                        <i class="fa-solid fa-phone text-[#f97316] text-xl mt-1"></i>
+                        <div>
+                            <p class="text-xs text-slate-400 uppercase font-bold">Phone</p>
+                            <a href="tel:07440369576" class="text-white font-bold hover:text-[#f97316]">07440 369576</a>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <i class="fa-solid fa-envelope text-[#f97316] text-xl mt-1"></i>
+                        <div>
+                            <p class="text-xs text-slate-400 uppercase font-bold">Email</p>
+                            <a href="mailto:cherrywoodparts@outlook.com" class="text-white font-bold hover:text-[#f97316]">cherrywoodparts@outlook.com</a>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <i class="fa-solid fa-location-dot text-[#f97316] text-xl mt-1"></i>
+                        <div>
+                            <p class="text-xs text-slate-400 uppercase font-bold">Address</p>
+                            <p class="text-white">110-112 Cherrywood Road</p>
+                            <p class="text-white">Bordesley Green, Birmingham</p>
+                            <p class="text-white">B9 4UH</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-[#111827] border border-slate-800 rounded-2xl p-6">
+                    <h3 class="font-bold text-white text-sm mb-3">Opening Hours</h3>
+                    <div class="space-y-1 text-sm text-slate-400">
+                        <p><span class="text-slate-500">Office:</span> Mon-Fri 9:00am - 5:00pm</p>
+                        <p><span class="text-slate-500">Yard:</span> Mon-Fri 10:00am - 4:00pm</p>
+                        <p><span class="text-slate-500">Phone Enquiries:</span> 7:30am - 7:30pm (7 days)</p>
+                        <p><span class="text-slate-500">Online Enquiries:</span> 24/7</p>
+                    </div>
+                </div>
             </div>
-            <div>
-                <label class="block text-[10px] uppercase text-slate-400 mb-1">Engine Code/Size</label>
-                <input type="text" name="engine" placeholder="e.g. 1.2 TSI" class="w-full p-2.5 bg-[#0f172a] rounded border border-slate-700 outline-none text-white font-medium" required>
-            </div>
-            <div>
-                <label class="block text-[10px] uppercase text-slate-400 mb-1">Fuel Type</label>
-                <input type="text" name="fuel" placeholder="Petrol / Diesel" class="w-full p-2.5 bg-[#0f172a] rounded border border-slate-700 outline-none text-white font-medium" required>
-            </div>
-            <div>
-                <label class="block text-[10px] uppercase text-slate-400 mb-1">Transmission</label>
-                <input type="text" name="transmission" placeholder="Manual / DSG" class="w-full p-2.5 bg-[#0f172a] rounded border border-slate-700 outline-none text-white font-medium" required>
-            </div>
-            <div>
-                <label class="block text-[10px] uppercase text-slate-400 mb-1">Mileage</label>
-                <input type="text" name="mileage" placeholder="e.g. 74,000" class="w-full p-2.5 bg-[#0f172a] rounded border border-slate-700 outline-none text-white font-medium" required>
-            </div>
-            <div>
-                <label class="block text-[10px] uppercase text-slate-400 mb-1">Status Badge</label>
-                <input type="text" name="status" value="Breaking" class="w-full p-2.5 bg-[#0f172a] rounded border border-slate-700 outline-none text-white font-medium" required>
-            </div>
-            <div class="sm:col-span-3">
-                <label class="block text-[10px] uppercase text-slate-400 mb-1">Hosted Image URL (.jpg or .png link)</label>
-                <input type="url" name="image_url" placeholder="https://postimages.org/...image.jpg" class="w-full p-2.5 bg-[#0f172a] rounded border border-slate-700 outline-none text-white font-medium">
-            </div>
-            <div class="sm:col-span-3">
-                <label class="block text-[10px] uppercase text-slate-400 mb-1">Top Components Available (Separate with commas)</label>
-                <input type="text" name="parts_available" placeholder="Front Bumper, Headlights, Wings, Alloy Wheels, Tailgate" class="w-full p-2.5 bg-[#0f172a] rounded border border-slate-700 outline-none text-white font-medium">
-            </div>
-            <div class="sm:col-span-3">
-                <label class="block text-[10px] uppercase text-slate-400 mb-1">Short Description</label>
-                <textarea name="description" rows="2" placeholder="Describe component details or specific yard notes..." class="w-full p-2.5 bg-[#0f172a] rounded border border-slate-700 outline-none text-white font-medium"></textarea>
-            </div>
-            <div class="sm:col-span-3 mt-2">
-                <button type="submit" class="w-full p-3 bg-green-600 text-white font-bold rounded-lg uppercase tracking-wide hover:bg-green-700 cursor-pointer">
-                    Publish Vehicle Live To Yard Grid
-                </button>
-            </div>
-        </form>
-    </div>
-</section>
-{% endif %}
-    <footer class="bg-[#0b0f19] border-t border-slate-900 py-12 text-slate-500 text-xs font-semibold w-full pb-24 md:pb-12">
-        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-5 gap-8">
-            <!-- Column 1: About -->
+        </div>
+    </section>
+
+    <!-- ===== FAQS ===== -->
+    <section class="max-w-4xl mx-auto px-4 py-12 w-full">
+        <h2 class="text-2xl font-black text-white text-center mb-8">Frequently Asked Questions</h2>
+        <div class="space-y-4">
+            <details class="bg-[#111827] border border-slate-800 rounded-xl p-4 group cursor-pointer">
+                <summary class="font-bold text-sm text-white uppercase flex justify-between items-center outline-none">
+                    Do you deliver nationwide across the UK? <i class="fa-solid fa-chevron-down text-xs text-[#f97316] group-open:rotate-180 transition"></i>
+                </summary>
+                <p class="text-xs text-slate-400 mt-2 leading-relaxed">Yes. We arrange fast tracked courier shipping for smaller loose items and secure commercial heavy pallet delivery options for engines, transmissions, and heavy door panels.</p>
+            </details>
+            <details class="bg-[#111827] border border-slate-800 rounded-xl p-4 group cursor-pointer">
+                <summary class="font-bold text-sm text-white uppercase flex justify-between items-center outline-none">
+                    Do you buy scrap cars? <i class="fa-solid fa-chevron-down text-xs text-[#f97316] group-open:rotate-180 transition"></i>
+                </summary>
+                <p class="text-xs text-slate-400 mt-2 leading-relaxed">Yes. We buy accident damaged, faulty, or MOT failure Audi, VW, SEAT, and Škoda models for breaking. Contact our team with details for an instant quote pay-out.</p>
+            </details>
+            <details class="bg-[#111827] border border-slate-800 rounded-xl p-4 group cursor-pointer">
+                <summary class="font-bold text-sm text-white uppercase flex justify-between items-center outline-none">
+                    Are your parts tested? <i class="fa-solid fa-chevron-down text-xs text-[#f97316] group-open:rotate-180 transition"></i>
+                </summary>
+                <p class="text-xs text-slate-400 mt-2 leading-relaxed">Yes. All parts are fully tested before being listed. We provide a 90-day warranty on all mechanical components.</p>
+            </details>
+        </div>
+    </section>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="bg-[#0b0f19] border-t border-slate-900 py-12 text-slate-500 text-xs font-semibold w-full">
+        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-4 gap-8">
             <div>
                 <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Cherrywood Auto Parts</span>
                 <p class="leading-relaxed text-slate-400 font-medium">Genuine recycled Audi, VW, SEAT and Škoda parts. Delivering throughout the UK.</p>
+                <p class="mt-3 text-[#f97316] font-bold">Licensed Vehicle Recycler</p>
             </div>
-            <!-- Column 2: Opening Hours -->
             <div>
-                <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Opening Hours</span>
-                <p class="text-slate-400 font-medium">Mon - Fri: 8:00am - 5:00pm<br>Sat: 8:00am - 1:00pm<br>Sun: Closed</p>
+                <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Quick Links</span>
+                <div class="flex flex-col gap-1">
+                    <a href="/" class="hover:text-[#f97316] transition">Home</a>
+                    <a href="/gallery" class="hover:text-[#f97316] transition">Gallery</a>
+                    <a href="/enquiry" class="hover:text-[#f97316] transition">Part Enquiry</a>
+                    <a href="/about" class="hover:text-[#f97316] transition">About Us</a>
+                    <a href="/contact" class="hover:text-[#f97316] transition">Contact</a>
+                </div>
             </div>
-            <!-- Column 3: Quick Contact -->
             <div>
-                <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Quick Contact</span>
-                <p class="text-slate-400 font-medium mb-1">Phone: 07440 369576</p>
-                <p class="text-slate-400 font-medium">Email: zabdi908@gmail.com</p>
+                <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Contact</span>
+                <p class="text-slate-400 font-medium">Phone: 07440 369576</p>
+                <p class="text-slate-400 font-medium">Email: cherrywoodparts@outlook.com</p>
+                <p class="text-slate-400 font-medium mt-2">110-112 Cherrywood Road</p>
+                <p class="text-slate-400 font-medium">Bordesley Green, Birmingham</p>
+                <p class="text-slate-400 font-medium">B9 4UH</p>
             </div>
-            <!-- Column 4: Licensed & Compliant -->
             <div>
                 <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Licensed &amp; Compliant</span>
                 <p class="text-[10px] text-slate-400 leading-relaxed">
@@ -451,23 +316,14 @@
                     <span class="text-[#f97316]">✓</span> Compliance Band: B (100%)
                 </p>
             </div>
-            <!-- Column 5: Information (NEW) -->
-            <div>
-                <span class="block font-black text-sm tracking-wider text-white uppercase mb-2">Information</span>
-                <div class="flex flex-col gap-1 text-[10px] text-slate-400">
-                    <a href="/about" class="hover:text-[#f97316] transition">About Us</a>
-                    <a href="/warranty" class="hover:text-[#f97316] transition">Warranty Policy</a>
-                    <a href="/privacy" class="hover:text-[#f97316] transition">Privacy Policy</a>
-                </div>
-            </div>
         </div>
-        <!-- Copyright -->
         <div class="max-w-7xl mx-auto px-4 mt-8 pt-8 border-t border-slate-900/40 text-center text-[11px] text-slate-600 font-medium">
-            <p>Cherrywood Autos · 110-112 Cherrywood Road, Bordesley Green, Birmingham, B9 4UH</p>
-            <p class="mt-1">© 2026 Cherrywood Auto Parts. All Rights Reserved. Managed inventory portal.</p>
+            <p>© 2026 Cherrywood Auto Parts. All Rights Reserved.</p>
+            <p class="mt-1">Environment Agency Licence: 102422 · EPR Ref: TP3398VM</p>
         </div>
     </footer>
 
+    <!-- ===== MOBILE BOTTOM BAR ===== -->
     <div class="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-[#111827]/95 backdrop-blur-md border-t border-slate-800 grid grid-cols-3 font-black text-[10px] tracking-wider text-center uppercase text-white shadow-2xl">
         <a href="tel:07440369576" class="py-3 border-r border-slate-800 hover:bg-slate-800 transition flex flex-col items-center gap-0.5">
             <i class="fa-solid fa-phone text-sm text-[#f97316]"></i> Call Now
@@ -475,23 +331,21 @@
         <a href="https://wa.me/447440369576" target="_blank" class="py-3 bg-green-600/20 border-r border-slate-800 hover:bg-green-600/30 transition flex flex-col items-center gap-0.5 text-green-400">
             <i class="fa-brands fa-whatsapp text-base"></i> WhatsApp
         </a>
-        <a href="mailto:zabdi908@gmail.com" class="py-3 hover:bg-slate-800 transition flex flex-col items-center gap-0.5">
+        <a href="mailto:cherrywoodparts@outlook.com" class="py-3 hover:bg-slate-800 transition flex flex-col items-center gap-0.5">
             <i class="fa-solid fa-envelope text-sm text-[#f97316]"></i> Email Us
         </a>
     </div>
 
-    <a href="https://wa.me/447440369576" target="_blank" class="hidden md:flex fixed bottom-6 right-6 z-50 bg-[#22c55e] text-white w-14 h-14 rounded-full shadow-2xl items-center justify-center text-3xl hover:bg-green-600 hover:scale-110 transition duration-200" title="Chat on WhatsApp">
+    <!-- ===== FLOATING WHATSAPP ===== -->
+    <a href="https://wa.me/447440369576" target="_blank" class="hidden md:flex fixed bottom-6 right-6 z-50 bg-[#22c55e] text-white w-14 h-14 rounded-full shadow-2xl items-center justify-center text-3xl hover:bg-green-600 hover:scale-110 transition duration-200">
         <i class="fa-brands fa-whatsapp"></i>
     </a>
 
+    <!-- ===== MOBILE MENU SCRIPT ===== -->
     <script>
-        function handleStockCheck(e) {
-            e.preventDefault();
-            const reg = document.getElementById('form-reg').value.trim();
-            const part = document.getElementById('form-part').value.trim();
-            const message = `Hi Cherrywood, I want to check stock availability for:\n\n• Reg: ${reg}\n• Part Needed: ${part}`;
-            window.open(`https://wa.me/447440369576?text=${encodeURIComponent(message)}`, '_blank');
-        }
+        document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
     </script>
 
 </body>
