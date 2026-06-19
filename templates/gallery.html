@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery - Cherrywood Auto Parts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+        .orange-gradient { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+    </style>
+</head>
+<body class="bg-[#0f172a] text-slate-200 min-h-screen flex flex-col">
+
+    <!-- ===== NAVIGATION (SAME ON ALL PAGES) ===== -->
+    <nav class="bg-[#111827] border-b border-slate-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-2">
+                <svg class="w-8 h-8 text-[#f97316]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                </svg>
+                <div>
+                    <span class="font-black text-base tracking-wider block text-white leading-none">CHERRYWOOD</span>
+                    <span class="text-[10px] font-black text-[#f97316] tracking-widest uppercase block mt-0.5">AUTO PARTS</span>
+                </div>
+            </a>
+            <div class="hidden md:flex items-center gap-6">
+                <a href="/" class="text-sm text-slate-300 hover:text-[#f97316] transition">Home</a>
+                <a href="/gallery" class="text-sm text-[#f97316] font-bold transition">Gallery</a>
+                <a href="/faqs" class="text-sm text-slate-300 hover:text-[#f97316] transition">FAQs</a>
+                <a href="/about" class="text-sm text-slate-300 hover:text-[#f97316] transition">About</a>
+                <a href="/contact" class="text-sm text-slate-300 hover:text-[#f97316] transition">Contact</a>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="https://wa.me/447440369576" target="_blank" class="bg-[#22c55e] text-white px-3 py-1.5 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-green-600 transition">
+                    <i class="fa-brands fa-whatsapp"></i> <span class="hidden sm:inline">WhatsApp</span>
+                </a>
+                {% if session.get('logged_in') %}
+                    <a href="/logout" class="text-xs bg-red-600 px-3 py-1.5 rounded font-bold text-white">Logout</a>
+                {% endif %}
+                <!-- Mobile menu button -->
+                <button id="mobile-menu-btn" class="md:hidden text-white text-xl">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Mobile menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-[#1e293b] border-t border-slate-700 py-3 px-4">
+            <div class="flex flex-col gap-2">
+                <a href="/" class="text-sm text-slate-300 hover:text-[#f97316] transition py-1">Home</a>
+                <a href="/gallery" class="text-sm text-[#f97316] font-bold transition py-1">Gallery</a>
+                <a href="/faqs" class="text-sm text-slate-300 hover:text-[#f97316] transition py-1">FAQs</a>
+                <a href="/about" class="text-sm text-slate-300 hover:text-[#f97316] transition py-1">About</a>
+                <a href="/contact" class="text-sm text-slate-300 hover:text-[#f97316] transition py-1">Contact</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 py-12 w-full">
+        <h1 class="text-3xl font-black text-white mb-2 flex items-center gap-3">
+            <i class="fa-solid fa-images text-[#f97316]"></i> Our Vehicle Gallery
+        </h1>
+        <p class="text-slate-400 text-sm mb-8">Browse all available donor vehicles and parts</p>
+
+        <!-- Search -->
+        <div class="max-w-2xl mb-8">
+            <form action="/gallery" method="GET" class="flex flex-col sm:flex-row gap-3">
+                <div class="flex-1">
+                    <input type="text" name="q" 
+                           placeholder="🔍 Search by make, model, or part..." 
+                           class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-[#f97316] outline-none transition"
+                           value="{{ search_query or '' }}">
+                </div>
+                <button type="submit" class="px-6 py-3 bg-[#f97316] text-black font-black text-sm uppercase tracking-wider rounded-lg hover:bg-orange-500 transition">
+                    Search
+                </button>
+                {% if search_query %}
+                    <a href="/gallery" class="px-4 py-3 bg-slate-700 text-white font-black text-sm uppercase tracking-wider rounded-lg hover:bg-slate-600 transition text-center">
+                        Clear
+                    </a>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- Vehicle Grid -->
+        {% if not vehicles %}
+            <div class="text-center py-12">
+                <i class="fa-solid fa-car text-4xl text-slate-600 mb-4 block"></i>
+                <p class="text-slate-400">No vehicles available yet. Check back soon!</p>
+            </div>
+        {% else %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for vehicle in vehicles %}
+                <div class="bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden shadow-xl hover:border-[#f97316] transition">
+                    <div class="relative h-48 bg-slate-900">
+                        <img src="{{ vehicle.image_url or 'https://via.placeholder.com/400x300/1a1a2e/ffffff?text=No+Image' }}" 
+                             alt="{{ vehicle.title }}" 
+                             class="w-full h-full object-cover">
+                        <span class="absolute top-3 right-3 bg-[#f97316] text-black font-black text-xs uppercase px-3 py-1 rounded-md">
+                            {{ vehicle.status }}
+                        </span>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-lg font-black text-white mb-2">{{ vehicle.title }}</h3>
+                        <div class="grid grid-cols-2 gap-1 text-xs text-slate-400 mb-3">
+                            <div><span class="text-slate-500">Make:</span> {{ vehicle.make }}</div>
+                            <div><span class="text-slate-500">Model:</span> {{ vehicle.model }}</div>
+                            <div><span class="text-slate-500">Year:</span> {{ vehicle.year }}</div>
+                            <div><span class="text-slate-500">Reg:</span> {{ vehicle.reg }}</div>
+                        </div>
+                        <div class="flex gap-2">
+                            <a href="/vehicle/{{ vehicle.id }}" class="flex-1 bg-[#f97316] text-black text-center py-2 rounded-lg text-xs font-bold uppercase hover:bg-orange-500 transition">
+                                View Details
+                            </a>
+                            <a href="https://wa.me/447440369576?text={{ 'Hi, I am interested in the ' | urlencode }}{{ vehicle.title | urlencode }}" target="_blank" class="flex-1 bg-green-600 text-white text-center py-2 rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition">
+                                <i class="fa-brands fa-whatsapp"></i> Enquire
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </main>
+
+    <!-- ===== FOOTER (SAME ON ALL PAGES) ===== -->
+    <footer class="bg-[#0b0f19] border-t border-slate-900 py-8 text-slate-500 text-xs font-semibold w-full">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p>Cherrywood Autos · 110-112 Cherrywood Road, Bordesley Green, Birmingham, B9 4UH</p>
+            <p class="mt-1">© 2026 Cherrywood Auto Parts. All Rights Reserved.</p>
+            <p class="mt-1 text-[10px] text-slate-600">Environment Agency Licence: 102422 · EPR Ref: TP3398VM</p>
+        </div>
+    </footer>
+
+    <!-- Mobile menu toggle script -->
+    <script>
+        document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+    </script>
+
+</body>
+</html>
