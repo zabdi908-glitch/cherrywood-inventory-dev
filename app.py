@@ -14,7 +14,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'cherrywood_yard_secret_key_2026')
 
 if os.getenv('RENDER'):
-    DATABASE = os.path.join('/tmp', 'inventory.db')
+    DATABASE = os.path.join('/data', 'inventory.db')  # ✅ CORRECT — Persistent disk!
 else:
     DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inventory.db')
 
