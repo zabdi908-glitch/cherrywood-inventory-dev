@@ -1,10 +1,9 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 import sqlite3
 import os
 import json
 from functools import wraps
 from datetime import datetime
-from admin_agent import admin_agent
 
 app = Flask(__name__)
 
@@ -14,9 +13,8 @@ app = Flask(__name__)
 
 app.secret_key = os.getenv('SECRET_KEY', 'cherrywood_yard_secret_key_2026')
 
-# Database path - use persistent storage on Render
 if os.getenv('RENDER'):
-    DATABASE = os.path.join('/data', 'inventory.db')  # Persistent disk
+    DATABASE = os.path.join('/tmp', 'inventory.db')
 else:
     DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inventory.db')
 
@@ -55,11 +53,10 @@ def init_db():
 init_db()
 
 # ============================================
-# AUTO-BACKUP & RESTORE SYSTEM
+# AUTO-BACKUP SYSTEM
 # ============================================
 
 def auto_backup_vehicles():
-    """Auto-backup vehicles to a JSON file on every change"""
     try:
         db = get_db()
         rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
@@ -73,25 +70,21 @@ def auto_backup_vehicles():
         with open(backup_file, 'w') as f:
             json.dump(vehicles, f, indent=2)
         
-        print(f"✅ Backed up {len(vehicles)} vehicles")
         return True
     except Exception as e:
-        print(f"❌ Backup failed: {e}")
+        print(f"Backup failed: {e}")
         return False
 
 def restore_from_backup():
-    """Restore vehicles from backup file"""
     try:
         backup_file = 'vehicles_backup.json'
         if not os.path.exists(backup_file):
-            print("No backup file found")
             return False
         
         with open(backup_file, 'r') as f:
             vehicles = json.load(f)
         
         if not vehicles:
-            print("Backup file is empty")
             return False
         
         db = get_db()
@@ -108,10 +101,9 @@ def restore_from_backup():
         
         db.commit()
         db.close()
-        print(f"✅ Restored {len(vehicles)} vehicles from backup!")
         return True
     except Exception as e:
-        print(f"❌ Restore failed: {e}")
+        print(f"Restore failed: {e}")
         return False
 
 def backup_after_change(func):
@@ -121,26 +113,6 @@ def backup_after_change(func):
         auto_backup_vehicles()
         return result
     return wrapper
-
-def restore_on_startup():
-    """Auto-restore vehicles from backup on startup"""
-    try:
-        db = get_db()
-        count = db.execute('SELECT COUNT(*) FROM vehicle').fetchone()[0]
-        db.close()
-        
-        if count == 0:
-            print("⚠️ Database is empty, attempting to restore from backup...")
-            if restore_from_backup():
-                print("✅ Vehicles restored from backup on startup!")
-            else:
-                print("ℹ️ No backup found - database is empty")
-        else:
-            print(f"✅ Database has {count} vehicles")
-    except Exception as e:
-        print(f"❌ Restore on startup failed: {e}")
-
-restore_on_startup()
 
 # ============================================
 # PUBLIC ROUTES
@@ -168,7 +140,6 @@ def index():
 
 @app.route('/search')
 def search():
-    """Search vehicles by make, model, or parts"""
     query = request.args.get('q', '').strip()
     
     if not query:
@@ -245,7 +216,7 @@ def logout():
     return redirect(url_for('index'))
 
 # ============================================
-# ADMIN ROUTES (With Auto-Backup)
+# ADMIN ROUTES
 # ============================================
 
 @app.route('/add', methods=['POST'])
@@ -265,9 +236,9 @@ def add_vehicle():
                    request.form['parts_available'], request.form['description']))
         db.commit()
         db.close()
-        flash('Vehicle added successfully!', 'success')
+        flash('✅ Vehicle added successfully!', 'success')
     except Exception as e:
-        flash(f'Error adding vehicle: {e}', 'error')
+        flash(f'❌ Error adding vehicle: {e}', 'error')
     return redirect(url_for('index'))
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
@@ -293,11 +264,11 @@ def edit_vehicle(id):
                         request.form['parts_available'], request.form['description'], id))
             db.commit()
             db.close()
-            flash('Vehicle updated successfully!', 'success')
+            flash('✅ Vehicle updated successfully!', 'success')
             auto_backup_vehicles()
             return redirect(url_for('index'))
         except Exception as e:
-            flash(f'Error updating vehicle: {e}', 'error')
+            flash(f'❌ Error updating vehicle: {e}', 'error')
             db.close()
             return render_template('edit.html', vehicle=dict(vehicle))
     
@@ -312,10 +283,10 @@ def delete_vehicle(id):
         db.execute('DELETE FROM vehicle WHERE id = ?', (id,))
         db.commit()
         db.close()
-        flash('Vehicle deleted successfully!', 'success')
+        flash('✅ Vehicle deleted successfully!', 'success')
         auto_backup_vehicles()
     except Exception as e:
-        flash(f'Error deleting vehicle: {e}', 'error')
+        flash(f'❌ Error deleting vehicle: {e}', 'error')
     return redirect(url_for('index'))
 
 @app.route('/admin/restore', methods=['POST'])
@@ -330,7 +301,6 @@ def restore_vehicles():
 @app.route('/admin/backup-now', methods=['POST'])
 @login_required
 def backup_now():
-    """Manually create a backup file"""
     try:
         db = get_db()
         rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
@@ -344,19 +314,18 @@ def backup_now():
         with open(backup_file, 'w') as f:
             json.dump(vehicles, f, indent=2)
         
-        flash(f'✅ Backup created with {len(vehicles)} vehicles! Now commit and push to GitHub.', 'success')
+        flash(f'✅ Backup created with {len(vehicles)} vehicles!', 'success')
         return redirect(url_for('index'))
     except Exception as e:
         flash(f'❌ Backup failed: {e}', 'error')
         return redirect(url_for('index'))
 
 # ============================================
-# GALLERY PAGE
+# INFORMATION PAGES
 # ============================================
 
 @app.route('/gallery')
 def gallery():
-    """Gallery page - all vehicles"""
     try:
         db = get_db()
         rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
@@ -375,13 +344,8 @@ def gallery():
         flash(f'Error loading gallery: {e}', 'error')
         return render_template('gallery.html', vehicles=[])
 
-# ============================================
-# PART ENQUIRY PAGE
-# ============================================
-
 @app.route('/enquiry', methods=['GET', 'POST'])
 def enquiry():
-    """Part Enquiry page - customers can request parts"""
     if request.method == 'POST':
         name = request.form.get('name')
         email = request.form.get('email')
@@ -407,10 +371,6 @@ def enquiry():
     
     return render_template('enquiry.html')
 
-# ============================================
-# INFORMATION PAGES
-# ============================================
-
 @app.route('/about')
 def about():
     return render_template('about.html')
@@ -430,48 +390,6 @@ def faqs():
 @app.route('/contact')
 def contact():
     return render_template('contact.html')
-
-# ============================================
-# ADMIN AGENT ROUTES
-# ============================================
-
-@app.route('/admin/dashboard')
-@login_required
-def admin_dashboard():
-    health = admin_agent.health_check()
-    return render_template('admin_dashboard.html', health=health)
-
-@app.route('/admin/backup', methods=['POST'])
-@login_required
-def admin_backup():
-    result = admin_agent.auto_backup()
-    flash(result['message'] if result['success'] else result['error'], 'success' if result['success'] else 'error')
-    return redirect(url_for('admin_dashboard'))
-
-@app.route('/admin/restore', methods=['POST'])
-@login_required
-def admin_restore():
-    result = admin_agent.restore_backup()
-    flash(result['message'] if result['success'] else result['error'], 'success' if result['success'] else 'error')
-    return redirect(url_for('admin_dashboard'))
-
-@app.route('/admin/export/csv')
-@login_required
-def admin_export_csv():
-    result = admin_agent.export_to_csv()
-    if result['success']:
-        return send_file(result['file'], as_attachment=True)
-    else:
-        flash(result['error'], 'error')
-        return redirect(url_for('admin_dashboard'))
-
-@app.route('/admin/backup/list')
-@login_required
-def admin_backup_list():
-    import os
-    files = [f for f in os.listdir(admin_agent.backup_dir) if f.startswith('vehicles_backup_')]
-    files.sort(reverse=True)
-    return render_template('admin_backups.html', backups=files)
 
 # ============================================
 # RUN THE APP
