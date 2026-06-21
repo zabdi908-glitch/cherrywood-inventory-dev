@@ -4,6 +4,8 @@ import os
 import json
 from functools import wraps
 from datetime import datetime
+from admin_agent import admin_agent
+import admin_agent
 
 app = Flask(__name__)
 
@@ -432,6 +434,48 @@ def faqs():
 def contact():
     return render_template('contact.html')
 
+# ============================================
+# ADMIN AGENT ROUTES
+# ============================================
+
+@app.route('/admin/dashboard')
+@login_required
+def admin_dashboard():
+    health = admin_agent.health_check()
+    return render_template('admin_dashboard.html', health=health)
+
+@app.route('/admin/backup', methods=['POST'])
+@login_required
+def admin_backup():
+    result = admin_agent.auto_backup()
+    flash(result['message'] if result['success'] else result['error'], 'success' if result['success'] else 'error')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/restore', methods=['POST'])
+@login_required
+def admin_restore():
+    result = admin_agent.restore_backup()
+    flash(result['message'] if result['success'] else result['error'], 'success' if result['success'] else 'error')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/export/csv')
+@login_required
+def admin_export_csv():
+    result = admin_agent.export_to_csv()
+    if result['success']:
+        from flask import send_file
+        return send_file(result['file'], as_attachment=True)
+    else:
+        flash(result['error'], 'error')
+        return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/backup/list')
+@login_required
+def admin_backup_list():
+    import os
+    files = [f for f in os.listdir(admin_agent.backup_dir) if f.startswith('vehicles_backup_')]
+    files.sort(reverse=True)
+    return render_template('admin_backups.html', backups=files)
 # ============================================
 # RUN THE APP
 # ============================================

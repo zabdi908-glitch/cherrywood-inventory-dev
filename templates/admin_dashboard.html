@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Agent - Cherrywood Auto Parts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-[#0f172a] text-white min-h-screen">
+    
+    <nav class="bg-[#111827] border-b border-slate-800 p-4">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-robot text-2xl text-[#f97316]"></i>
+                <h1 class="text-2xl font-black text-white">🤖 Admin Agent</h1>
+            </div>
+            <div>
+                <a href="/" class="text-slate-400 hover:text-white mr-4 transition">← Back to Site</a>
+                <a href="/logout" class="text-red-400 hover:text-red-300 transition">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-3 rounded-lg text-sm font-bold {% if category == 'error' %}bg-red-600/20 text-red-400 border border-red-600/30{% else %}bg-green-600/20 text-green-400 border border-green-600/30{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="bg-[#111827] border border-slate-800 rounded-2xl p-6 mb-8">
+            <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-heartbeat text-[#f97316]"></i> System Health
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-[#0f172a] p-4 rounded-lg">
+                    <p class="text-slate-400 text-xs">Vehicles</p>
+                    <p class="text-2xl font-bold text-[#f97316]">{{ health.vehicle_count or 0 }}</p>
+                </div>
+                <div class="bg-[#0f172a] p-4 rounded-lg">
+                    <p class="text-slate-400 text-xs">Backups</p>
+                    <p class="text-2xl font-bold text-green-400">{{ health.backup_count or 0 }}</p>
+                </div>
+                <div class="bg-[#0f172a] p-4 rounded-lg">
+                    <p class="text-slate-400 text-xs">Status</p>
+                    <p class="text-2xl font-bold {% if health.status == 'healthy' %}text-green-400{% else %}text-red-400{% endif %}">
+                        {{ health.status or 'Unknown' }}
+                    </p>
+                </div>
+                <div class="bg-[#0f172a] p-4 rounded-lg">
+                    <p class="text-slate-400 text-xs">Last Check</p>
+                    <p class="text-sm font-bold text-slate-300">{{ health.timestamp or 'Never' }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-[#111827] border border-slate-800 rounded-2xl p-6">
+                <h3 class="font-bold mb-4">💾 Backup</h3>
+                <form action="/admin/backup" method="POST">
+                    <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg font-bold hover:bg-blue-700 transition">
+                        <i class="fa-solid fa-download mr-2"></i> Backup Now
+                    </button>
+                </form>
+                <a href="/admin/backup/list" class="block mt-2 text-center text-slate-400 hover:text-white text-sm">
+                    View Backups →
+                </a>
+            </div>
+
+            <div class="bg-[#111827] border border-slate-800 rounded-2xl p-6">
+                <h3 class="font-bold mb-4">🔄 Restore</h3>
+                <form action="/admin/restore" method="POST" onsubmit="return confirm('⚠️ This will replace all current data. Continue?');">
+                    <button type="submit" class="w-full bg-orange-600 text-white p-3 rounded-lg font-bold hover:bg-orange-700 transition">
+                        <i class="fa-solid fa-rotate-left mr-2"></i> Restore Latest
+                    </button>
+                </form>
+            </div>
+
+            <div class="bg-[#111827] border border-slate-800 rounded-2xl p-6">
+                <h3 class="font-bold mb-4">📤 Export</h3>
+                <a href="/admin/export/csv" class="block w-full bg-green-600 text-white p-3 rounded-lg font-bold text-center hover:bg-green-700 transition">
+                    <i class="fa-solid fa-file-csv mr-2"></i> Export CSV
+                </a>
+            </div>
+
+            <div class="bg-[#111827] border border-slate-800 rounded-2xl p-6">
+                <h3 class="font-bold mb-4">📥 Bulk Add</h3>
+                <a href="/admin/bulk-add" class="block w-full bg-purple-600 text-white p-3 rounded-lg font-bold text-center hover:bg-purple-700 transition">
+                    <i class="fa-solid fa-upload mr-2"></i> Bulk Add
+                </a>
+            </div>
+        </div>
+
+        <div class="bg-[#0f172a] border border-slate-800 rounded-2xl p-4">
+            <p class="text-xs text-slate-500 flex items-center gap-2">
+                <i class="fa-solid fa-info-circle text-[#f97316]"></i>
+                <span>Backups are stored in the <code class="bg-slate-800 px-2 py-1 rounded">backups/</code> folder. Only the last 30 backups are kept.</span>
+            </p>
+        </div>
+    </div>
+
+</body>
+</html>
