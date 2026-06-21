@@ -1,11 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
 import sqlite3
 import os
 import json
 from functools import wraps
 from datetime import datetime
 from admin_agent import admin_agent
-import admin_agent
 
 app = Flask(__name__)
 
@@ -15,8 +14,9 @@ app = Flask(__name__)
 
 app.secret_key = os.getenv('SECRET_KEY', 'cherrywood_yard_secret_key_2026')
 
+# Database path - use persistent storage on Render
 if os.getenv('RENDER'):
-    DATABASE = os.path.join('/tmp', 'inventory.db')
+    DATABASE = os.path.join('/data', 'inventory.db')  # Persistent disk
 else:
     DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inventory.db')
 
@@ -383,7 +383,6 @@ def gallery():
 def enquiry():
     """Part Enquiry page - customers can request parts"""
     if request.method == 'POST':
-        # Get form data
         name = request.form.get('name')
         email = request.form.get('email')
         phone = request.form.get('phone')
@@ -392,7 +391,6 @@ def enquiry():
         parts = request.form.get('parts')
         message = request.form.get('message')
         
-        # Build WhatsApp message
         whatsapp_message = f"Hi Cherrywood, I have a part enquiry:\n\n"
         whatsapp_message += f"Name: {name}\n"
         whatsapp_message += f"Email: {email}\n"
@@ -405,7 +403,6 @@ def enquiry():
         if message:
             whatsapp_message += f"Additional Info: {message}\n"
         
-        # Redirect to WhatsApp with pre-filled message
         return redirect(f"https://wa.me/447440369576?text={whatsapp_message.replace(' ', '%20').replace('\n', '%0A')}")
     
     return render_template('enquiry.html')
@@ -463,7 +460,6 @@ def admin_restore():
 def admin_export_csv():
     result = admin_agent.export_to_csv()
     if result['success']:
-        from flask import send_file
         return send_file(result['file'], as_attachment=True)
     else:
         flash(result['error'], 'error')
@@ -476,6 +472,7 @@ def admin_backup_list():
     files = [f for f in os.listdir(admin_agent.backup_dir) if f.startswith('vehicles_backup_')]
     files.sort(reverse=True)
     return render_template('admin_backups.html', backups=files)
+
 # ============================================
 # RUN THE APP
 # ============================================
