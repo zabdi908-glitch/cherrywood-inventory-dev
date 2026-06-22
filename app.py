@@ -122,7 +122,8 @@ def backup_after_change(func):
 def index():
     try:
         db = get_db()
-        rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
+        # ✅ Show ONLY Breaking vehicles, ordered by newest first
+        rows = db.execute('SELECT * FROM vehicle WHERE status = "Breaking" ORDER BY id DESC').fetchall()
         db.close()
         
         vehicles_data = []
