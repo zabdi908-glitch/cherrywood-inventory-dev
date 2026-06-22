@@ -61,7 +61,10 @@
             <h1 class="text-3xl font-black text-white mb-2 flex items-center gap-3">
                 <i class="fa-solid fa-paper-plane text-[#f97316]"></i> Part Enquiry
             </h1>
-            <p class="text-slate-400 text-sm mb-6">Can't find what you're looking for? Fill in the form and our team will check our stock.</p>
+            <p class="text-slate-400 text-sm mb-6">
+                Fill in the form and our team will check our stock. 
+                <span class="text-[#f97316] font-bold">Photos help us find the right part faster.</span>
+            </p>
 
             <!-- Flash Messages -->
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -110,6 +113,21 @@
                     <label class="block text-xs font-black uppercase text-slate-400 mb-1.5 tracking-wider">Part(s) Required *</label>
                     <textarea name="parts" rows="3" placeholder="e.g. Engine, Gearbox, Headlight, ECU..." required
                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-[#f97316] outline-none transition"></textarea>
+                </div>
+
+                <!-- ✅ Photo Upload -->
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1.5 tracking-wider">
+                        <i class="fa-solid fa-camera text-[#f97316] mr-1"></i> Upload Photos
+                        <span class="text-slate-500 font-normal lowercase">(optional - helps us identify the part)</span>
+                    </label>
+                    <input type="file" name="photos" multiple accept="image/*"
+                           class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-[#f97316] outline-none transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#f97316] file:text-black file:font-bold hover:file:bg-orange-500">
+                    <p class="text-xs text-slate-500 mt-1">You can upload multiple photos (JPEG, PNG, WebP). Max 5MB each.</p>
+                    <p class="text-xs text-[#f97316] mt-1">
+                        <i class="fa-solid fa-whatsapp mr-1"></i> 
+                        Alternatively, send photos via WhatsApp: <a href="https://wa.me/447440369576" target="_blank" class="hover:underline font-bold">07440 369576</a>
+                    </p>
                 </div>
 
                 <div>
