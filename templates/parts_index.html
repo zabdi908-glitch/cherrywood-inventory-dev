@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parts Inventory - Cherrywood Auto Parts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-[#0f172a] text-white min-h-screen">
+    
+    <nav class="bg-[#111827] border-b border-slate-800 p-4">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-cubes text-2xl text-[#f97316]"></i>
+                <h1 class="text-2xl font-black text-white">Parts Inventory</h1>
+                <span class="bg-[#f97316]/20 text-[#f97316] text-xs px-2 py-1 rounded">{{ parts|length }} parts</span>
+            </div>
+            <div>
+                <a href="/" class="text-slate-400 hover:text-white mr-4 transition">← Back to Site</a>
+                <a href="/logout" class="text-red-400 hover:text-red-300 transition">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-3 rounded-lg text-sm font-bold {% if category == 'error' %}bg-red-600/20 text-red-400 border border-red-600/30{% else %}bg-green-600/20 text-green-400 border border-green-600/30{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Search & Add -->
+        <div class="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+            <form action="/parts/search" method="GET" class="flex flex-1 gap-2">
+                <input type="text" name="q" placeholder="🔍 Search by part, OEM, make, model..." 
+                       class="flex-1 p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-[#f97316] outline-none transition"
+                       value="{{ search_query or '' }}">
+                <button type="submit" class="px-6 py-3 bg-[#f97316] text-black font-bold rounded-lg hover:bg-orange-500 transition">
+                    Search
+                </button>
+                {% if search_query %}
+                    <a href="/parts" class="px-4 py-3 bg-slate-700 text-white font-bold rounded-lg hover:bg-slate-600 transition">
+                        Clear
+                    </a>
+                {% endif %}
+            </form>
+            <div class="flex gap-2">
+                <a href="/parts/add" class="px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition">
+                    <i class="fa-solid fa-plus mr-2"></i> Add Part
+                </a>
+                <a href="/parts/bulk-import" class="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition">
+                    <i class="fa-solid fa-upload mr-2"></i> Bulk Import
+                </a>
+            </div>
+        </div>
+
+        <!-- Parts Grid -->
+        {% if not parts %}
+            <div class="text-center py-12 bg-[#111827] rounded-2xl border border-slate-800">
+                <i class="fa-solid fa-cubes text-4xl text-slate-600 mb-4 block"></i>
+                <p class="text-slate-400">No parts in inventory yet. Add your first part!</p>
+            </div>
+        {% else %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for part in parts %}
+                <div class="bg-[#111827] border border-slate-800 rounded-xl p-4 hover:border-[#f97316] transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-white">{{ part.part_name }}</h3>
+                            <p class="text-xs text-slate-400">{{ part.make }} {{ part.model }}</p>
+                            <p class="text-xs text-slate-500 mt-1">OEM: {{ part.oem_number or 'N/A' }}</p>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded font-bold 
+                            {% if part.stock_status == 'Available' %}bg-green-600/20 text-green-400{% endif %}
+                            {% if part.stock_status == 'Reserved' %}bg-yellow-600/20 text-yellow-400{% endif %}
+                            {% if part.stock_status == 'Sold' %}bg-red-600/20 text-red-400{% endif %}">
+                            {{ part.stock_status }}
+                        </span>
+                    </div>
+                    <div class="mt-2 flex flex-wrap gap-1 text-xs">
+                        <span class="bg-slate-800 px-2 py-0.5 rounded">{{ part.category }}</span>
+                        <span class="bg-slate-800 px-2 py-0.5 rounded">£{{ part.price }}</span>
+                    </div>
+                    <div class="mt-3 flex gap-2">
+                        <a href="/parts/{{ part.id }}" class="text-[#f97316] hover:underline text-sm">View</a>
+                        <a href="/parts/edit/{{ part.id }}" class="text-blue-400 hover:underline text-sm">Edit</a>
+                        <form action="/parts/delete/{{ part.id }}" method="POST" onsubmit="return confirm('Delete this part?');">
+                            <button type="submit" class="text-red-400 hover:underline text-sm">Delete</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+</body>
+</html>
