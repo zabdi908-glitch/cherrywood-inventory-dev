@@ -524,6 +524,65 @@ def part_public_view(id):
 @app.route('/delivery')
 def delivery():
     return render_template('delivery.html')
+
+@app.route('/parts/bulk-import', methods=['GET', 'POST'])
+@login_required
+def parts_bulk_import():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file uploaded', 'error')
+            return redirect(url_for('parts_bulk_import'))
+        
+        file = request.files['file']
+        if file.filename == '':
+            flash('No file selected', 'error')
+            return redirect(url_for('parts_bulk_import'))
+        
+        if file and file.filename.endswith('.csv'):
+            # Read CSV
+            import csv
+            import io
+            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+            csv_input = csv.DictReader(stream)
+            
+            added = 0
+            errors = []
+            
+            for row in csv_input:
+                try:
+                    data = {
+                        'stock_id': row.get('stock_id', '').strip(),
+                        'part_name': row.get('part_name', '').strip(),
+                        'category': row.get('category', '').strip(),
+                        'part_type': row.get('part_type', '').strip(),
+                        'make': row.get('make', '').strip(),
+                        'model': row.get('model', '').strip(),
+                        'generation': row.get('generation', '').strip(),
+                        'oem_number': row.get('oem_number', '').strip(),
+                        'engine_code': row.get('engine_code', '').strip(),
+                        'condition': row.get('condition', 'Good').strip(),
+                        'price': float(row.get('price', 0)) if row.get('price') else 0,
+                        'stock_status': row.get('stock_status', 'Available').strip(),
+                        'location': row.get('location', '').strip(),
+                        'notes': row.get('notes', '').strip()
+                    }
+                    result = parts_agent.add_part(data)
+                    if result['success']:
+                        added += 1
+                    else:
+                        errors.append(f"Row {csv_input.line_num}: {result['error']}")
+                except Exception as e:
+                    errors.append(f"Row {csv_input.line_num}: {str(e)}")
+            
+            flash(f'✅ Added {added} parts successfully!', 'success')
+            if errors:
+                flash(f'❌ Errors: {", ".join(errors[:5])}', 'error')
+            return redirect(url_for('parts_index'))
+        else:
+            flash('Please upload a CSV file', 'error')
+            return redirect(url_for('parts_bulk_import'))
+    
+    return render_template('parts_bulk_import.html')
     
 # ============================================
 # RUN THE APP
