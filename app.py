@@ -376,7 +376,6 @@ def enquiry():
 @app.route('/about')
 def about():
     return render_template('about.html')
-
 @app.route('/warranty')
 def warranty():
     return render_template('warranty.html')
