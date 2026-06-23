@@ -204,13 +204,13 @@ def login():
         if username == 'admin' and password == admin_password:
             session['logged_in'] = True
             flash('Logged in successfully!', 'success')
-            return redirect(url_for('index'))
+            return redirect(url_for('index'))  # <-- THIS IS THE PROBLEM
         else:
             flash('Invalid username or password', 'error')
             return render_template('login.html')
     
     return render_template('login.html')
-
+    
 @app.route('/logout')
 def logout():
     session.pop('logged_in', None)
