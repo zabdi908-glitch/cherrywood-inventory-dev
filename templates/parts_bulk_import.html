@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk Import Parts - Cherrywood Auto Parts{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-12 w-full">
+    <div class="bg-[#111827] border border-slate-800 rounded-2xl p-8">
+        <h1 class="text-3xl font-black text-white mb-2 flex items-center gap-3">
+            <i class="fa-solid fa-upload text-[#f97316]"></i> Bulk Import Parts
+        </h1>
+        <p class="text-slate-400 text-sm mb-6">Upload a CSV file to add multiple parts at once.</p>
+
+        <div class="bg-[#0f172a] border border-slate-700 rounded-lg p-4 mb-6">
+            <h3 class="font-bold text-white text-sm mb-2">CSV Format Requirements:</h3>
+            <ul class="text-xs text-slate-400 space-y-1 list-disc pl-4">
+                <li>Column headers must match the template exactly</li>
+                <li><span class="text-white">stock_id</span> and <span class="text-white">part_name</span> are required</li>
+                <li>Price must be a number (e.g., 250.00)</li>
+                <li>Category must be: Engine, Gearbox, Electronics, Body Panel, Interior, Wheels, Lighting, Suspension, Brakes, Exhaust, Other</li>
+            </ul>
+        </div>
+
+        <div class="flex gap-4 mb-6">
+            <a href="/static/csv_template.csv" class="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition">
+                <i class="fa-solid fa-download mr-2"></i> Download Template
+            </a>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="space-y-4">
+            <div>
+                <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Select CSV File</label>
+                <input type="file" name="file" accept=".csv" required
+                       class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-[#f97316] outline-none transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#f97316] file:text-black file:font-bold hover:file:bg-orange-500">
+            </div>
+
+            <button type="submit" class="w-full p-4 bg-[#f97316] text-black font-black uppercase rounded-xl hover:bg-orange-500 transition">
+                <i class="fa-solid fa-upload mr-2"></i> Upload & Import
+            </button>
+        </form>
+
+        <div class="mt-6 pt-4 border-t border-slate-800">
+            <p class="text-xs text-slate-500 flex items-center gap-2">
+                <i class="fa-solid fa-info-circle text-[#f97316]"></i>
+                <span>Your data will be validated before import. Any rows with errors will be skipped.</span>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
