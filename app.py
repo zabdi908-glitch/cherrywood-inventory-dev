@@ -204,7 +204,8 @@ def login():
         if username == 'admin' and password == admin_password:
             session['logged_in'] = True
             flash('Logged in successfully!', 'success')
-            return redirect(url_for('index'))  # <-- THIS IS THE PROBLEM
+            # ✅ FIX: Redirect to parts page instead of homepage
+            return redirect(url_for('parts_index'))
         else:
             flash('Invalid username or password', 'error')
             return render_template('login.html')
