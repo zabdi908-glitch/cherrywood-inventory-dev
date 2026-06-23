@@ -346,7 +346,7 @@ def gallery():
     except Exception as e:
         flash(f'Error loading gallery: {e}', 'error')
         return render_template('gallery.html', vehicles=[])
-
+        
 @app.route('/enquiry', methods=['GET', 'POST'])
 def enquiry():
     if request.method == 'POST':
@@ -354,24 +354,32 @@ def enquiry():
         email = request.form.get('email')
         phone = request.form.get('phone')
         reg = request.form.get('reg')
+        vin = request.form.get('vin')
         vehicle = request.form.get('vehicle')
         parts = request.form.get('parts')
         message = request.form.get('message')
-        
+        contact_method = request.form.get('contact_method')
+        urgency = request.form.get('urgency')
+
+        # Build WhatsApp message
         whatsapp_message = f"Hi Cherrywood, I have a part enquiry:\n\n"
         whatsapp_message += f"Name: {name}\n"
         whatsapp_message += f"Email: {email}\n"
         if phone:
             whatsapp_message += f"Phone: {phone}\n"
         whatsapp_message += f"Reg: {reg}\n"
+        if vin:
+            whatsapp_message += f"VIN: {vin}\n"
         if vehicle:
             whatsapp_message += f"Vehicle: {vehicle}\n"
         whatsapp_message += f"Parts Required: {parts}\n"
         if message:
             whatsapp_message += f"Additional Info: {message}\n"
-        
+        whatsapp_message += f"Contact Method: {contact_method}\n"
+        whatsapp_message += f"Urgency: {urgency}"
+
         return redirect(f"https://wa.me/447440369576?text={whatsapp_message.replace(' ', '%20').replace('\n', '%0A')}")
-    
+
     return render_template('enquiry.html')
 
 @app.route('/about')
