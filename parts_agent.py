@@ -155,7 +155,7 @@ class PartsAgent:
         except Exception as e:
             return {'success': False, 'error': str(e)}
     
-    def get_photos(self, part_id):
+  def get_photos(self, part_id):
     try:
         conn = self.get_db()
         photos = conn.execute('SELECT * FROM part_photos WHERE part_id = ? ORDER BY photo_order', (part_id,)).fetchall()
@@ -163,7 +163,7 @@ class PartsAgent:
         return [dict(p) for p in photos]
     except Exception as e:
         return []
-    
+        
     def delete_photo(self, photo_id):
         try:
             conn = self.get_db()
