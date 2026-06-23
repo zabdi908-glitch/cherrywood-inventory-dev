@@ -486,7 +486,8 @@ def parts_delete(id):
     else:
         flash('❌ Delete failed', 'error')
     return redirect(url_for('parts_index'))
-    # ============================================
+
+# ============================================
 # PUBLIC PARTS ROUTES
 # ============================================
 
@@ -508,7 +509,6 @@ def parts_public_search():
 @app.route('/parts-public/category/<category>')
 def parts_public_category(category):
     """Filter parts by category"""
-    # Get all parts and filter by category
     all_parts = parts_agent.get_all_parts()
     parts = [p for p in all_parts if p.get('category') == category]
     return render_template('parts_public.html', parts=parts, selected_category=category)
