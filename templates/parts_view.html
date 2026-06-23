@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ part.part_name }} - Parts Inventory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-[#0f172a] text-white min-h-screen">
+
+    <nav class="bg-[#111827] border-b border-slate-800 p-4">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-cube text-2xl text-[#f97316]"></i>
+                <h1 class="text-2xl font-black text-white">{{ part.part_name }}</h1>
+            </div>
+            <div>
+                <a href="/parts" class="text-slate-400 hover:text-white mr-4 transition">← Back</a>
+                <a href="/logout" class="text-red-400 hover:text-red-300 transition">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <div class="bg-[#111827] border border-slate-800 rounded-2xl p-8">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-xs text-slate-400">Stock ID</p>
+                    <p class="text-lg font-bold text-white">{{ part.stock_id }}</p>
+                </div>
+                <span class="text-sm px-4 py-2 rounded font-bold 
+                    {% if part.stock_status == 'Available' %}bg-green-600/20 text-green-400{% endif %}
+                    {% if part.stock_status == 'Reserved' %}bg-yellow-600/20 text-yellow-400{% endif %}
+                    {% if part.stock_status == 'Sold' %}bg-red-600/20 text-red-400{% endif %}">
+                    {{ part.stock_status }}
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <div>
+                    <p class="text-xs text-slate-400">Category</p>
+                    <p class="text-white font-bold">{{ part.category }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400">Part Type</p>
+                    <p class="text-white font-bold">{{ part.part_type or 'N/A' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400">Make / Model</p>
+                    <p class="text-white font-bold">{{ part.make }} {{ part.model }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400">Generation</p>
+                    <p class="text-white font-bold">{{ part.generation or 'N/A' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400">OEM / Part Number</p>
+                    <p class="text-white font-bold">{{ part.oem_number or 'N/A' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400">Engine Code</p>
+                    <p class="text-white font-bold">{{ part.engine_code or 'N/A' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400">Condition</p>
+                    <p class="text-white font-bold">{{ part.condition }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400">Price</p>
+                    <p class="text-2xl font-black text-[#f97316]">£{{ "%.2f"|format(part.price) }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400">Location</p>
+                    <p class="text-white font-bold">{{ part.location or 'N/A' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400">Added</p>
+                    <p class="text-white font-bold">{{ part.created_at[:10] }}</p>
+                </div>
+            </div>
+
+            {% if part.notes %}
+            <div class="mt-6 pt-4 border-t border-slate-800">
+                <p class="text-xs text-slate-400">Notes</p>
+                <p class="text-white">{{ part.notes }}</p>
+            </div>
+            {% endif %}
+
+            <div class="mt-6 pt-4 border-t border-slate-800 flex gap-4">
+                <a href="/parts/edit/{{ part.id }}" class="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition">
+                    <i class="fa-solid fa-pen mr-2"></i> Edit
+                </a>
+                <form action="/parts/delete/{{ part.id }}" method="POST" onsubmit="return confirm('Delete this part?');">
+                    <button type="submit" class="px-6 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition">
+                        <i class="fa-solid fa-trash mr-2"></i> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
