@@ -4,6 +4,7 @@ import os
 import json
 from functools import wraps
 from datetime import datetime
+from parts_agent import parts_agent
 
 app = Flask(__name__)
 
@@ -391,7 +392,101 @@ def faqs():
 @app.route('/contact')
 def contact():
     return render_template('contact.html')
+# ============================================
+# PARTS INVENTORY ROUTES
+# ============================================
 
+@app.route('/parts')
+def parts_index():
+    parts = parts_agent.get_all_parts()
+    return render_template('parts_index.html', parts=parts)
+
+@app.route('/parts/search')
+def parts_search():
+    query = request.args.get('q', '').strip()
+    parts = parts_agent.search_parts(query)
+    return render_template('parts_index.html', parts=parts, search_query=query)
+
+@app.route('/parts/add', methods=['GET', 'POST'])
+@login_required
+def parts_add():
+    if request.method == 'POST':
+        data = {
+            'stock_id': request.form['stock_id'],
+            'part_name': request.form['part_name'],
+            'category': request.form['category'],
+            'part_type': request.form.get('part_type', ''),
+            'make': request.form.get('make', ''),
+            'model': request.form.get('model', ''),
+            'generation': request.form.get('generation', ''),
+            'oem_number': request.form.get('oem_number', ''),
+            'engine_code': request.form.get('engine_code', ''),
+            'condition': request.form.get('condition', 'Good'),
+            'price': float(request.form.get('price', 0)),
+            'stock_status': request.form.get('stock_status', 'Available'),
+            'location': request.form.get('location', ''),
+            'notes': request.form.get('notes', '')
+        }
+        result = parts_agent.add_part(data)
+        if result['success']:
+            flash('✅ Part added successfully!', 'success')
+            return redirect(url_for('parts_index'))
+        else:
+            flash(f'❌ Error: {result["error"]}', 'error')
+    return render_template('parts_add.html')
+
+@app.route('/parts/<int:id>')
+def parts_view(id):
+    part = parts_agent.get_part(id)
+    if not part:
+        flash('Part not found', 'error')
+        return redirect(url_for('parts_index'))
+    return render_template('parts_view.html', part=part)
+
+@app.route('/parts/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def parts_edit(id):
+    part = parts_agent.get_part(id)
+    if not part:
+        flash('Part not found', 'error')
+        return redirect(url_for('parts_index'))
+    
+    if request.method == 'POST':
+        data = {
+            'stock_id': request.form['stock_id'],
+            'part_name': request.form['part_name'],
+            'category': request.form['category'],
+            'part_type': request.form.get('part_type', ''),
+            'make': request.form.get('make', ''),
+            'model': request.form.get('model', ''),
+            'generation': request.form.get('generation', ''),
+            'oem_number': request.form.get('oem_number', ''),
+            'engine_code': request.form.get('engine_code', ''),
+            'condition': request.form.get('condition', 'Good'),
+            'price': float(request.form.get('price', 0)),
+            'stock_status': request.form.get('stock_status', 'Available'),
+            'location': request.form.get('location', ''),
+            'notes': request.form.get('notes', '')
+        }
+        result = parts_agent.update_part(id, data)
+        if result['success']:
+            flash('✅ Part updated successfully!', 'success')
+            return redirect(url_for('parts_view', id=id))
+        else:
+            flash(f'❌ Error: {result["error"]}', 'error')
+    
+    return render_template('parts_edit.html', part=part)
+
+@app.route('/parts/delete/<int:id>', methods=['POST'])
+@login_required
+def parts_delete(id):
+    result = parts_agent.delete_part(id)
+    if result['success']:
+        flash('✅ Part deleted', 'success')
+    else:
+        flash('❌ Delete failed', 'error')
+    return redirect(url_for('parts_index'))
+    
 # ============================================
 # RUN THE APP
 # ============================================
