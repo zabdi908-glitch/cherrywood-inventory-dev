@@ -520,6 +520,10 @@ def part_public_view(id):
         flash('Part not found', 'error')
         return redirect(url_for('parts_public'))
     return render_template('part_public_view.html', part=part)
+
+@app.route('/delivery')
+def delivery():
+    return render_template('delivery.html')
     
 # ============================================
 # RUN THE APP
