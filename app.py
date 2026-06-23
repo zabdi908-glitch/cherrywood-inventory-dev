@@ -592,6 +592,37 @@ def parts_bulk_import():
             return redirect(url_for('parts_bulk_import'))
     
     return render_template('parts_bulk_import.html')
+    # ============================================
+# PUBLIC PARTS ROUTES WITH FILTERS
+# ============================================
+
+@app.route('/parts-public/price/<min_price>-<max_price>')
+def parts_public_price(min_price, max_price):
+    """Filter parts by price range"""
+    all_parts = parts_agent.get_all_parts()
+    parts = [p for p in all_parts if float(min_price) <= float(p.get('price', 0)) <= float(max_price)]
+    return render_template('parts_public.html', parts=parts)
+
+@app.route('/parts-public/status/<status>')
+def parts_public_status(status):
+    """Filter parts by stock status"""
+    all_parts = parts_agent.get_all_parts()
+    parts = [p for p in all_parts if p.get('stock_status') == status]
+    return render_template('parts_public.html', parts=parts)
+
+@app.route('/parts-public/sort/<sort_by>')
+def parts_public_sort(sort_by):
+    """Sort parts by price or name"""
+    all_parts = parts_agent.get_all_parts()
+    if sort_by == 'price_asc':
+        parts = sorted(all_parts, key=lambda x: float(x.get('price', 0)))
+    elif sort_by == 'price_desc':
+        parts = sorted(all_parts, key=lambda x: float(x.get('price', 0)), reverse=True)
+    elif sort_by == 'name':
+        parts = sorted(all_parts, key=lambda x: x.get('part_name', ''))
+    else:
+        parts = all_parts
+    return render_template('parts_public.html', parts=parts)
     
 # ============================================
 # RUN THE APP
