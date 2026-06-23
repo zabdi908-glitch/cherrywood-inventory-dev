@@ -437,6 +437,24 @@ def parts_add():
         }
         result = parts_agent.add_part(data)
         if result['success']:
+            part_id = result['id']
+            
+            # ✅ Handle photo uploads
+            if 'photos' in request.files:
+                files = request.files.getlist('photos')
+                for i, file in enumerate(files):
+                    if file and file.filename:
+                        # Save to static/uploads folder
+                        import os
+                        from werkzeug.utils import secure_filename
+                        upload_folder = os.path.join('static', 'uploads')
+                        if not os.path.exists(upload_folder):
+                            os.makedirs(upload_folder)
+                        filename = secure_filename(file.filename)
+                        filepath = os.path.join(upload_folder, filename)
+                        file.save(filepath)
+                        parts_agent.add_photo(part_id, f'/static/uploads/{filename}', i)
+            
             flash('✅ Part added successfully!', 'success')
             return redirect(url_for('parts_index'))
         else:
@@ -478,6 +496,21 @@ def parts_edit(id):
         }
         result = parts_agent.update_part(id, data)
         if result['success']:
+            # ✅ Handle photo uploads
+            if 'photos' in request.files:
+                files = request.files.getlist('photos')
+                for i, file in enumerate(files):
+                    if file and file.filename:
+                        import os
+                        from werkzeug.utils import secure_filename
+                        upload_folder = os.path.join('static', 'uploads')
+                        if not os.path.exists(upload_folder):
+                            os.makedirs(upload_folder)
+                        filename = secure_filename(file.filename)
+                        filepath = os.path.join(upload_folder, filename)
+                        file.save(filepath)
+                        parts_agent.add_photo(id, f'/static/uploads/{filename}', i)
+            
             flash('✅ Part updated successfully!', 'success')
             return redirect(url_for('parts_view', id=id))
         else:
