@@ -486,6 +486,41 @@ def parts_delete(id):
     else:
         flash('❌ Delete failed', 'error')
     return redirect(url_for('parts_index'))
+    # ============================================
+# PUBLIC PARTS ROUTES
+# ============================================
+
+@app.route('/parts-public')
+def parts_public():
+    """Public parts page - all parts"""
+    parts = parts_agent.get_all_parts()
+    return render_template('parts_public.html', parts=parts)
+
+@app.route('/parts-public/search')
+def parts_public_search():
+    """Search public parts"""
+    query = request.args.get('q', '').strip()
+    if not query:
+        return redirect(url_for('parts_public'))
+    parts = parts_agent.search_parts(query)
+    return render_template('parts_public.html', parts=parts, search_query=query)
+
+@app.route('/parts-public/category/<category>')
+def parts_public_category(category):
+    """Filter parts by category"""
+    # Get all parts and filter by category
+    all_parts = parts_agent.get_all_parts()
+    parts = [p for p in all_parts if p.get('category') == category]
+    return render_template('parts_public.html', parts=parts, selected_category=category)
+
+@app.route('/part/<int:id>')
+def part_public_view(id):
+    """Public part detail page"""
+    part = parts_agent.get_part(id)
+    if not part:
+        flash('Part not found', 'error')
+        return redirect(url_for('parts_public'))
+    return render_template('part_public_view.html', part=part)
     
 # ============================================
 # RUN THE APP
