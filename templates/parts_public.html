@@ -12,8 +12,9 @@
         </div>
     </section>
 
-    <!-- Search & Filters -->
+    <!-- ===== SEARCH & FILTERS ===== -->
     <div class="mb-6">
+        <!-- Search Bar -->
         <form action="/parts-public/search" method="GET" class="flex flex-col md:flex-row gap-3">
             <div class="flex-1">
                 <input type="text" name="q" 
@@ -33,19 +34,60 @@
             </div>
         </form>
 
-        <div class="flex flex-wrap gap-2 mt-4">
-            <a href="/parts-public" class="px-4 py-2 rounded-full text-sm font-bold bg-[#f97316] text-black hover:bg-orange-500 transition">
-                All Parts
-            </a>
-            {% for cat in ['Engine', 'Gearbox', 'Electronics', 'Body Panel', 'Interior', 'Wheels', 'Lighting', 'Suspension', 'Brakes', 'Exhaust'] %}
-                <a href="/parts-public/category/{{ cat }}" class="px-4 py-2 rounded-full text-sm font-bold bg-slate-800 text-slate-300 hover:bg-[#f97316] hover:text-black transition">
-                    {{ cat }}
+        <!-- ===== ✅ NEW: FILTER ROW ===== -->
+        <div class="flex flex-wrap gap-3 mt-4">
+            <!-- Category Filters -->
+            <div class="flex flex-wrap gap-2">
+                <a href="/parts-public" class="px-4 py-2 rounded-full text-sm font-bold bg-[#f97316] text-black hover:bg-orange-500 transition">
+                    All Parts
                 </a>
-            {% endfor %}
+                {% for cat in ['Engine', 'Gearbox', 'Electronics', 'Body Panel', 'Interior', 'Wheels', 'Lighting', 'Suspension', 'Brakes', 'Exhaust'] %}
+                    <a href="/parts-public/category/{{ cat }}" class="px-4 py-2 rounded-full text-sm font-bold bg-slate-800 text-slate-300 hover:bg-[#f97316] hover:text-black transition">
+                        {{ cat }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- ===== ✅ NEW: PRICE & STOCK FILTERS ===== -->
+        <div class="flex flex-wrap gap-3 mt-3">
+            <!-- Price Filter -->
+            <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
+                <span class="text-xs text-slate-400 font-bold">Price:</span>
+                <select name="price_filter" class="bg-transparent text-white text-sm focus:outline-none" onchange="window.location.href=this.value">
+                    <option value="/parts-public">All</option>
+                    <option value="/parts-public/price/0-100">Under £100</option>
+                    <option value="/parts-public/price/100-500">£100 - £500</option>
+                    <option value="/parts-public/price/500-1000">£500 - £1000</option>
+                    <option value="/parts-public/price/1000-99999">Over £1000</option>
+                </select>
+            </div>
+
+            <!-- Stock Status Filter -->
+            <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
+                <span class="text-xs text-slate-400 font-bold">Status:</span>
+                <select name="stock_filter" class="bg-transparent text-white text-sm focus:outline-none" onchange="window.location.href=this.value">
+                    <option value="/parts-public">All</option>
+                    <option value="/parts-public/status/Available">Available</option>
+                    <option value="/parts-public/status/Reserved">Reserved</option>
+                    <option value="/parts-public/status/Sold">Sold</option>
+                </select>
+            </div>
+
+            <!-- Sort Filter -->
+            <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
+                <span class="text-xs text-slate-400 font-bold">Sort:</span>
+                <select name="sort" class="bg-transparent text-white text-sm focus:outline-none" onchange="window.location.href=this.value">
+                    <option value="/parts-public">Newest First</option>
+                    <option value="/parts-public/sort/price_asc">Price: Low → High</option>
+                    <option value="/parts-public/sort/price_desc">Price: High → Low</option>
+                    <option value="/parts-public/sort/name">Name A → Z</option>
+                </select>
+            </div>
         </div>
     </div>
 
-    <!-- Parts Grid -->
+    <!-- ===== PARTS GRID ===== -->
     {% if not parts %}
         <div class="text-center py-12 bg-[#111827] rounded-2xl border border-slate-800">
             <i class="fa-solid fa-cubes text-4xl text-slate-600 mb-4 block"></i>
