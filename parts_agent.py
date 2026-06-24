@@ -198,9 +198,9 @@ class PartsAgent:
                         'location': row.get('location', ''),
                         'notes': row.get('notes', '')
                     }
-                    result = self.add_part(data)
-                    if result['success']:
-                        added += 1
+                   import time
+result = self.add_part(data)
+time.sleep(0.05)  # Wait 0.05 seconds between each insert
                     else:
                         errors.append(f"Row {reader.line_num}: {result['error']}")
                 except Exception as e:
