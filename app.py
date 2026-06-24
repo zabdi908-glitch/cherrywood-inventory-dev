@@ -469,6 +469,14 @@ def parts_bulk_import():
             return redirect(url_for('parts_bulk_import'))
     
     return render_template('parts_bulk_import.html')
+    @app.route('/part/<int:id>')
+def part_public_view(id):
+    """Public part detail page"""
+    part = parts_agent.get_part(id)
+    if not part:
+        flash('Part not found', 'error')
+        return redirect(url_for('parts_public'))
+    return render_template('part_public_view.html', part=part)
     
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
