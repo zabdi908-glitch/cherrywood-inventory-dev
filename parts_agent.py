@@ -205,7 +205,7 @@ class PartsAgent:
                         added += 1
                     else:
                         errors.append(f"Row {line}: {result['error']}")
-                    time.sleep(0.02)
+                    time.sleep(0.01)
                 except Exception as e:
                     errors.append(f"Row {line}: {str(e)}")
 
