@@ -5,8 +5,10 @@ import json
 from functools import wraps
 from datetime import datetime
 from parts_agent import parts_agent
+from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
+csrf = CSRFProtect(app)  # ✅ Add this
 
 # ============================================
 # CONFIGURATION
