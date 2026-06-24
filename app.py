@@ -4,6 +4,7 @@ import os
 import json
 from functools import wraps
 from datetime import datetime
+from parts_agent import parts_agent
 
 app = Flask(__name__)
 
@@ -299,7 +300,175 @@ def contact():
 @app.route('/delivery')
 def delivery():
     return render_template('delivery.html')
+# ============================================
+# PARTS ROUTES
+# ============================================
 
+@app.route('/parts')
+def parts_index():
+    try:
+        parts = parts_agent.get_all_parts()
+        return render_template('parts_index.html', parts=parts)
+    except Exception as e:
+        flash(f'Error loading parts: {e}', 'error')
+        return render_template('parts_index.html', parts=[])
+
+@app.route('/parts/add', methods=['GET', 'POST'])
+@login_required
+def parts_add():
+    if request.method == 'POST':
+        data = {
+            'stock_id': request.form['stock_id'],
+            'part_name': request.form['part_name'],
+            'category': request.form['category'],
+            'part_type': request.form.get('part_type', ''),
+            'make': request.form.get('make', ''),
+            'model': request.form.get('model', ''),
+            'generation': request.form.get('generation', ''),
+            'oem_number': request.form.get('oem_number', ''),
+            'engine_code': request.form.get('engine_code', ''),
+            'condition': request.form.get('condition', 'Good'),
+            'price': float(request.form.get('price', 0)),
+            'stock_status': request.form.get('stock_status', 'Available'),
+            'location': request.form.get('location', ''),
+            'notes': request.form.get('notes', '')
+        }
+        result = parts_agent.add_part(data)
+        if result['success']:
+            flash('✅ Part added successfully!', 'success')
+            return redirect(url_for('parts_index'))
+        else:
+            flash(f'❌ Error: {result["error"]}', 'error')
+    return render_template('parts_add.html')
+
+@app.route('/parts/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def parts_edit(id):
+    part = parts_agent.get_part(id)
+    if not part:
+        flash('Part not found', 'error')
+        return redirect(url_for('parts_index'))
+    
+    if request.method == 'POST':
+        data = {
+            'stock_id': request.form['stock_id'],
+            'part_name': request.form['part_name'],
+            'category': request.form['category'],
+            'part_type': request.form.get('part_type', ''),
+            'make': request.form.get('make', ''),
+            'model': request.form.get('model', ''),
+            'generation': request.form.get('generation', ''),
+            'oem_number': request.form.get('oem_number', ''),
+            'engine_code': request.form.get('engine_code', ''),
+            'condition': request.form.get('condition', 'Good'),
+            'price': float(request.form.get('price', 0)),
+            'stock_status': request.form.get('stock_status', 'Available'),
+            'location': request.form.get('location', ''),
+            'notes': request.form.get('notes', '')
+        }
+        result = parts_agent.update_part(id, data)
+        if result['success']:
+            flash('✅ Part updated successfully!', 'success')
+            return redirect(url_for('parts_view', id=id))
+        else:
+            flash(f'❌ Error: {result["error"]}', 'error')
+    
+    return render_template('parts_edit.html', part=part)
+
+@app.route('/parts/delete/<int:id>', methods=['POST'])
+@login_required
+def parts_delete(id):
+    result = parts_agent.delete_part(id)
+    if result['success']:
+        flash('✅ Part deleted', 'success')
+    else:
+        flash('❌ Delete failed', 'error')
+    return redirect(url_for('parts_index'))
+
+@app.route('/parts/view/<int:id>')
+def parts_view(id):
+    part = parts_agent.get_part(id)
+    if not part:
+        flash('Part not found', 'error')
+        return redirect(url_for('parts_index'))
+    return render_template('parts_view.html', part=part)
+
+@app.route('/parts-public')
+def parts_public():
+    parts = parts_agent.get_all_parts()
+    return render_template('parts_public.html', parts=parts)
+
+@app.route('/parts-public/search')
+def parts_public_search():
+    query = request.args.get('q', '').strip()
+    if not query:
+        return redirect(url_for('parts_public'))
+    parts = parts_agent.search_parts(query)
+    return render_template('parts_public.html', parts=parts, search_query=query)
+
+@app.route('/parts-public/category/<category>')
+def parts_public_category(category):
+    all_parts = parts_agent.get_all_parts()
+    parts = [p for p in all_parts if p.get('category') == category]
+    return render_template('parts_public.html', parts=parts, selected_category=category)
+
+@app.route('/parts-public/price/<min_price>-<max_price>')
+def parts_public_price(min_price, max_price):
+    all_parts = parts_agent.get_all_parts()
+    parts = [p for p in all_parts if float(min_price) <= float(p.get('price', 0)) <= float(max_price)]
+    return render_template('parts_public.html', parts=parts)
+
+@app.route('/parts-public/status/<status>')
+def parts_public_status(status):
+    all_parts = parts_agent.get_all_parts()
+    parts = [p for p in all_parts if p.get('stock_status') == status]
+    return render_template('parts_public.html', parts=parts)
+
+@app.route('/parts-public/sort/<sort_by>')
+def parts_public_sort(sort_by):
+    all_parts = parts_agent.get_all_parts()
+    if sort_by == 'price_asc':
+        parts = sorted(all_parts, key=lambda x: float(x.get('price', 0)))
+    elif sort_by == 'price_desc':
+        parts = sorted(all_parts, key=lambda x: float(x.get('price', 0)), reverse=True)
+    elif sort_by == 'name':
+        parts = sorted(all_parts, key=lambda x: x.get('part_name', ''))
+    else:
+        parts = all_parts
+    return render_template('parts_public.html', parts=parts)
+
+@app.route('/parts/bulk-import', methods=['GET', 'POST'])
+@login_required
+def parts_bulk_import():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file uploaded', 'error')
+            return redirect(url_for('parts_bulk_import'))
+        
+        file = request.files['file']
+        if file.filename == '':
+            flash('No file selected', 'error')
+            return redirect(url_for('parts_bulk_import'))
+        
+        if file and file.filename.endswith('.csv'):
+            import csv
+            import io
+            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+            result = parts_agent.bulk_import(stream.read())
+            
+            if result['success']:
+                flash(f'✅ Added {result["added"]} parts successfully!', 'success')
+                if result['errors']:
+                    flash(f'⚠️ Errors: {", ".join(result["errors"][:5])}', 'error')
+            else:
+                flash(f'❌ Error: {result["error"]}', 'error')
+            return redirect(url_for('parts_index'))
+        else:
+            flash('Please upload a CSV file', 'error')
+            return redirect(url_for('parts_bulk_import'))
+    
+    return render_template('parts_bulk_import.html')
+    
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
