@@ -5,11 +5,21 @@
 {% block content %}
 <div class="max-w-4xl mx-auto px-4 py-12 w-full">
     <div class="bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden">
+        <!-- Photo -->
         <div class="h-96 bg-slate-900">
-            <img src="{{ part.photo_url or 'https://via.placeholder.com/800x400/1a1a2e/ffffff?text=Part+Image' }}" 
-                 alt="{{ part.part_name }}" 
-                 class="w-full h-full object-cover">
+            {% set photos = parts_agent.get_photos(part.id) %}
+            {% if photos %}
+                <img src="{{ photos[0].photo_url }}" alt="{{ part.part_name }}" class="w-full h-full object-cover">
+            {% else %}
+                <div class="w-full h-full flex items-center justify-center bg-slate-800">
+                    <div class="text-center">
+                        <i class="fa-solid fa-image text-6xl text-slate-600 mb-4 block"></i>
+                        <p class="text-slate-400">No photos</p>
+                    </div>
+                </div>
+            {% endif %}
         </div>
+
         <div class="p-8">
             <div class="flex justify-between items-start">
                 <div>
@@ -26,10 +36,22 @@
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 p-4 bg-[#0f172a] rounded-xl">
-                <div><p class="text-xs text-slate-500">Category</p><p class="font-bold text-white">{{ part.category }}</p></div>
-                <div><p class="text-xs text-slate-500">Part Type</p><p class="font-bold text-white">{{ part.part_type or 'N/A' }}</p></div>
-                <div><p class="text-xs text-slate-500">Engine Code</p><p class="font-bold text-white">{{ part.engine_code or 'N/A' }}</p></div>
-                <div><p class="text-xs text-slate-500">Condition</p><p class="font-bold text-white">{{ part.condition }}</p></div>
+                <div>
+                    <p class="text-xs text-slate-500">Category</p>
+                    <p class="font-bold text-white">{{ part.category }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500">Part Type</p>
+                    <p class="font-bold text-white">{{ part.part_type or 'N/A' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500">Engine Code</p>
+                    <p class="font-bold text-white">{{ part.engine_code or 'N/A' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500">Condition</p>
+                    <p class="font-bold text-white">{{ part.condition }}</p>
+                </div>
             </div>
 
             <div class="mt-6 flex items-center justify-between">
@@ -48,19 +70,6 @@
             <div class="mt-6 pt-4 border-t border-slate-800">
                 <p class="text-xs text-slate-400">Notes</p>
                 <p class="text-white">{{ part.notes }}</p>
-            </div>
-            {% endif %}
-
-            {% if session.get('logged_in') %}
-            <div class="mt-6 pt-4 border-t border-slate-800 flex gap-3">
-                <a href="/parts/edit/{{ part.id }}" class="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                    Edit Part
-                </a>
-                <form action="/parts/delete/{{ part.id }}" method="POST" onsubmit="return confirm('Delete this part?');">
-                    <button type="submit" class="text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
-                        Delete
-                    </button>
-                </form>
             </div>
             {% endif %}
         </div>
