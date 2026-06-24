@@ -361,34 +361,6 @@ def parts_search():
         flash('No parts found matching your search', 'error')
     return render_template('parts_index.html', parts=parts, search_query=query)
 
-@app.route('/parts/add', methods=['GET', 'POST'])
-@login_required
-def parts_add():
-
-    if request.method == 'POST':
-        data = {
-            'stock_id': request.form['stock_id'],
-            'part_name': request.form['part_name'],
-            'category': request.form['category'],
-            'part_type': request.form.get('part_type', ''),
-            'make': request.form.get('make', ''),
-            'model': request.form.get('model', ''),
-            'generation': request.form.get('generation', ''),
-            'oem_number': request.form.get('oem_number', ''),
-            'engine_code': request.form.get('engine_code', ''),
-            'condition': request.form.get('condition', 'Good'),
-            'price': float(request.form.get('price', 0)),
-            'stock_status': request.form.get('stock_status', 'Available'),
-            'location': request.form.get('location', ''),
-            'notes': request.form.get('notes', '')
-        }
-        result = parts_agent.add_part(data)
-        if result['success']:
-            flash('✅ Part added successfully!', 'success')
-            return redirect(url_for('parts_index'))
-        else:
-            flash(f'❌ Error: {result["error"]}', 'error')
-    return render_template('parts_add.html')
 
 @app.route('/parts/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
