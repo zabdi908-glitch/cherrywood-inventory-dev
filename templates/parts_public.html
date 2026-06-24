@@ -100,12 +100,12 @@
                     <img src="{{ part.photo_url or 'https://via.placeholder.com/400x300/1a1a2e/ffffff?text=Part+Image' }}" 
                          alt="{{ part.part_name }}" 
                          class="w-full h-full object-cover">
-                    <span class="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold 
-                        {% if part.stock_status == 'Available' %}bg-green-600 text-white{% endif %}
-                        {% if part.stock_status == 'Reserved' %}bg-yellow-600 text-black{% endif %}
-                        {% if part.stock_status == 'Sold' %}bg-red-600 text-white{% endif %}">
-                        {{ part.stock_status }}
-                    </span>
+                   <span class="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold 
+    {% if part.stock_status == 'Available' %}bg-green-600 text-white{% endif %}
+    {% if part.stock_status == 'Reserved' %}bg-yellow-600 text-black{% endif %}
+    {% if part.stock_status == 'Sold' %}bg-red-600 text-white{% endif %}">
+    {{ part.stock_status }}
+</span>
                 </div>
                 <div class="p-4">
                     <h3 class="text-lg font-black text-white mb-1">{{ part.part_name }}</h3>
