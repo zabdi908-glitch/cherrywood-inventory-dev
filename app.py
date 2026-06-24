@@ -369,22 +369,25 @@ def parts_edit(id):
     if not part:
         flash('Part not found', 'error')
         return redirect(url_for('parts_index'))
-    if request.method == 'POST':
+    
+    form = PartForm(obj=part)
+    
+    if form.validate_on_submit():
         data = {
-            'stock_id': request.form['stock_id'],
-            'part_name': request.form['part_name'],
-            'category': request.form['category'],
-            'part_type': request.form.get('part_type', ''),
-            'make': request.form.get('make', ''),
-            'model': request.form.get('model', ''),
-            'generation': request.form.get('generation', ''),
-            'oem_number': request.form.get('oem_number', ''),
-            'engine_code': request.form.get('engine_code', ''),
-            'condition': request.form.get('condition', 'Good'),
-            'price': float(request.form.get('price', 0)),
-            'stock_status': request.form.get('stock_status', 'Available'),
-            'location': request.form.get('location', ''),
-            'notes': request.form.get('notes', '')
+            'stock_id': form.stock_id.data,
+            'part_name': form.part_name.data,
+            'category': form.category.data,
+            'part_type': form.part_type.data or '',
+            'make': form.make.data or '',
+            'model': form.model.data or '',
+            'generation': form.generation.data or '',
+            'oem_number': form.oem_number.data or '',
+            'engine_code': form.engine_code.data or '',
+            'condition': form.condition.data or 'Good',
+            'price': form.price.data or 0,
+            'stock_status': form.stock_status.data or 'Available',
+            'location': form.location.data or '',
+            'notes': form.notes.data or ''
         }
         result = parts_agent.update_part(id, data)
         if result['success']:
@@ -392,8 +395,14 @@ def parts_edit(id):
             return redirect(url_for('parts_view', id=id))
         else:
             flash(f'❌ Error: {result["error"]}', 'error')
-    return render_template('parts_edit.html', part=part)
-
+    else:
+        # ✅ Show validation errors
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f'❌ {field.replace("_", " ").title()}: {error}', 'error')
+    
+    return render_template('parts_edit.html', form=form, part=part)
+    
 @app.route('/parts/delete/<int:id>', methods=['POST'])
 @login_required
 def parts_delete(id):
@@ -520,6 +529,12 @@ def parts_add():
             return redirect(url_for('parts_index'))
         else:
             flash(f'❌ Error: {result["error"]}', 'error')
+    else:
+        # ✅ Show validation errors
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f'❌ {field.replace("_", " ").title()}: {error}', 'error')
+    
     return render_template('parts_add.html', form=form)
     
 # ============================================
