@@ -333,6 +333,8 @@ def contact():
 def delivery():
     return render_template('delivery.html')
 
+
+
 # ============================================
 # PARTS INVENTORY ROUTES
 # ============================================
@@ -346,9 +348,21 @@ def parts_index():
         flash(f'Error loading parts: {e}', 'error')
         return render_template('parts_index.html', parts=[])
 
+@app.route('/parts/search')
+def parts_search():
+    query = request.args.get('q', '').strip()
+    if not query:
+        flash('Please enter a search term', 'error')
+        return redirect(url_for('parts_index'))
+    parts = parts_agent.search_parts(query)
+    if not parts:
+        flash('No parts found matching your search', 'error')
+    return render_template('parts_index.html', parts=parts, search_query=query)
+
 @app.route('/parts/add', methods=['GET', 'POST'])
 @login_required
 def parts_add():
+
     if request.method == 'POST':
         data = {
             'stock_id': request.form['stock_id'],
