@@ -13,22 +13,10 @@ class PartsAgent:
         else:
             self.database = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inventory.db')
         self.init_tables()
-        # Enable WAL mode for better concurrency
-        self._enable_wal()
-    
-    def _enable_wal(self):
-        try:
-            conn = sqlite3.connect(self.database)
-            conn.execute('PRAGMA journal_mode=WAL')
-            conn.close()
-        except:
-            pass
-    
+
     def init_tables(self):
         try:
             conn = sqlite3.connect(self.database)
-            
-            # Parts table
             conn.execute('''CREATE TABLE IF NOT EXISTS parts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 stock_id TEXT UNIQUE,
@@ -48,8 +36,6 @@ class PartsAgent:
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )''')
-            
-            # Part photos table
             conn.execute('''CREATE TABLE IF NOT EXISTS part_photos (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 part_id INTEGER,
@@ -57,18 +43,17 @@ class PartsAgent:
                 photo_order INTEGER DEFAULT 0,
                 FOREIGN KEY (part_id) REFERENCES parts(id) ON DELETE CASCADE
             )''')
-            
             conn.commit()
             conn.close()
-            print("✅ Parts inventory tables ready")
+            print("Parts inventory tables ready")
         except Exception as e:
-            print(f"❌ Parts table error: {e}")
-    
+            print(f"Parts table error: {e}")
+
     def get_db(self):
-        conn = sqlite3.connect(self.database, timeout=30)  # 30 seconds timeout
+        conn = sqlite3.connect(self.database, timeout=20)
         conn.row_factory = sqlite3.Row
         return conn
-    
+
     def add_part(self, data):
         try:
             conn = self.get_db()
@@ -87,7 +72,7 @@ class PartsAgent:
             return {'success': True, 'id': part_id}
         except Exception as e:
             return {'success': False, 'error': str(e)}
-    
+
     def get_part(self, part_id):
         try:
             conn = self.get_db()
@@ -96,7 +81,7 @@ class PartsAgent:
             return dict(part) if part else None
         except Exception as e:
             return None
-    
+
     def get_all_parts(self):
         try:
             conn = self.get_db()
@@ -105,7 +90,7 @@ class PartsAgent:
             return [dict(p) for p in parts]
         except Exception as e:
             return []
-    
+
     def search_parts(self, query):
         try:
             conn = self.get_db()
@@ -124,7 +109,7 @@ class PartsAgent:
             return [dict(p) for p in parts]
         except Exception as e:
             return []
-    
+
     def update_part(self, part_id, data):
         try:
             conn = self.get_db()
@@ -144,7 +129,7 @@ class PartsAgent:
             return {'success': True}
         except Exception as e:
             return {'success': False, 'error': str(e)}
-    
+
     def delete_part(self, part_id):
         try:
             conn = self.get_db()
@@ -154,7 +139,7 @@ class PartsAgent:
             return {'success': True}
         except Exception as e:
             return {'success': False, 'error': str(e)}
-    
+
     def add_photo(self, part_id, photo_url, order=0):
         try:
             conn = self.get_db()
@@ -165,7 +150,7 @@ class PartsAgent:
             return {'success': True}
         except Exception as e:
             return {'success': False, 'error': str(e)}
-    
+
     def get_photos(self, part_id):
         try:
             conn = self.get_db()
@@ -174,7 +159,7 @@ class PartsAgent:
             return [dict(p) for p in photos]
         except Exception as e:
             return []
-    
+
     def delete_photo(self, photo_id):
         try:
             conn = self.get_db()
@@ -184,19 +169,14 @@ class PartsAgent:
             return {'success': True}
         except Exception as e:
             return {'success': False, 'error': str(e)}
-    
+
     def bulk_import(self, csv_content):
         try:
-            # Use a fresh connection with WAL mode
-            conn = self.get_db()
-            conn.execute('PRAGMA journal_mode=WAL')
-            conn.close()
-            
             reader = csv.DictReader(io.StringIO(csv_content))
             added = 0
             errors = []
             line = 1
-            
+
             for row in reader:
                 line += 1
                 try:
@@ -216,21 +196,19 @@ class PartsAgent:
                         'location': row.get('location', '').strip(),
                         'notes': row.get('notes', '').strip()
                     }
-                    # Skip empty stock_id
                     if not data['stock_id']:
                         errors.append(f"Row {line}: Missing stock_id")
                         continue
-                    
+
                     result = self.add_part(data)
                     if result['success']:
                         added += 1
                     else:
                         errors.append(f"Row {line}: {result['error']}")
-                    # Small delay to prevent lock contention
                     time.sleep(0.02)
                 except Exception as e:
                     errors.append(f"Row {line}: {str(e)}")
-            
+
             return {'success': True, 'added': added, 'errors': errors}
         except Exception as e:
             return {'success': False, 'error': str(e)}
