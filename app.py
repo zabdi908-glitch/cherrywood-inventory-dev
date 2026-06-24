@@ -47,14 +47,14 @@ def init_db():
                 status TEXT, image_url TEXT, parts_available TEXT, description TEXT
             )''')
             conn.commit()
-            print(f"Database initialized at {DATABASE}")
+            print("Database initialized")
     except Exception as e:
         print(f"DB init error: {e}")
 
 init_db()
 
 # ============================================
-# AUTO-BACKUP SYSTEM
+# BACKUP SYSTEM
 # ============================================
 
 def auto_backup_vehicles():
@@ -114,7 +114,9 @@ def index():
         vehicles_data = []
         for row in rows:
             v = dict(row)
-            v['get_parts_list'] = lambda: v.get('parts_available', '').split(',') if v.get('parts_available') else []
+            def get_parts():
+                return v.get('parts_available', '').split(',') if v.get('parts_available') else []
+            v['get_parts_list'] = get_parts
             vehicles_data.append(v)
         return render_template('index.html', vehicles=vehicles_data)
     except Exception as e:
@@ -136,10 +138,13 @@ def search():
         vehicles_data = []
         for row in rows:
             v = dict(row)
-            v['get_parts_list'] = lambda: v.get('parts_available', '').split(',') if v.get('parts_available') else []
+            def get_parts():
+                return v.get('parts_available', '').split(',') if v.get('parts_available') else []
+            v['get_parts_list'] = get_parts
             vehicles_data.append(v)
         return render_template('index.html', vehicles=vehicles_data, search_query=query)
-    except:
+    except Exception as e:
+        flash(f'Search error: {e}', 'error')
         return redirect(url_for('index'))
 
 @app.route('/vehicle/<int:id>')
@@ -281,7 +286,9 @@ def gallery():
         vehicles_data = []
         for row in rows:
             v = dict(row)
-            v['get_parts_list'] = lambda: v.get('parts_available', '').split(',') if v.get('parts_available') else []
+            def get_parts():
+                return v.get('parts_available', '').split(',') if v.get('parts_available') else []
+            v['get_parts_list'] = get_parts
             vehicles_data.append(v)
         return render_template('gallery.html', vehicles=vehicles_data)
     except Exception as e:
@@ -367,12 +374,7 @@ def parts_add():
             flash(f'❌ Error: {result["error"]}', 'error')
     return render_template('parts_add.html')
 
-
-    if request.method == 'POST':
-        data = {
-            'stock_id': request.form['stock_id'],
-            'part_name': request.form['part_name'],
-            'category': request.form['category'],@app.route('/parts/edit/<int:id>', methods=['GET', 'POST'])
+@app.route('/parts/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def parts_edit(id):
     part = parts_agent.get_part(id)
@@ -380,9 +382,10 @@ def parts_edit(id):
         flash('Part not found', 'error')
         return redirect(url_for('parts_index'))
     if request.method == 'POST':
-        # ... update logic
-    return render_template('parts_edit.html', part=part)
-    
+        data = {
+            'stock_id': request.form['stock_id'],
+            'part_name': request.form['part_name'],
+            'category': request.form['category'],
             'part_type': request.form.get('part_type', ''),
             'make': request.form.get('make', ''),
             'model': request.form.get('model', ''),
@@ -495,7 +498,6 @@ def parts_bulk_import():
 
 @app.route('/part/<int:id>')
 def part_public_view(id):
-    """Public part detail page"""
     part = parts_agent.get_part(id)
     if not part:
         flash('Part not found', 'error')
