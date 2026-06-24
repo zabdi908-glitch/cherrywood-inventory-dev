@@ -13,6 +13,16 @@ class PartsAgent:
         else:
             self.database = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inventory.db')
         self.init_tables()
+        # Enable WAL mode for better concurrency
+        self._enable_wal()
+    
+    def _enable_wal(self):
+        try:
+            conn = sqlite3.connect(self.database)
+            conn.execute('PRAGMA journal_mode=WAL')
+            conn.close()
+        except:
+            pass
     
     def init_tables(self):
         try:
@@ -55,7 +65,7 @@ class PartsAgent:
             print(f"❌ Parts table error: {e}")
     
     def get_db(self):
-        conn = sqlite3.connect(self.database)
+        conn = sqlite3.connect(self.database, timeout=30)  # 30 seconds timeout
         conn.row_factory = sqlite3.Row
         return conn
     
@@ -177,37 +187,49 @@ class PartsAgent:
     
     def bulk_import(self, csv_content):
         try:
+            # Use a fresh connection with WAL mode
+            conn = self.get_db()
+            conn.execute('PRAGMA journal_mode=WAL')
+            conn.close()
+            
             reader = csv.DictReader(io.StringIO(csv_content))
             added = 0
             errors = []
+            line = 1
             
             for row in reader:
+                line += 1
                 try:
                     data = {
-                        'stock_id': row.get('stock_id', ''),
-                        'part_name': row.get('part_name', ''),
-                        'category': row.get('category', ''),
-                        'part_type': row.get('part_type', ''),
-                        'make': row.get('make', ''),
-                        'model': row.get('model', ''),
-                        'generation': row.get('generation', ''),
-                        'oem_number': row.get('oem_number', ''),
-                        'engine_code': row.get('engine_code', ''),
-                        'condition': row.get('condition', 'Good'),
+                        'stock_id': row.get('stock_id', '').strip(),
+                        'part_name': row.get('part_name', '').strip(),
+                        'category': row.get('category', '').strip(),
+                        'part_type': row.get('part_type', '').strip(),
+                        'make': row.get('make', '').strip(),
+                        'model': row.get('model', '').strip(),
+                        'generation': row.get('generation', '').strip(),
+                        'oem_number': row.get('oem_number', '').strip(),
+                        'engine_code': row.get('engine_code', '').strip(),
+                        'condition': row.get('condition', 'Good').strip(),
                         'price': float(row.get('price', 0)) if row.get('price') else 0,
-                        'stock_status': row.get('stock_status', 'Available'),
-                        'location': row.get('location', ''),
-                        'notes': row.get('notes', '')
+                        'stock_status': row.get('stock_status', 'Available').strip(),
+                        'location': row.get('location', '').strip(),
+                        'notes': row.get('notes', '').strip()
                     }
+                    # Skip empty stock_id
+                    if not data['stock_id']:
+                        errors.append(f"Row {line}: Missing stock_id")
+                        continue
+                    
                     result = self.add_part(data)
                     if result['success']:
                         added += 1
                     else:
-                        errors.append(f"Row {reader.line_num}: {result['error']}")
-                    # ✅ Small delay to prevent database lock
-                    time.sleep(0.05)
+                        errors.append(f"Row {line}: {result['error']}")
+                    # Small delay to prevent lock contention
+                    time.sleep(0.02)
                 except Exception as e:
-                    errors.append(f"Row {reader.line_num}: {str(e)}")
+                    errors.append(f"Row {line}: {str(e)}")
             
             return {'success': True, 'added': added, 'errors': errors}
         except Exception as e:
