@@ -3,6 +3,7 @@ import json
 import os
 import csv
 import io
+import time
 from datetime import datetime
 
 class PartsAgent:
@@ -198,11 +199,13 @@ class PartsAgent:
                         'location': row.get('location', ''),
                         'notes': row.get('notes', '')
                     }
-                   import time
-result = self.add_part(data)
-time.sleep(0.05)  # Wait 0.05 seconds between each insert
+                    result = self.add_part(data)
+                    if result['success']:
+                        added += 1
                     else:
                         errors.append(f"Row {reader.line_num}: {result['error']}")
+                    # ✅ Small delay to prevent database lock
+                    time.sleep(0.05)
                 except Exception as e:
                     errors.append(f"Row {reader.line_num}: {str(e)}")
             
