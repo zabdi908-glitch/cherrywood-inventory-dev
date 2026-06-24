@@ -1,156 +1,108 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Part - Parts Inventory</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body class="bg-[#0f172a] text-white min-h-screen">
-    
-    <nav class="bg-[#111827] border-b border-slate-800 p-4">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <i class="fa-solid fa-plus-circle text-2xl text-[#f97316]"></i>
-                <h1 class="text-2xl font-black text-white">Add New Part</h1>
+{% extends "base.html" %}
+
+{% block title %}Add Part - Cherrywood Auto Parts{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-12 w-full">
+    <div class="bg-[#111827] border border-slate-800 rounded-2xl p-8">
+        <h1 class="text-3xl font-black text-white mb-2 flex items-center gap-3">
+            <i class="fa-solid fa-plus-circle text-[#f97316]"></i> Add New Part
+        </h1>
+        <p class="text-slate-400 text-sm mb-6">Fill in the details below to add a new part to inventory.</p>
+
+        <form method="POST" enctype="multipart/form-data" class="space-y-4">
+            {{ form.csrf_token }}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Stock ID *</label>
+                    {{ form.stock_id(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Part Name *</label>
+                    {{ form.part_name(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
             </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Category *</label>
+                    {{ form.category(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Part Type</label>
+                    {{ form.part_type(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Make</label>
+                    {{ form.make(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Model</label>
+                    {{ form.model(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Generation</label>
+                    {{ form.generation(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">OEM / Part Number</label>
+                    {{ form.oem_number(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Engine Code</label>
+                    {{ form.engine_code(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Condition</label>
+                    {{ form.condition(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Price (£)</label>
+                    {{ form.price(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Stock Status</label>
+                    {{ form.stock_status(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Location</label>
+                    {{ form.location(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+            </div>
+
             <div>
-                <a href="/parts" class="text-slate-400 hover:text-white mr-4 transition">← Back to Inventory</a>
-                <a href="/logout" class="text-red-400 hover:text-red-300 transition">Logout</a>
+                <label class="block text-xs font-black uppercase text-slate-400 mb-1">Notes</label>
+                {{ form.notes(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none", rows="2") }}
             </div>
-        </div>
-    </nav>
 
-    <div class="max-w-3xl mx-auto px-4 py-8">
-        <div class="bg-[#111827] border border-slate-800 rounded-2xl p-8">
-            <form method="POST" enctype="multipart/form-data" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Stock ID *</label>
-                        <input type="text" name="stock_id" placeholder="e.g. CH-001" required
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Part Name *</label>
-                        <input type="text" name="part_name" placeholder="e.g. Audi A3 8V DSG Gearbox" required
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                </div>
+            <!-- Photo Upload -->
+            <div>
+                <label class="block text-xs font-black uppercase text-slate-400 mb-1">
+                    <i class="fa-solid fa-camera text-[#f97316] mr-1"></i> Upload Photos
+                    <span class="text-slate-500 font-normal lowercase">(optional — JPEG, PNG, WebP)</span>
+                </label>
+                <input type="file" name="photos" multiple accept="image/*"
+                       class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#f97316] file:text-black file:font-bold hover:file:bg-orange-500">
+                <p class="text-xs text-slate-500 mt-1">You can upload multiple photos. Max 5MB each.</p>
+            </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Category *</label>
-                        <select name="category" required class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                            <option value="">Select Category</option>
-                            <option value="Engine">Engine</option>
-                            <option value="Gearbox">Gearbox</option>
-                            <option value="Body Panel">Body Panel</option>
-                            <option value="Electronics">Electronics</option>
-                            <option value="Interior">Interior</option>
-                            <option value="Wheels">Wheels</option>
-                            <option value="Lighting">Lighting</option>
-                            <option value="Suspension">Suspension</option>
-                            <option value="Brakes">Brakes</option>
-                            <option value="Exhaust">Exhaust</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Part Type</label>
-                        <input type="text" name="part_type" placeholder="e.g. Transmission, Turbo, ECU"
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Make</label>
-                        <input type="text" name="make" placeholder="e.g. Audi, VW, SEAT"
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Model</label>
-                        <input type="text" name="model" placeholder="e.g. A3, Golf, Leon"
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Generation</label>
-                        <input type="text" name="generation" placeholder="e.g. 8V, MK7, 5F"
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">OEM / Part Number</label>
-                        <input type="text" name="oem_number" placeholder="e.g. 0D5 300 052"
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Engine Code (optional)</label>
-                        <input type="text" name="engine_code" placeholder="e.g. EA288, CJAA"
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Condition</label>
-                        <select name="condition" class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                            <option value="Good">Good</option>
-                            <option value="Tested">Tested</option>
-                            <option value="New">New</option>
-                            <option value="Refurbished">Refurbished</option>
-                            <option value="As Is">As Is</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Price (£)</label>
-                        <input type="number" name="price" step="0.01" placeholder="0.00"
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Stock Status</label>
-                        <select name="stock_status" class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                            <option value="Available">Available</option>
-                            <option value="Reserved">Reserved</option>
-                            <option value="Sold">Sold</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Location</label>
-                        <input type="text" name="location" placeholder="e.g. Shelf B3, Bay 2"
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Notes</label>
-                    <textarea name="notes" rows="2" placeholder="Additional details..."
-                              class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none"></textarea>
-                </div>
-
-                <!-- ✅ PHOTO UPLOAD SECTION -->
-                <div>
-                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">
-                        <i class="fa-solid fa-camera text-[#f97316] mr-1"></i> Upload Photos
-                        <span class="text-slate-500 font-normal lowercase">(optional — JPEG, PNG, WebP)</span>
-                    </label>
-                    <input type="file" name="photos" multiple accept="image/*"
-                           class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#f97316] file:text-black file:font-bold hover:file:bg-orange-500">
-                    <p class="text-xs text-slate-500 mt-1">You can upload multiple photos. Max 5MB each.</p>
-                </div>
-
-                <button type="submit" class="w-full p-4 bg-[#f97316] text-black font-black uppercase rounded-xl hover:bg-orange-500 transition">
-                    <i class="fa-solid fa-save mr-2"></i> Add Part
-                </button>
-            </form>
-        </div>
+            <button type="submit" class="w-full p-4 bg-[#f97316] text-black font-black uppercase rounded-xl hover:bg-orange-500 transition">
+                Add Part
+            </button>
+        </form>
     </div>
-
-</body>
-</html>
+</div>
+{% endblock %}
