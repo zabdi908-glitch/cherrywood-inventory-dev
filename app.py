@@ -4,7 +4,7 @@ import os
 import json
 from functools import wraps
 from datetime import datetime
-#from parts_agent import parts_agent
+from parts_agent import parts_agent
 
 app = Flask(__name__)
 
@@ -400,16 +400,16 @@ def faqs():
 @app.route('/contact')
 def contact():
     return render_template('contact.html')
-# ============================================
-# PARTS INVENTORY ROUTES
-# ============================================
+============================================
+ PARTS INVENTORY ROUTES
+ ============================================
 
-# @app.route('/parts')
-# def parts_index():
-#     parts = parts_agent.get_all_parts()
-#     return render_template('parts_index.html', parts=parts)
+ @app.route('/parts')
+ def parts_index():
+     parts = parts_agent.get_all_parts()
+     return render_template('parts_index.html', parts=parts)
 
-# ... and so on for all parts routes
+ ... and so on for all parts routes
 
 @app.route('/parts/search')
 def parts_search():
