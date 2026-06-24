@@ -400,9 +400,9 @@ def faqs():
 @app.route('/contact')
 def contact():
     return render_template('contact.html')
-============================================
+    
  PARTS INVENTORY ROUTES
- ============================================
+ 
 
  @app.route('/parts')
  def parts_index():
