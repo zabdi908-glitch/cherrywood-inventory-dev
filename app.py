@@ -519,7 +519,37 @@ def part_public_view(id):
         flash('Part not found', 'error')
         return redirect(url_for('parts_public'))
     return render_template('part_public_view.html', part=part, parts_agent=parts_agent)
+from forms import PartForm
 
+@app.route('/parts/add', methods=['GET', 'POST'])
+@login_required
+def parts_add():
+    form = PartForm()
+    if form.validate_on_submit():
+        data = {
+            'stock_id': form.stock_id.data,
+            'part_name': form.part_name.data,
+            'category': form.category.data,
+            'part_type': form.part_type.data or '',
+            'make': form.make.data or '',
+            'model': form.model.data or '',
+            'generation': form.generation.data or '',
+            'oem_number': form.oem_number.data or '',
+            'engine_code': form.engine_code.data or '',
+            'condition': form.condition.data or 'Good',
+            'price': form.price.data or 0,
+            'stock_status': form.stock_status.data or 'Available',
+            'location': form.location.data or '',
+            'notes': form.notes.data or ''
+        }
+        result = parts_agent.add_part(data)
+        if result['success']:
+            flash('✅ Part added successfully!', 'success')
+            return redirect(url_for('parts_index'))
+        else:
+            flash(f'❌ Error: {result["error"]}', 'error')
+    return render_template('parts_add.html', form=form)
+    
 # ============================================
 # RUN THE APP
 # ============================================
