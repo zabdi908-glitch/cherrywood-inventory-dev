@@ -391,8 +391,9 @@ def parts_view(id):
     if not part:
         flash('Part not found', 'error')
         return redirect(url_for('parts_index'))
-    return render_template('parts_view.html', part=part)
-
+    # ✅ Pass the parts_agent to the template
+    return render_template('parts_view.html', part=part, parts_agent=parts_agent)
+    
 @app.route('/parts-public')
 def parts_public():
     parts = parts_agent.get_all_parts()
