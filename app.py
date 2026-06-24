@@ -367,7 +367,12 @@ def parts_add():
             flash(f'❌ Error: {result["error"]}', 'error')
     return render_template('parts_add.html')
 
-@app.route('/parts/edit/<int:id>', methods=['GET', 'POST'])
+
+    if request.method == 'POST':
+        data = {
+            'stock_id': request.form['stock_id'],
+            'part_name': request.form['part_name'],
+            'category': request.form['category'],@app.route('/parts/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def parts_edit(id):
     part = parts_agent.get_part(id)
@@ -375,10 +380,9 @@ def parts_edit(id):
         flash('Part not found', 'error')
         return redirect(url_for('parts_index'))
     if request.method == 'POST':
-        data = {
-            'stock_id': request.form['stock_id'],
-            'part_name': request.form['part_name'],
-            'category': request.form['category'],
+        # ... update logic
+    return render_template('parts_edit.html', part=part)
+    
             'part_type': request.form.get('part_type', ''),
             'make': request.form.get('make', ''),
             'model': request.form.get('model', ''),
