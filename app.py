@@ -8,14 +8,20 @@ from parts_agent import parts_agent
 
 app = Flask(__name__)
 
+# ============================================
+# CONFIGURATION
+# ============================================
+
 app.secret_key = os.getenv('SECRET_KEY', 'cherrywood_yard_secret_key_2026')
-import os
 
 if os.getenv('RENDER'):
-    DATABASE = os.path.join('/data', 'inventory.db')  # ✅ Persistent disk
+    DATABASE = os.path.join('/data', 'inventory.db')  # Persistent disk
 else:
     DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inventory.db')
-    DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inventory.db')
+
+# ============================================
+# DATABASE FUNCTIONS
+# ============================================
 
 def login_required(f):
     @wraps(f)
@@ -41,10 +47,15 @@ def init_db():
                 status TEXT, image_url TEXT, parts_available TEXT, description TEXT
             )''')
             conn.commit()
+            print(f"Database initialized at {DATABASE}")
     except Exception as e:
-        print(f"Database error: {e}")
+        print(f"DB init error: {e}")
 
 init_db()
+
+# ============================================
+# AUTO-BACKUP SYSTEM
+# ============================================
 
 def auto_backup_vehicles():
     try:
@@ -90,6 +101,10 @@ def backup_after_change(func):
         return result
     return wrapper
 
+# ============================================
+# VEHICLE ROUTES
+# ============================================
+
 @app.route('/')
 def index():
     try:
@@ -102,7 +117,8 @@ def index():
             v['get_parts_list'] = lambda: v.get('parts_available', '').split(',') if v.get('parts_available') else []
             vehicles_data.append(v)
         return render_template('index.html', vehicles=vehicles_data)
-    except:
+    except Exception as e:
+        flash(f'Error loading vehicles: {e}', 'error')
         return render_template('index.html', vehicles=[])
 
 @app.route('/search')
@@ -138,8 +154,8 @@ def view_vehicle(id):
         v = dict(vehicle)
         v['parts_list'] = v.get('parts_available', '').split(',') if v.get('parts_available') else []
         return render_template('vehicle_detail.html', vehicle=v)
-    except:
-        flash('Error loading vehicle', 'error')
+    except Exception as e:
+        flash(f'Error loading vehicle: {e}', 'error')
         return redirect(url_for('index'))
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -164,6 +180,10 @@ def logout():
     session.pop('logged_in', None)
     flash('Logged out successfully', 'success')
     return redirect(url_for('index'))
+
+# ============================================
+# VEHICLE ADMIN
+# ============================================
 
 @app.route('/add', methods=['POST'])
 @login_required
@@ -211,8 +231,8 @@ def edit_vehicle(id):
             flash('✅ Vehicle updated!', 'success')
             auto_backup_vehicles()
             return redirect(url_for('index'))
-        except:
-            flash('❌ Error updating vehicle', 'error')
+        except Exception as e:
+            flash(f'❌ Error: {e}', 'error')
             db.close()
             return render_template('edit.html', vehicle=dict(vehicle))
     db.close()
@@ -228,8 +248,8 @@ def delete_vehicle(id):
         db.close()
         flash('✅ Vehicle deleted!', 'success')
         auto_backup_vehicles()
-    except:
-        flash('❌ Delete failed', 'error')
+    except Exception as e:
+        flash(f'❌ Delete failed: {e}', 'error')
     return redirect(url_for('index'))
 
 @app.route('/admin/restore', methods=['POST'])
@@ -248,6 +268,10 @@ def backup_now():
     flash('✅ Backup created!', 'success')
     return redirect(url_for('index'))
 
+# ============================================
+# INFO PAGES
+# ============================================
+
 @app.route('/gallery')
 def gallery():
     try:
@@ -260,7 +284,8 @@ def gallery():
             v['get_parts_list'] = lambda: v.get('parts_available', '').split(',') if v.get('parts_available') else []
             vehicles_data.append(v)
         return render_template('gallery.html', vehicles=vehicles_data)
-    except:
+    except Exception as e:
+        flash(f'Error loading gallery: {e}', 'error')
         return render_template('gallery.html', vehicles=[])
 
 @app.route('/enquiry', methods=['GET', 'POST'])
@@ -300,8 +325,9 @@ def contact():
 @app.route('/delivery')
 def delivery():
     return render_template('delivery.html')
+
 # ============================================
-# PARTS ROUTES
+# PARTS INVENTORY ROUTES
 # ============================================
 
 @app.route('/parts')
@@ -348,7 +374,6 @@ def parts_edit(id):
     if not part:
         flash('Part not found', 'error')
         return redirect(url_for('parts_index'))
-    
     if request.method == 'POST':
         data = {
             'stock_id': request.form['stock_id'],
@@ -372,7 +397,6 @@ def parts_edit(id):
             return redirect(url_for('parts_view', id=id))
         else:
             flash(f'❌ Error: {result["error"]}', 'error')
-    
     return render_template('parts_edit.html', part=part)
 
 @app.route('/parts/delete/<int:id>', methods=['POST'])
@@ -391,9 +415,8 @@ def parts_view(id):
     if not part:
         flash('Part not found', 'error')
         return redirect(url_for('parts_index'))
-    # ✅ Pass the parts_agent to the template
     return render_template('parts_view.html', part=part, parts_agent=parts_agent)
-    
+
 @app.route('/parts-public')
 def parts_public():
     parts = parts_agent.get_all_parts()
@@ -445,18 +468,15 @@ def parts_bulk_import():
         if 'file' not in request.files:
             flash('No file uploaded', 'error')
             return redirect(url_for('parts_bulk_import'))
-        
         file = request.files['file']
         if file.filename == '':
             flash('No file selected', 'error')
             return redirect(url_for('parts_bulk_import'))
-        
         if file and file.filename.endswith('.csv'):
             import csv
             import io
             stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
             result = parts_agent.bulk_import(stream.read())
-            
             if result['success']:
                 flash(f'✅ Added {result["added"]} parts successfully!', 'success')
                 if result['errors']:
@@ -467,17 +487,21 @@ def parts_bulk_import():
         else:
             flash('Please upload a CSV file', 'error')
             return redirect(url_for('parts_bulk_import'))
-    
     return render_template('parts_bulk_import.html')
-    @app.route('/part/<int:id>')
+
+@app.route('/part/<int:id>')
 def part_public_view(id):
     """Public part detail page"""
     part = parts_agent.get_part(id)
     if not part:
         flash('Part not found', 'error')
         return redirect(url_for('parts_public'))
-    return render_template('part_public_view.html', part=part)
-    
+    return render_template('part_public_view.html', part=part, parts_agent=parts_agent)
+
+# ============================================
+# RUN THE APP
+# ============================================
+
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
