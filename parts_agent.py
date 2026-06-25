@@ -190,16 +190,27 @@ class PartsAgent:
     # PHOTO FUNCTIONS
     # ============================================
 
-    def add_photo(self, part_id, photo_url, order=0):
-        try:
-            conn = self.get_db()
+   def add_photo(self, part_id, photo_url, order=0):
+    try:
+        # ✅ Compress the image before saving
+        from compress_images import compress_image, create_thumbnail
+        compress_image(photo_url)
+        
+        # ✅ Create thumbnail for listing pages
+        thumb_path = create_thumbnail(photo_url)
+        
+        conn = self.get_db()
+        conn.execute('INSERT INTO part_photos (part_id, photo_url, photo_order) VALUES (?, ?, ?)',
+                    (part_id, photo_url, order))
+        # If thumbnail was created, save it too
+        if thumb_path:
             conn.execute('INSERT INTO part_photos (part_id, photo_url, photo_order) VALUES (?, ?, ?)',
-                        (part_id, photo_url, order))
-            conn.commit()
-            conn.close()
-            return {'success': True}
-        except Exception as e:
-            return {'success': False, 'error': str(e)}
+                        (part_id, thumb_path, order + 100))
+        conn.commit()
+        conn.close()
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
     def get_photos(self, part_id):
         try:
