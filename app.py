@@ -160,7 +160,11 @@ def view_vehicle(id):
             return redirect(url_for('index'))
         v = dict(vehicle)
         v['parts_list'] = v.get('parts_available', '').split(',') if v.get('parts_available') else []
-        return render_template('vehicle_detail.html', vehicle=v)
+        
+        # ✅ Generate meta description
+        meta_description = f"Find used {v['title']} parts at Cherrywood Auto Parts. {v['make']} {v['model']} {v['year']} breaking for parts. UK delivery available."
+        
+        return render_template('vehicle_detail.html', vehicle=v, meta_description=meta_description)
     except Exception as e:
         flash(f'Error loading vehicle: {e}', 'error')
         return redirect(url_for('index'))
