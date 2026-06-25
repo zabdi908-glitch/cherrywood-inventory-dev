@@ -146,9 +146,7 @@
                 <div class="mt-6 flex items-center justify-between">
                     <span class="text-3xl font-black text-[#f97316]">£{{ "%.2f"|format(part.price) }}</span>
                     <div class="flex gap-3">
-                        <a href="https://wa.me/447440369576?text={{ 'Hi, I am interested in the ' | urlencode }}{{ part.part_name | urlencode }}%20(OEM:{{ part.oem_number or 'N/A' | urlencode }})%20£{{ part.price }}" target="_blank" class="px-6 py-3 bg-[#22c55e] text-white font-black rounded-lg hover:bg-green-600 transition flex items-center gap-2">
-                            <i class="fa-brands fa-whatsapp text-xl"></i> WhatsApp
-                        </a>
+                      <a href="https://wa.me/447440369576?text={{ 'Hi%2C%20I%27m%20interested%20in%20part%20' }}{{ part.id }}" target="_blank" class="px-6 py-3 bg-[#22c55e] ...">
                         <a href="/parts-public" class="px-6 py-3 bg-slate-700 text-white font-black rounded-lg hover:bg-slate-600 transition">
                             Back to Parts
                         </a>
