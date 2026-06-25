@@ -8,9 +8,34 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
-        .orange-gradient { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
-    </style>
+    body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+    .orange-gradient { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+    
+    /* ✅ FIX: Custom grid styles for parts page */
+    .parts-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    @media (min-width: 640px) {
+        .parts-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .parts-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    @media (min-width: 1280px) {
+        .parts-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+</style>
     <script type="application/ld+json">
 {
     "@context": "https://schema.org",
