@@ -4,6 +4,8 @@ import os
 import csv
 import io
 import time
+import re
+import unicodedata
 from datetime import datetime
 
 class PartsAgent:
@@ -13,6 +15,23 @@ class PartsAgent:
         else:
             self.database = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inventory.db')
         self.init_tables()
+        def slugify(self, text):
+    """Convert text to a URL-friendly slug"""
+    if not text:
+        return ''
+    # Normalize unicode characters
+    text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
+    # Convert to lowercase and replace spaces with hyphens
+    text = re.sub(r'[^\w\s-]', '', text).strip().lower()
+    text = re.sub(r'[-\s]+', '-', text)
+    return text
+
+def generate_slug(self, part_name, part_id):
+    """Generate a unique slug from part name and ID"""
+    base_slug = self.slugify(part_name)
+    if not base_slug:
+        base_slug = f"part-{part_id}"
+    return f"{base_slug}-{part_id}"
 
     def init_tables(self):
         try:
@@ -54,24 +73,29 @@ class PartsAgent:
         conn.row_factory = sqlite3.Row
         return conn
 
-    def add_part(self, data):
-        try:
-            conn = self.get_db()
-            cursor = conn.execute('''INSERT INTO parts 
-                (stock_id, part_name, category, part_type, make, model, generation, 
-                 oem_number, engine_code, condition, price, stock_status, location, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                (data.get('stock_id'), data.get('part_name'), data.get('category'),
-                 data.get('part_type'), data.get('make'), data.get('model'),
-                 data.get('generation'), data.get('oem_number'), data.get('engine_code'),
-                 data.get('condition'), data.get('price'), data.get('stock_status', 'Available'),
-                 data.get('location'), data.get('notes')))
-            part_id = cursor.lastrowid
-            conn.commit()
-            conn.close()
-            return {'success': True, 'id': part_id}
-        except Exception as e:
-            return {'success': False, 'error': str(e)}
+ def add_part(self, data):
+    try:
+        conn = self.get_db()
+        cursor = conn.execute('''INSERT INTO parts 
+            (stock_id, part_name, category, part_type, make, model, generation, 
+             oem_number, engine_code, condition, price, stock_status, location, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+            (data.get('stock_id'), data.get('part_name'), data.get('category'),
+             data.get('part_type'), data.get('make'), data.get('model'),
+             data.get('generation'), data.get('oem_number'), data.get('engine_code'),
+             data.get('condition'), data.get('price'), data.get('stock_status', 'Available'),
+             data.get('location'), data.get('notes')))
+        part_id = cursor.lastrowid
+        
+        # ✅ Generate and update slug
+        slug = self.generate_slug(data.get('part_name', ''), part_id)
+        conn.execute('UPDATE parts SET slug = ? WHERE id = ?', (slug, part_id))
+        
+        conn.commit()
+        conn.close()
+        return {'success': True, 'id': part_id}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
     def get_part(self, part_id):
         try:
