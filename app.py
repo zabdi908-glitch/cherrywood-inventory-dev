@@ -518,8 +518,11 @@ def part_public_view(id):
     if not part:
         flash('Part not found', 'error')
         return redirect(url_for('parts_public'))
-    return render_template('part_public_view.html', part=part, parts_agent=parts_agent)
-from forms import PartForm
+    
+    # ✅ Generate meta description
+    meta_description = f"{part['part_name']} - OEM: {part['oem_number'] or 'N/A'}. Price: £{part['price']}. Available from Cherrywood Auto Parts."
+    
+    return render_template('part_public_view.html', part=part, parts_agent=parts_agent, meta_description=meta_description)
 
 @app.route('/parts/add', methods=['GET', 'POST'])
 @login_required
