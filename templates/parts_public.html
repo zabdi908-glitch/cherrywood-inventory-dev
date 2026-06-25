@@ -118,9 +118,9 @@
     <a href="/part/{{ part.slug or part.id }}" class="flex-1 bg-[#f97316] text-black text-center py-2 rounded-lg text-xs font-bold uppercase hover:bg-orange-500 transition">
         View Part
     </a>
-    <a href="https://wa.me/447440369576?text={{ 'Hi, I am interested in the ' | urlencode }}{{ part.part_name | urlencode }}" target="_blank" class="flex-1 bg-green-600 text-white text-center py-2 rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition flex items-center justify-center gap-1">
-        <i class="fa-brands fa-whatsapp"></i> WhatsApp
-    </a>
+    <a href="https://wa.me/447440369576?text={{ 'Hi%2C%20I%27m%20interested%20in%20part%20' }}{{ part.id }}" target="_blank" class="flex-1 bg-green-600 ...">
+    <i class="fa-brands fa-whatsapp"></i> WhatsApp
+</a>
 </div>
                 </div>
             </div>
