@@ -11,6 +11,31 @@
         body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
         .orange-gradient { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
     </style>
+    <script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "{{ part.part_name }}",
+    "description": "{{ part.part_name }} - OEM: {{ part.oem_number or 'N/A' }}. Compatible with {{ part.make }} {{ part.model }} {{ part.generation or '' }}.",
+    "sku": "{{ part.stock_id }}",
+    "mpn": "{{ part.oem_number or '' }}",
+    "brand": {
+        "@type": "Brand",
+        "name": "{{ part.make or 'Cherrywood Auto Parts' }}"
+    },
+    "offers": {
+        "@type": "Offer",
+        "price": "{{ part.price }}",
+        "priceCurrency": "GBP",
+        "availability": "{% if part.stock_status == 'Available' %}https://schema.org/InStock{% elif part.stock_status == 'Reserved' %}https://schema.org/LimitedAvailability{% else %}https://schema.org/OutOfStock{% endif %}",
+        "url": "{{ request.url }}",
+        "seller": {
+            "@type": "Organization",
+            "name": "Cherrywood Auto Parts"
+        }
+    }
+}
+</script>
 </head>
 <body class="bg-[#0f172a] text-slate-200 min-h-screen flex flex-col">
 
