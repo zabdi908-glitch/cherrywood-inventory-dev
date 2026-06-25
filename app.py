@@ -7,6 +7,7 @@ from datetime import datetime
 from parts_agent import parts_agent
 from flask_wtf.csrf import CSRFProtect
 from flask import send_from_directory
+from forms import PartForm
 
 app = Flask(__name__)
 csrf = CSRFProtect(app)  # ✅ Add this
