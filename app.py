@@ -513,19 +513,26 @@ def parts_bulk_import():
             flash('Please upload a CSV file', 'error')
             return redirect(url_for('parts_bulk_import'))
     return render_template('parts_bulk_import.html')
-
-@app.route('/part/<int:id>')
-def part_public_view(id):
-    part = parts_agent.get_part(id)
+    
+@app.route('/part/<slug>')
+def part_public_view(slug):
+    # Try to find by slug, or fallback to ID
+    part = parts_agent.get_part_by_slug(slug)
+    if not part:
+        # If not found, try to parse as ID (fallback for old links)
+        try:
+            part_id = int(slug)
+            part = parts_agent.get_part(part_id)
+        except:
+            pass
     if not part:
         flash('Part not found', 'error')
         return redirect(url_for('parts_public'))
     
-    # ✅ Generate meta description
     meta_description = f"{part['part_name']} - OEM: {part['oem_number'] or 'N/A'}. Price: £{part['price']}. Available from Cherrywood Auto Parts."
     
     return render_template('part_public_view.html', part=part, parts_agent=parts_agent, meta_description=meta_description, request=request)
-    
+
 @app.route('/parts/add', methods=['GET', 'POST'])
 @login_required
 def parts_add():
