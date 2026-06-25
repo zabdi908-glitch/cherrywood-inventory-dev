@@ -116,9 +116,9 @@
                             <a href="/vehicle/{{ vehicle.id }}" class="flex-1 bg-[#f97316] text-black text-center py-2 rounded-lg text-xs font-bold uppercase hover:bg-orange-500 transition">
                                 View Details
                             </a>
-                            <a href="https://wa.me/447440369576?text={{ 'Hi, I am interested in the ' | urlencode }}{{ vehicle.title | urlencode }}" target="_blank" class="flex-1 bg-green-600 text-white text-center py-2 rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition">
-                                <i class="fa-brands fa-whatsapp"></i> Enquire
-                            </a>
+                           <a href="https://wa.me/447440369576?text={{ 'Hi%2C%20I%27m%20interested%20in%20vehicle%20' }}{{ vehicle.id }}" target="_blank" class="flex-1 bg-green-600 ...">
+    <i class="fa-brands fa-whatsapp"></i> Enquire
+</a>
                         </div>
                         {% if session.get('logged_in') %}
                         <div class="flex space-x-2 mt-2 pt-2 border-t border-slate-700">
