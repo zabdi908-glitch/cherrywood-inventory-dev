@@ -6,6 +6,7 @@ from functools import wraps
 from datetime import datetime
 from parts_agent import parts_agent
 from flask_wtf.csrf import CSRFProtect
+from flask import send_from_directory
 
 app = Flask(__name__)
 csrf = CSRFProtect(app)  # ✅ Add this
@@ -558,6 +559,14 @@ def parts_add():
                 flash(f'❌ {field.replace("_", " ").title()}: {error}', 'error')
     
     return render_template('parts_add.html', form=form)
+
+@app.route('/sitemap.xml')
+def sitemap():
+    return send_from_directory('.', 'sitemap.xml', mimetype='application/xml')
+
+@app.route('/robots.txt')
+def robots():
+    return send_from_directory('.', 'robots.txt', mimetype='text/plain')
     
 # ============================================
 # RUN THE APP
