@@ -114,15 +114,14 @@
                     <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-800">
                         <span class="text-xl font-black text-[#f97316]">£{{ "%.2f"|format(part.price) }}</span>
                         <span class="text-xs bg-slate-800 px-2 py-1 rounded">{{ part.category }}</span>
-                    </div>
                     <div class="flex gap-2 mt-3">
-                        <a href="/part/{{ part.id }}" class="flex-1 bg-[#f97316] text-black text-center py-2 rounded-lg text-xs font-bold uppercase hover:bg-orange-500 transition">
-                            View Part
-                        </a>
-                        <a href="https://wa.me/447440369576?text={{ 'Hi, I am interested in the ' | urlencode }}{{ part.part_name | urlencode }}%20(OEM:{{ part.oem_number or 'N/A' | urlencode }})%20£{{ part.price }}" target="_blank" class="flex-1 bg-green-600 text-white text-center py-2 rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition flex items-center justify-center gap-1">
-                            <i class="fa-brands fa-whatsapp"></i> WhatsApp
-                        </a>
-                    </div>
+    <a href="/part/{{ part.slug or part.id }}" class="flex-1 bg-[#f97316] text-black text-center py-2 rounded-lg text-xs font-bold uppercase hover:bg-orange-500 transition">
+        View Part
+    </a>
+    <a href="https://wa.me/447440369576?text={{ 'Hi, I am interested in the ' | urlencode }}{{ part.part_name | urlencode }}" target="_blank" class="flex-1 bg-green-600 text-white text-center py-2 rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition flex items-center justify-center gap-1">
+        <i class="fa-brands fa-whatsapp"></i> WhatsApp
+    </a>
+</div>
                 </div>
             </div>
             {% endfor %}
