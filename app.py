@@ -584,7 +584,7 @@ def google_verify():
 def google_verify_static():
     return send_from_directory('static', 'googlea8a0fd57acfb2a7e.html')
     
-    @app.route('/parts/bulk-update', methods=['GET', 'POST'])
+ @app.route('/parts/bulk-update', methods=['GET', 'POST'])
 @login_required
 def parts_bulk_update():
     if request.method == 'POST':
@@ -614,14 +614,12 @@ def parts_bulk_update():
                     errors.append(f"Row {line}: Missing stock_id")
                     continue
                 
-                # Find the part
                 all_parts = parts_agent.get_all_parts()
                 part = next((p for p in all_parts if p.get('stock_id') == stock_id), None)
                 if not part:
                     errors.append(f"Row {line}: stock_id '{stock_id}' not found")
                     continue
                 
-                # Update fields
                 data = {
                     'stock_id': part['stock_id'],
                     'part_name': part['part_name'],
