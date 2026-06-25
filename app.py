@@ -584,6 +584,76 @@ def google_verify():
 def google_verify_static():
     return send_from_directory('static', 'googlea8a0fd57acfb2a7e.html')
     
+    @app.route('/parts/bulk-update', methods=['GET', 'POST'])
+@login_required
+def parts_bulk_update():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file uploaded', 'error')
+            return redirect(url_for('parts_bulk_update'))
+        
+        file = request.files['file']
+        if file.filename == '':
+            flash('No file selected', 'error')
+            return redirect(url_for('parts_bulk_update'))
+        
+        if file and file.filename.endswith('.csv'):
+            import csv
+            import io
+            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+            reader = csv.DictReader(stream)
+            
+            updated = 0
+            errors = []
+            line = 1
+            
+            for row in reader:
+                line += 1
+                stock_id = row.get('stock_id', '').strip()
+                if not stock_id:
+                    errors.append(f"Row {line}: Missing stock_id")
+                    continue
+                
+                # Find the part
+                all_parts = parts_agent.get_all_parts()
+                part = next((p for p in all_parts if p.get('stock_id') == stock_id), None)
+                if not part:
+                    errors.append(f"Row {line}: stock_id '{stock_id}' not found")
+                    continue
+                
+                # Update fields
+                data = {
+                    'stock_id': part['stock_id'],
+                    'part_name': part['part_name'],
+                    'category': part['category'],
+                    'part_type': part.get('part_type', ''),
+                    'make': part.get('make', ''),
+                    'model': part.get('model', ''),
+                    'generation': part.get('generation', ''),
+                    'oem_number': part.get('oem_number', ''),
+                    'engine_code': part.get('engine_code', ''),
+                    'condition': part.get('condition', 'Good'),
+                    'price': float(row.get('price', part.get('price', 0))),
+                    'stock_status': row.get('stock_status', part.get('stock_status', 'Available')),
+                    'location': row.get('location', part.get('location', '')),
+                    'notes': row.get('notes', part.get('notes', ''))
+                }
+                result = parts_agent.update_part(part['id'], data)
+                if result['success']:
+                    updated += 1
+                else:
+                    errors.append(f"Row {line}: {result['error']}")
+            
+            flash(f'✅ Updated {updated} parts successfully!', 'success')
+            if errors:
+                flash(f'⚠️ Errors: {", ".join(errors[:5])}', 'error')
+            return redirect(url_for('parts_index'))
+        else:
+            flash('Please upload a CSV file', 'error')
+            return redirect(url_for('parts_bulk_update'))
+    
+    return render_template('parts_bulk_update.html')
+    
 # ============================================
 # RUN THE APP
 # ============================================
