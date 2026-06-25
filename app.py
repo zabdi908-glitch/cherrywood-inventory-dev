@@ -271,10 +271,25 @@ def restore_vehicles():
 @app.route('/admin/backup-now', methods=['POST'])
 @login_required
 def backup_now():
-    auto_backup_vehicles()
-    flash('✅ Backup created!', 'success')
-    return redirect(url_for('index'))
-
+    try:
+        db = get_db()
+        rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
+        db.close()
+        
+        vehicles = []
+        for row in rows:
+            vehicles.append(dict(row))
+        
+        # ✅ SECURE: Store in /data/ directory
+        backup_file = os.path.join('/data', 'vehicles_backup.json')
+        with open(backup_file, 'w') as f:
+            json.dump(vehicles, f, indent=2)
+        
+        flash(f'✅ Backup created with {len(vehicles)} vehicles!', 'success')
+        return redirect(url_for('index'))
+    except Exception as e:
+        flash(f'❌ Backup failed: {e}', 'error')
+        return redirect(url_for('index'))
 # ============================================
 # INFO PAGES
 # ============================================
