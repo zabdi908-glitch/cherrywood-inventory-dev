@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+# Allow search engines to find sitemap
+Sitemap: https://cherrywoodautoparts.co.uk/sitemap.xml
+
+# Disallow admin pages (keep them private)
+Disallow: /login
+Disallow: /logout
+Disallow: /parts/
+Disallow: /admin/
+Disallow: /add
+Disallow: /edit/
+Disallow: /delete/
