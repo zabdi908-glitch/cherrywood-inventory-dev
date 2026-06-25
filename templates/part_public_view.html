@@ -61,8 +61,8 @@
     <!-- ===== MAIN CONTENT ===== -->
     <main class="flex-1 max-w-4xl mx-auto px-4 py-12 w-full">
         <div class="bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden">
-            <!-- Photo -->
-            <div class="h-96 bg-slate-900">
+            <!-- Photo with Stock Status Badge -->
+            <div class="h-96 bg-slate-900 relative">
                 {% set photos = parts_agent.get_photos(part.id) %}
                 {% if photos %}
                     <img src="{{ photos[0].photo_url }}" alt="{{ part.part_name }}" class="w-full h-full object-cover">
@@ -74,6 +74,13 @@
                         </div>
                     </div>
                 {% endif %}
+                <!-- ✅ Stock Status Badge -->
+                <span class="absolute top-3 right-3 px-4 py-2 rounded-full text-sm font-bold 
+                    {% if part.stock_status == 'Available' %}bg-green-600 text-white{% endif %}
+                    {% if part.stock_status == 'Reserved' %}bg-yellow-600 text-black{% endif %}
+                    {% if part.stock_status == 'Sold' %}bg-red-600 text-white{% endif %}">
+                    {{ part.stock_status }}
+                </span>
             </div>
 
             <div class="p-8">
@@ -83,6 +90,7 @@
                         <p class="text-sm text-slate-400 mt-1">OEM: {{ part.oem_number or 'N/A' }}</p>
                         <p class="text-sm text-slate-400">{{ part.make }} {{ part.model }} {{ part.generation or '' }}</p>
                     </div>
+                    <!-- Also show status here in the details section if you like -->
                     <span class="px-4 py-2 rounded-full text-sm font-bold 
                         {% if part.stock_status == 'Available' %}bg-green-600 text-white{% endif %}
                         {% if part.stock_status == 'Reserved' %}bg-yellow-600 text-black{% endif %}
@@ -126,6 +134,15 @@
                 <div class="mt-6 pt-4 border-t border-slate-800">
                     <p class="text-xs text-slate-400">Notes</p>
                     <p class="text-white">{{ part.notes }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Admin edit link (visible only when logged in) -->
+                {% if session.get('logged_in') %}
+                <div class="mt-6 pt-4 border-t border-slate-800 flex gap-3">
+                    <a href="/parts/edit/{{ part.id }}" class="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                        Edit Part (Admin)
+                    </a>
                 </div>
                 {% endif %}
             </div>
