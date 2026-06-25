@@ -1,164 +1,108 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Part - Cherrywood Auto Parts</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Flash Messages -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        {% for category, message in messages %}
-            <div class="mb-4 p-3 rounded-lg text-sm font-bold {% if category == 'error' %}bg-red-600/20 text-red-400 border border-red-600/30{% else %}bg-green-600/20 text-green-400 border border-green-600/30{% endif %}">
-                {{ message }}
-            </div>
-        {% endfor %}
-    {% endif %}
-{% endwith %}
-</head>
-<body class="bg-[#0f172a] text-white min-h-screen">
+{% extends "base.html" %}
 
-    <nav class="bg-[#111827] border-b border-slate-800 p-4">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <i class="fa-solid fa-pen-to-square text-2xl text-[#f97316]"></i>
-                <h1 class="text-2xl font-black text-white">Edit Part: {{ part.part_name }}</h1>
+{% block title %}Edit Part - Cherrywood Auto Parts{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-12 w-full">
+    <div class="bg-[#111827] border border-slate-800 rounded-2xl p-8">
+        <h1 class="text-3xl font-black text-white mb-2 flex items-center gap-3">
+            <i class="fa-solid fa-pen-to-square text-[#f97316]"></i> Edit Part
+        </h1>
+        <p class="text-slate-400 text-sm mb-6">Update the details for <span class="text-white font-bold">{{ part.part_name }}</span></p>
+
+        <form method="POST" enctype="multipart/form-data" class="space-y-4">
+            {{ form.csrf_token }}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Stock ID *</label>
+                    {{ form.stock_id(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Part Name *</label>
+                    {{ form.part_name(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
             </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Category *</label>
+                    {{ form.category(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Part Type</label>
+                    {{ form.part_type(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Make</label>
+                    {{ form.make(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Model</label>
+                    {{ form.model(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Generation</label>
+                    {{ form.generation(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">OEM / Part Number</label>
+                    {{ form.oem_number(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Engine Code</label>
+                    {{ form.engine_code(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Condition</label>
+                    {{ form.condition(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Price (£)</label>
+                    {{ form.price(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Stock Status</label>
+                    {{ form.stock_status(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Location</label>
+                    {{ form.location(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none") }}
+                </div>
+            </div>
+
             <div>
-                <a href="/parts" class="text-slate-400 hover:text-white mr-4 transition">← Back to Inventory</a>
-                <a href="/logout" class="text-red-400 hover:text-red-300 transition">Logout</a>
+                <label class="block text-xs font-black uppercase text-slate-400 mb-1">Notes</label>
+                {{ form.notes(class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none", rows="2") }}
             </div>
-        </div>
-    </nav>
 
-    <div class="max-w-3xl mx-auto px-4 py-8">
-        <div class="bg-[#111827] border border-slate-800 rounded-2xl p-8">
-            <form method="POST" enctype="multipart/form-data" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Stock ID *</label>
-                        <input type="text" name="stock_id" value="{{ part.stock_id }}" required
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Part Name *</label>
-                        <input type="text" name="part_name" value="{{ part.part_name }}" required
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                </div>
+            <!-- Photo Upload -->
+            <div>
+                <label class="block text-xs font-black uppercase text-slate-400 mb-1">
+                    <i class="fa-solid fa-camera text-[#f97316] mr-1"></i> Upload Photos
+                    <span class="text-slate-500 font-normal lowercase">(optional — add more photos)</span>
+                </label>
+                <input type="file" name="photos" multiple accept="image/*"
+                       class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#f97316] file:text-black file:font-bold hover:file:bg-orange-500">
+                <p class="text-xs text-slate-500 mt-1">You can upload multiple photos. Max 5MB each.</p>
+            </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Category *</label>
-                        <select name="category" required class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                            <option value="Engine" {% if part.category == 'Engine' %}selected{% endif %}>Engine</option>
-                            <option value="Gearbox" {% if part.category == 'Gearbox' %}selected{% endif %}>Gearbox</option>
-                            <option value="Body Panel" {% if part.category == 'Body Panel' %}selected{% endif %}>Body Panel</option>
-                            <option value="Electronics" {% if part.category == 'Electronics' %}selected{% endif %}>Electronics</option>
-                            <option value="Interior" {% if part.category == 'Interior' %}selected{% endif %}>Interior</option>
-                            <option value="Wheels" {% if part.category == 'Wheels' %}selected{% endif %}>Wheels</option>
-                            <option value="Lighting" {% if part.category == 'Lighting' %}selected{% endif %}>Lighting</option>
-                            <option value="Suspension" {% if part.category == 'Suspension' %}selected{% endif %}>Suspension</option>
-                            <option value="Brakes" {% if part.category == 'Brakes' %}selected{% endif %}>Brakes</option>
-                            <option value="Exhaust" {% if part.category == 'Exhaust' %}selected{% endif %}>Exhaust</option>
-                            <option value="Other" {% if part.category == 'Other' %}selected{% endif %}>Other</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Part Type</label>
-                        <input type="text" name="part_type" value="{{ part.part_type or '' }}"
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Make</label>
-                        <input type="text" name="make" value="{{ part.make or '' }}"
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Model</label>
-                        <input type="text" name="model" value="{{ part.model or '' }}"
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Generation</label>
-                        <input type="text" name="generation" value="{{ part.generation or '' }}"
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">OEM / Part Number</label>
-                        <input type="text" name="oem_number" value="{{ part.oem_number or '' }}"
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Engine Code</label>
-                        <input type="text" name="engine_code" value="{{ part.engine_code or '' }}"
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Condition</label>
-                        <select name="condition" class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                            <option value="Good" {% if part.condition == 'Good' %}selected{% endif %}>Good</option>
-                            <option value="Tested" {% if part.condition == 'Tested' %}selected{% endif %}>Tested</option>
-                            <option value="New" {% if part.condition == 'New' %}selected{% endif %}>New</option>
-                            <option value="Refurbished" {% if part.condition == 'Refurbished' %}selected{% endif %}>Refurbished</option>
-                            <option value="As Is" {% if part.condition == 'As Is' %}selected{% endif %}>As Is</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Price (£)</label>
-                        <input type="number" name="price" step="0.01" value="{{ part.price }}"
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Stock Status</label>
-                        <select name="stock_status" class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                            <option value="Available" {% if part.stock_status == 'Available' %}selected{% endif %}>Available</option>
-                            <option value="Reserved" {% if part.stock_status == 'Reserved' %}selected{% endif %}>Reserved</option>
-                            <option value="Sold" {% if part.stock_status == 'Sold' %}selected{% endif %}>Sold</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Location</label>
-                        <input type="text" name="location" value="{{ part.location or '' }}"
-                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Notes</label>
-                    <textarea name="notes" rows="2" class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">{{ part.notes or '' }}</textarea>
-                </div>
-
-                <!-- ✅ PHOTO UPLOAD SECTION -->
-                <div>
-                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">
-                        <i class="fa-solid fa-camera text-[#f97316] mr-1"></i> Upload Photos
-                        <span class="text-slate-500 font-normal lowercase">(optional — JPEG, PNG, WebP)</span>
-                    </label>
-                    <input type="file" name="photos" multiple accept="image/*"
-                           class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#f97316] file:text-black file:font-bold hover:file:bg-orange-500">
-                    <p class="text-xs text-slate-500 mt-1">You can upload multiple photos. Max 5MB each.</p>
-                </div>
-
-                <button type="submit" class="w-full p-4 bg-[#f97316] text-black font-black uppercase rounded-xl hover:bg-orange-500 transition">
-                    <i class="fa-solid fa-save mr-2"></i> Update Part
-                </button>
-            </form>
-        </div>
+            <button type="submit" class="w-full p-4 bg-[#f97316] text-black font-black uppercase rounded-xl hover:bg-orange-500 transition">
+                Update Part
+            </button>
+        </form>
     </div>
-
-</body>
-</html>
+</div>
+{% endblock %}
