@@ -567,6 +567,14 @@ def sitemap():
 @app.route('/robots.txt')
 def robots():
     return send_from_directory('.', 'robots.txt', mimetype='text/plain')
+
+@app.route('/googlea8a0fd57acfb2a7e.html')
+def google_verify():
+    return send_from_directory('.', 'googlea8a0fd57acfb2a7e.html')
+
+@app.route('/static/googlea8a0fd57acfb2a7e.html')
+def google_verify_static():
+    return send_from_directory('static', 'googlea8a0fd57acfb2a7e.html')
     
 # ============================================
 # RUN THE APP
