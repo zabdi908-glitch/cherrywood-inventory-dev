@@ -77,42 +77,42 @@
 
         <!-- Price, Status, Sort Filters -->
         <div class="flex flex-wrap gap-3 mt-3">
-            <!-- Price Filter -->
-            <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
-                <span class="text-xs text-slate-400 font-bold">Price:</span>
-                <select name="price_filter" class="bg-transparent text-white text-sm focus:outline-none" onchange="window.location.href=this.value">
-                    <option value="/parts-public">All</option>
-                    <option value="/parts-public/price/0-100">Under £100</option>
-                    <option value="/parts-public/price/100-500">£100 - £500</option>
-                    <option value="/parts-public/price/500-1000">£500 - £1000</option>
-                    <option value="/parts-public/price/1000-99999">Over £1000</option>
-                </select>
-            </div>
-
-            <!-- Stock Status Filter -->
-            <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
-                <span class="text-xs text-slate-400 font-bold">Status:</span>
-                <select name="stock_filter" class="bg-transparent text-white text-sm focus:outline-none" onchange="window.location.href=this.value">
-                    <option value="/parts-public">All</option>
-                    <option value="/parts-public/status/Available">Available</option>
-                    <option value="/parts-public/status/Reserved">Reserved</option>
-                    <option value="/parts-public/status/Sold">Sold</option>
-                </select>
-            </div>
-
-            <!-- Sort Filter -->
-            <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
-                <span class="text-xs text-slate-400 font-bold">Sort:</span>
-                <select name="sort" class="bg-transparent text-white text-sm focus:outline-none" onchange="window.location.href=this.value">
-                    <option value="/parts-public">Newest First</option>
-                    <option value="/parts-public/sort/price_asc">Price: Low → High</option>
-                    <option value="/parts-public/sort/price_desc">Price: High → Low</option>
-                    <option value="/parts-public/sort/name">Name A → Z</option>
-                </select>
-            </div>
-        </div>
+           <!-- ===== FILTERS ===== -->
+<div class="flex flex-wrap gap-3 mt-3">
+    <!-- Price Filter -->
+    <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
+        <span class="text-xs text-slate-400 font-bold">Price:</span>
+        <select name="price_filter" class="bg-[#0f172a] text-white text-sm rounded px-2 py-1 focus:outline-none" onchange="window.location.href=this.value">
+            <option value="/parts-public">All</option>
+            <option value="/parts-public/price/0-100">Under £100</option>
+            <option value="/parts-public/price/100-500">£100 - £500</option>
+            <option value="/parts-public/price/500-1000">£500 - £1000</option>
+            <option value="/parts-public/price/1000-99999">Over £1000</option>
+        </select>
     </div>
 
+    <!-- Stock Status Filter -->
+    <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
+        <span class="text-xs text-slate-400 font-bold">Status:</span>
+        <select name="stock_filter" class="bg-[#0f172a] text-white text-sm rounded px-2 py-1 focus:outline-none" onchange="window.location.href=this.value">
+            <option value="/parts-public">All</option>
+            <option value="/parts-public/status/Available">Available</option>
+            <option value="/parts-public/status/Reserved">Reserved</option>
+            <option value="/parts-public/status/Sold">Sold</option>
+        </select>
+    </div>
+
+    <!-- Sort Filter -->
+    <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
+        <span class="text-xs text-slate-400 font-bold">Sort:</span>
+        <select name="sort" class="bg-[#0f172a] text-white text-sm rounded px-2 py-1 focus:outline-none" onchange="window.location.href=this.value">
+            <option value="/parts-public">Newest First</option>
+            <option value="/parts-public/sort/price_asc">Price: Low → High</option>
+            <option value="/parts-public/sort/price_desc">Price: High → Low</option>
+            <option value="/parts-public/sort/name">Name A → Z</option>
+        </select>
+    </div>
+</div>
     <!-- ===== PARTS GRID ===== -->
     {% if not parts %}
         <div class="text-center py-12 bg-[#111827] rounded-2xl border border-slate-800">
