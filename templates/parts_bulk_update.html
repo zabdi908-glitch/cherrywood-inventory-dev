@@ -19,12 +19,13 @@
             </ul>
             <div class="mt-3 p-3 bg-slate-800 rounded">
                 <p class="text-xs text-slate-300 font-mono">stock_id,price,stock_status,location</p>
-                <p class="text-xs text-slate-300 font-mono">CH-001,250.00,Sold,Shelf B3</p>
-                <p class="text-xs text-slate-300 font-mono">CH-002,850.00,Available,Bay 2</p>
+                <p class="text-xs text-slate-300 font-mono">TEST-001,250.00,Sold,Shelf B3</p>
+                <p class="text-xs text-slate-300 font-mono">TEST-002,850.00,Available,Bay 2</p>
             </div>
         </div>
 
         <form method="POST" enctype="multipart/form-data" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div>
                 <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Select CSV File</label>
                 <input type="file" name="file" accept=".csv" required
