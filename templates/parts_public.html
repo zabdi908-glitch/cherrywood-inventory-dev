@@ -3,6 +3,33 @@
 {% block title %}Parts - Cherrywood Auto Parts{% endblock %}
 
 {% block content %}
+<style>
+    /* Grid styles directly in the page */
+    .parts-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    @media (min-width: 640px) {
+        .parts-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .parts-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    @media (min-width: 1280px) {
+        .parts-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+</style>
+
 <div class="max-w-7xl mx-auto px-4 py-8 w-full">
     <!-- Hero -->
     <section class="orange-gradient text-black py-8 rounded-2xl mb-8">
@@ -34,9 +61,8 @@
             </div>
         </form>
 
-        <!-- ===== ✅ NEW: FILTER ROW ===== -->
+        <!-- Category Filters -->
         <div class="flex flex-wrap gap-3 mt-4">
-            <!-- Category Filters -->
             <div class="flex flex-wrap gap-2">
                 <a href="/parts-public" class="px-4 py-2 rounded-full text-sm font-bold bg-[#f97316] text-black hover:bg-orange-500 transition">
                     All Parts
@@ -49,42 +75,43 @@
             </div>
         </div>
 
-     <!-- ===== FILTERS ===== -->
-<div class="flex flex-wrap gap-3 mt-3">
-    <!-- Price Filter -->
-    <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
-        <span class="text-xs text-slate-400 font-bold">Price:</span>
-        <select name="price_filter" class="bg-transparent text-white text-sm focus:outline-none" onchange="window.location.href=this.value">
-            <option value="/parts-public">All</option>
-            <option value="/parts-public/price/0-100">Under £100</option>
-            <option value="/parts-public/price/100-500">£100 - £500</option>
-            <option value="/parts-public/price/500-1000">£500 - £1000</option>
-            <option value="/parts-public/price/1000-99999">Over £1000</option>
-        </select>
-    </div>
+        <!-- Price, Status, Sort Filters -->
+        <div class="flex flex-wrap gap-3 mt-3">
+            <!-- Price Filter -->
+            <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
+                <span class="text-xs text-slate-400 font-bold">Price:</span>
+                <select name="price_filter" class="bg-transparent text-white text-sm focus:outline-none" onchange="window.location.href=this.value">
+                    <option value="/parts-public">All</option>
+                    <option value="/parts-public/price/0-100">Under £100</option>
+                    <option value="/parts-public/price/100-500">£100 - £500</option>
+                    <option value="/parts-public/price/500-1000">£500 - £1000</option>
+                    <option value="/parts-public/price/1000-99999">Over £1000</option>
+                </select>
+            </div>
 
-    <!-- Stock Status Filter -->
-    <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
-        <span class="text-xs text-slate-400 font-bold">Status:</span>
-        <select name="stock_filter" class="bg-transparent text-white text-sm focus:outline-none" onchange="window.location.href=this.value">
-            <option value="/parts-public">All</option>
-            <option value="/parts-public/status/Available">Available</option>
-            <option value="/parts-public/status/Reserved">Reserved</option>
-            <option value="/parts-public/status/Sold">Sold</option>
-        </select>
-    </div>
+            <!-- Stock Status Filter -->
+            <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
+                <span class="text-xs text-slate-400 font-bold">Status:</span>
+                <select name="stock_filter" class="bg-transparent text-white text-sm focus:outline-none" onchange="window.location.href=this.value">
+                    <option value="/parts-public">All</option>
+                    <option value="/parts-public/status/Available">Available</option>
+                    <option value="/parts-public/status/Reserved">Reserved</option>
+                    <option value="/parts-public/status/Sold">Sold</option>
+                </select>
+            </div>
 
-    <!-- Sort Filter -->
-    <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
-        <span class="text-xs text-slate-400 font-bold">Sort:</span>
-        <select name="sort" class="bg-transparent text-white text-sm focus:outline-none" onchange="window.location.href=this.value">
-            <option value="/parts-public">Newest First</option>
-            <option value="/parts-public/sort/price_asc">Price: Low → High</option>
-            <option value="/parts-public/sort/price_desc">Price: High → Low</option>
-            <option value="/parts-public/sort/name">Name A → Z</option>
-        </select>
+            <!-- Sort Filter -->
+            <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
+                <span class="text-xs text-slate-400 font-bold">Sort:</span>
+                <select name="sort" class="bg-transparent text-white text-sm focus:outline-none" onchange="window.location.href=this.value">
+                    <option value="/parts-public">Newest First</option>
+                    <option value="/parts-public/sort/price_asc">Price: Low → High</option>
+                    <option value="/parts-public/sort/price_desc">Price: High → Low</option>
+                    <option value="/parts-public/sort/name">Name A → Z</option>
+                </select>
+            </div>
+        </div>
     </div>
-</div>
 
     <!-- ===== PARTS GRID ===== -->
     {% if not parts %}
@@ -93,21 +120,19 @@
             <p class="text-slate-400">No parts found. Check back soon!</p>
         </div>
     {% else %}
-     <div style="display: grid; grid-template-columns: repeat(1, 1fr); gap: 1.5rem;">
-    {% for part in parts %}
-        <!-- part card -->
-    {% endfor %}
-</div>
+        <div class="parts-grid">
+            {% for part in parts %}
+            <div class="bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#f97316] transition">
                 <div class="h-48 bg-slate-900 relative">
                     <img src="{{ part.photo_url or 'https://via.placeholder.com/400x300/1a1a2e/ffffff?text=Part+Image' }}" 
                          alt="{{ part.part_name }}" 
                          class="w-full h-full object-cover">
-                   <span class="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold 
-    {% if part.stock_status == 'Available' %}bg-green-600 text-white{% endif %}
-    {% if part.stock_status == 'Reserved' %}bg-yellow-600 text-black{% endif %}
-    {% if part.stock_status == 'Sold' %}bg-red-600 text-white{% endif %}">
-    {{ part.stock_status }}
-</span>
+                    <span class="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold 
+                        {% if part.stock_status == 'Available' %}bg-green-600 text-white{% endif %}
+                        {% if part.stock_status == 'Reserved' %}bg-yellow-600 text-black{% endif %}
+                        {% if part.stock_status == 'Sold' %}bg-red-600 text-white{% endif %}">
+                        {{ part.stock_status }}
+                    </span>
                 </div>
                 <div class="p-4">
                     <h3 class="text-lg font-black text-white mb-1">{{ part.part_name }}</h3>
@@ -116,14 +141,15 @@
                     <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-800">
                         <span class="text-xl font-black text-[#f97316]">£{{ "%.2f"|format(part.price) }}</span>
                         <span class="text-xs bg-slate-800 px-2 py-1 rounded">{{ part.category }}</span>
+                    </div>
                     <div class="flex gap-2 mt-3">
-    <a href="/part/{{ part.slug or part.id }}" class="flex-1 bg-[#f97316] text-black text-center py-2 rounded-lg text-xs font-bold uppercase hover:bg-orange-500 transition">
-        View Part
-    </a>
-    <a href="https://wa.me/447440369576?text={{ 'Hi%2C%20I%27m%20interested%20in%20part%20' }}{{ part.id }}" target="_blank" class="flex-1 bg-green-600 ...">
-    <i class="fa-brands fa-whatsapp"></i> WhatsApp
-</a>
-</div>
+                        <a href="/part/{{ part.slug or part.id }}" class="flex-1 bg-[#f97316] text-black text-center py-2 rounded-lg text-xs font-bold uppercase hover:bg-orange-500 transition">
+                            View Part
+                        </a>
+                        <a href="https://wa.me/447440369576?text={{ 'Hi%2C%20I%27m%20interested%20in%20part%20' }}{{ part.id }}" target="_blank" class="flex-1 bg-green-600 text-white text-center py-2 rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition flex items-center justify-center gap-1">
+                            <i class="fa-brands fa-whatsapp"></i> WhatsApp
+                        </a>
+                    </div>
                 </div>
             </div>
             {% endfor %}
