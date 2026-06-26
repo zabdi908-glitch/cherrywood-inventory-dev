@@ -10,7 +10,7 @@ from flask import send_from_directory
 from forms import PartForm
 
 app = Flask(__name__)
-csrf = CSRFProtect(app)  # ✅ Add this
+csrf = CSRFProtect(app)
 
 # ============================================
 # CONFIGURATION
@@ -162,10 +162,7 @@ def view_vehicle(id):
             return redirect(url_for('index'))
         v = dict(vehicle)
         v['parts_list'] = v.get('parts_available', '').split(',') if v.get('parts_available') else []
-        
-        # ✅ Generate meta description
         meta_description = f"Find used {v['title']} parts at Cherrywood Auto Parts. {v['make']} {v['model']} {v['year']} breaking for parts. UK delivery available."
-        
         return render_template('vehicle_detail.html', vehicle=v, meta_description=meta_description)
     except Exception as e:
         flash(f'Error loading vehicle: {e}', 'error')
@@ -265,18 +262,44 @@ def delete_vehicle(id):
         flash(f'❌ Delete failed: {e}', 'error')
     return redirect(url_for('index'))
 
+@app.route('/admin/backup-now', methods=['POST'])
+@login_required
+def backup_now():
+    try:
+        db = get_db()
+        rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
+        db.close()
+        
+        vehicles = []
+        for row in rows:
+            vehicles.append(dict(row))
+        
+        backup_file = os.path.join('/data', 'vehicles_backup.json')
+        with open(backup_file, 'w') as f:
+            json.dump(vehicles, f, indent=2)
+        
+        flash(f'✅ Backup created with {len(vehicles)} vehicles!', 'success')
+        return redirect(url_for('index'))
+    except Exception as e:
+        flash(f'❌ Backup failed: {e}', 'error')
+        return redirect(url_for('index'))
+
+# ============================================
+# IMPROVED RESTORE (WITH CONFIRMATION)
+# ============================================
+
 @app.route('/admin/restore', methods=['POST'])
 @login_required
 def restore_vehicles():
     try:
         backup_dir = '/data/backups/'
         if not os.path.exists(backup_dir):
-            flash('❌ No backup folder found', 'error')
+            flash('❌ No backup folder found. Please run a backup first.', 'error')
             return redirect(url_for('index'))
         
         files = sorted([f for f in os.listdir(backup_dir) if f.startswith('full_backup_')], reverse=True)
         if not files:
-            flash('❌ No backup files found', 'error')
+            flash('❌ No backup files found. Please run a backup first.', 'error')
             return redirect(url_for('index'))
         
         latest_backup = os.path.join(backup_dir, files[0])
@@ -341,6 +364,7 @@ def restore_confirm():
     except Exception as e:
         flash(f'❌ Restore failed: {e}', 'error')
         return redirect(url_for('index'))
+
 # ============================================
 # INFO PAGES
 # ============================================
@@ -401,8 +425,6 @@ def contact():
 def delivery():
     return render_template('delivery.html')
 
-
-
 # ============================================
 # PARTS INVENTORY ROUTES
 # ============================================
@@ -427,6 +449,38 @@ def parts_search():
         flash('No parts found matching your search', 'error')
     return render_template('parts_index.html', parts=parts, search_query=query)
 
+@app.route('/parts/add', methods=['GET', 'POST'])
+@login_required
+def parts_add():
+    form = PartForm()
+    if form.validate_on_submit():
+        data = {
+            'stock_id': form.stock_id.data,
+            'part_name': form.part_name.data,
+            'category': form.category.data,
+            'part_type': form.part_type.data or '',
+            'make': form.make.data or '',
+            'model': form.model.data or '',
+            'generation': form.generation.data or '',
+            'oem_number': form.oem_number.data or '',
+            'engine_code': form.engine_code.data or '',
+            'condition': form.condition.data or 'Good',
+            'price': form.price.data or 0,
+            'stock_status': form.stock_status.data or 'Available',
+            'location': form.location.data or '',
+            'notes': form.notes.data or ''
+        }
+        result = parts_agent.add_part(data)
+        if result['success']:
+            flash('✅ Part added successfully!', 'success')
+            return redirect(url_for('parts_index'))
+        else:
+            flash(f'❌ Error: {result["error"]}', 'error')
+    else:
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f'❌ {field.replace("_", " ").title()}: {error}', 'error')
+    return render_template('parts_add.html', form=form)
 
 @app.route('/parts/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -435,9 +489,7 @@ def parts_edit(id):
     if not part:
         flash('Part not found', 'error')
         return redirect(url_for('parts_index'))
-    
     form = PartForm(obj=part)
-    
     if form.validate_on_submit():
         data = {
             'stock_id': form.stock_id.data,
@@ -462,13 +514,11 @@ def parts_edit(id):
         else:
             flash(f'❌ Error: {result["error"]}', 'error')
     else:
-        # ✅ Show validation errors
         for field, errors in form.errors.items():
             for error in errors:
                 flash(f'❌ {field.replace("_", " ").title()}: {error}', 'error')
-    
     return render_template('parts_edit.html', form=form, part=part)
-    
+
 @app.route('/parts/delete/<int:id>', methods=['POST'])
 @login_required
 def parts_delete(id):
@@ -558,76 +608,6 @@ def parts_bulk_import():
             flash('Please upload a CSV file', 'error')
             return redirect(url_for('parts_bulk_import'))
     return render_template('parts_bulk_import.html')
-    
-@app.route('/part/<slug>')
-def part_public_view(slug):
-    # Try to find by slug, or fallback to ID
-    part = parts_agent.get_part_by_slug(slug)
-    if not part:
-        # If not found, try to parse as ID (fallback for old links)
-        try:
-            part_id = int(slug)
-            part = parts_agent.get_part(part_id)
-        except:
-            pass
-    if not part:
-        flash('Part not found', 'error')
-        return redirect(url_for('parts_public'))
-    
-    meta_description = f"{part['part_name']} - OEM: {part['oem_number'] or 'N/A'}. Price: £{part['price']}. Available from Cherrywood Auto Parts."
-    
-    return render_template('part_public_view.html', part=part, parts_agent=parts_agent, meta_description=meta_description, request=request)
-
-@app.route('/parts/add', methods=['GET', 'POST'])
-@login_required
-def parts_add():
-    form = PartForm()
-    if form.validate_on_submit():
-        data = {
-            'stock_id': form.stock_id.data,
-            'part_name': form.part_name.data,
-            'category': form.category.data,
-            'part_type': form.part_type.data or '',
-            'make': form.make.data or '',
-            'model': form.model.data or '',
-            'generation': form.generation.data or '',
-            'oem_number': form.oem_number.data or '',
-            'engine_code': form.engine_code.data or '',
-            'condition': form.condition.data or 'Good',
-            'price': form.price.data or 0,
-            'stock_status': form.stock_status.data or 'Available',
-            'location': form.location.data or '',
-            'notes': form.notes.data or ''
-        }
-        result = parts_agent.add_part(data)
-        if result['success']:
-            flash('✅ Part added successfully!', 'success')
-            return redirect(url_for('parts_index'))
-        else:
-            flash(f'❌ Error: {result["error"]}', 'error')
-    else:
-        # ✅ Show validation errors
-        for field, errors in form.errors.items():
-            for error in errors:
-                flash(f'❌ {field.replace("_", " ").title()}: {error}', 'error')
-    
-    return render_template('parts_add.html', form=form)
-
-@app.route('/sitemap.xml')
-def sitemap():
-    return send_from_directory('.', 'sitemap.xml', mimetype='application/xml')
-
-@app.route('/robots.txt')
-def robots():
-    return send_from_directory('.', 'robots.txt', mimetype='text/plain')
-
-@app.route('/googlea8a0fd57acfb2a7e.html')
-def google_verify():
-    return send_from_directory('.', 'googlea8a0fd57acfb2a7e.html')
-
-@app.route('/static/googlea8a0fd57acfb2a7e.html')
-def google_verify_static():
-    return send_from_directory('static', 'googlea8a0fd57acfb2a7e.html')
 
 @app.route('/parts/bulk-update', methods=['GET', 'POST'])
 @login_required
@@ -636,35 +616,29 @@ def parts_bulk_update():
         if 'file' not in request.files:
             flash('No file uploaded', 'error')
             return redirect(url_for('parts_bulk_update'))
-
         file = request.files['file']
         if file.filename == '':
             flash('No file selected', 'error')
             return redirect(url_for('parts_bulk_update'))
-
         if file and file.filename.endswith('.csv'):
             import csv
             import io
             stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
             reader = csv.DictReader(stream)
-
             updated = 0
             errors = []
             line = 1
-
             for row in reader:
                 line += 1
                 stock_id = row.get('stock_id', '').strip()
                 if not stock_id:
                     errors.append(f"Row {line}: Missing stock_id")
                     continue
-
                 all_parts = parts_agent.get_all_parts()
                 part = next((p for p in all_parts if p.get('stock_id') == stock_id), None)
                 if not part:
                     errors.append(f"Row {line}: stock_id '{stock_id}' not found")
                     continue
-
                 data = {
                     'stock_id': part['stock_id'],
                     'part_name': part['part_name'],
@@ -686,7 +660,6 @@ def parts_bulk_update():
                     updated += 1
                 else:
                     errors.append(f"Row {line}: {result['error']}")
-
             flash(f'✅ Updated {updated} parts successfully!', 'success')
             if errors:
                 flash(f'⚠️ Errors: {", ".join(errors[:5])}', 'error')
@@ -694,87 +667,37 @@ def parts_bulk_update():
         else:
             flash('Please upload a CSV file', 'error')
             return redirect(url_for('parts_bulk_update'))
-
     return render_template('parts_bulk_update.html')
 
-@app.route('/admin/restore', methods=['POST'])
-@login_required
-def restore_vehicles():
-    try:
-        # Get the latest backup file
-        backup_dir = '/data/backups/'
-        files = sorted([f for f in os.listdir(backup_dir) if f.startswith('full_backup_')], reverse=True)
-        if not files:
-            flash('❌ No backup files found', 'error')
-            return redirect(url_for('index'))
-        
-        latest_backup = os.path.join(backup_dir, files[0])
-        
-        # Load backup data
-        with open(latest_backup, 'r') as f:
-            data = json.load(f)
-        
-        vehicles = data.get('vehicles', [])
-        parts = data.get('parts', [])
-        
-        # Confirm with user (via flash + session)
-        flash(f'⚠️ This will REPLACE all current data with backup from {data["timestamp"]}', 'warning')
-        flash(f'📊 Vehicles: {len(vehicles)} | Parts: {len(parts)}', 'info')
-        flash('👉 Click "Restore" again to confirm, or "Cancel" to abort.', 'info')
-        
-        # Store backup data in session for confirmation
-        session['pending_restore'] = data
-        
-        return redirect(url_for('index'))
-    except Exception as e:
-        flash(f'❌ Error: {e}', 'error')
-        return redirect(url_for('index'))
+@app.route('/part/<int:id>')
+def part_public_view(id):
+    part = parts_agent.get_part(id)
+    if not part:
+        flash('Part not found', 'error')
+        return redirect(url_for('parts_public'))
+    meta_description = f"{part['part_name']} - OEM: {part['oem_number'] or 'N/A'}. Price: £{part['price']}. Available from Cherrywood Auto Parts."
+    return render_template('part_public_view.html', part=part, parts_agent=parts_agent, meta_description=meta_description, request=request)
 
-@app.route('/admin/restore-confirm', methods=['POST'])
-@login_required
-def restore_confirm():
-    try:
-        data = session.pop('pending_restore', None)
-        if not data:
-            flash('❌ No restore pending', 'error')
-            return redirect(url_for('index'))
-        
-        conn = sqlite3.connect(DATABASE)
-        conn.execute('DELETE FROM vehicle')
-        conn.execute('DELETE FROM parts')
-        
-        # Restore vehicles
-        for v in data.get('vehicles', []):
-            conn.execute('''INSERT INTO vehicle 
-                (title, make, model, year, reg, engine, fuel, transmission, 
-                 mileage, status, image_url, parts_available, description) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                (v['title'], v['make'], v['model'], v['year'], v['reg'],
-                 v['engine'], v['fuel'], v['transmission'], v['mileage'],
-                 v['status'], v['image_url'], v['parts_available'], v['description']))
-        
-        # Restore parts (if any)
-        for p in data.get('parts', []):
-            conn.execute('''INSERT INTO parts 
-                (stock_id, part_name, category, part_type, make, model, generation, 
-                 oem_number, engine_code, condition, price, stock_status, location, notes, slug)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                (p['stock_id'], p['part_name'], p['category'], p.get('part_type', ''),
-                 p.get('make', ''), p.get('model', ''), p.get('generation', ''),
-                 p.get('oem_number', ''), p.get('engine_code', ''),
-                 p.get('condition', 'Good'), p.get('price', 0),
-                 p.get('stock_status', 'Available'), p.get('location', ''),
-                 p.get('notes', ''), p.get('slug', '')))
-        
-        conn.commit()
-        conn.close()
-        
-        flash(f'✅ Restored {len(data["vehicles"])} vehicles and {len(data["parts"])} parts successfully!', 'success')
-        return redirect(url_for('index'))
-    except Exception as e:
-        flash(f'❌ Restore failed: {e}', 'error')
-        return redirect(url_for('index'))
-        
+# ============================================
+# SITEMAP & ROBOTS
+# ============================================
+
+@app.route('/sitemap.xml')
+def sitemap():
+    return send_from_directory('.', 'sitemap.xml', mimetype='application/xml')
+
+@app.route('/robots.txt')
+def robots():
+    return send_from_directory('.', 'robots.txt', mimetype='text/plain')
+
+@app.route('/googlea8a0fd57acfb2a7e.html')
+def google_verify():
+    return send_from_directory('.', 'googlea8a0fd57acfb2a7e.html')
+
+@app.route('/static/googlea8a0fd57acfb2a7e.html')
+def google_verify_static():
+    return send_from_directory('static', 'googlea8a0fd57acfb2a7e.html')
+
 # ============================================
 # RUN THE APP
 # ============================================
