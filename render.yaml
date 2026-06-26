@@ -17,3 +17,9 @@ services:
         value: true
       - key: PYTHON_VERSION
         value: 3.11.0
+services:
+  - type: cron
+    name: daily-backup
+    schedule: "0 2 * * *"  # Runs at 2:00 AM daily
+    buildCommand: pip install -r requirements.txt
+    startCommand: python backup.py
