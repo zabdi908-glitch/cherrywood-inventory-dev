@@ -268,33 +268,78 @@ def delete_vehicle(id):
 @app.route('/admin/restore', methods=['POST'])
 @login_required
 def restore_vehicles():
-    if restore_from_backup():
-        flash('✅ Restored from backup!', 'success')
-    else:
-        flash('❌ Restore failed', 'error')
-    return redirect(url_for('index'))
-
-@app.route('/admin/backup-now', methods=['POST'])
-@login_required
-def backup_now():
     try:
-        db = get_db()
-        rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
-        db.close()
+        backup_dir = '/data/backups/'
+        if not os.path.exists(backup_dir):
+            flash('❌ No backup folder found', 'error')
+            return redirect(url_for('index'))
         
-        vehicles = []
-        for row in rows:
-            vehicles.append(dict(row))
+        files = sorted([f for f in os.listdir(backup_dir) if f.startswith('full_backup_')], reverse=True)
+        if not files:
+            flash('❌ No backup files found', 'error')
+            return redirect(url_for('index'))
         
-        # ✅ SECURE: Store in /data/ directory
-        backup_file = os.path.join('/data', 'vehicles_backup.json')
-        with open(backup_file, 'w') as f:
-            json.dump(vehicles, f, indent=2)
+        latest_backup = os.path.join(backup_dir, files[0])
         
-        flash(f'✅ Backup created with {len(vehicles)} vehicles!', 'success')
+        with open(latest_backup, 'r') as f:
+            data = json.load(f)
+        
+        vehicles = data.get('vehicles', [])
+        parts = data.get('parts', [])
+        
+        flash(f'⚠️ This will REPLACE all current data with backup from {data["timestamp"]}', 'warning')
+        flash(f'📊 Vehicles: {len(vehicles)} | Parts: {len(parts)}', 'info')
+        flash('👉 Click "Restore" again to confirm, or "Cancel" to abort.', 'info')
+        
+        session['pending_restore'] = data
         return redirect(url_for('index'))
     except Exception as e:
-        flash(f'❌ Backup failed: {e}', 'error')
+        flash(f'❌ Error: {e}', 'error')
+        return redirect(url_for('index'))
+
+@app.route('/admin/restore-confirm', methods=['POST'])
+@login_required
+def restore_confirm():
+    try:
+        data = session.pop('pending_restore', None)
+        if not data:
+            flash('❌ No restore pending', 'error')
+            return redirect(url_for('index'))
+        
+        conn = sqlite3.connect(DATABASE)
+        conn.execute('DELETE FROM vehicle')
+        conn.execute('DELETE FROM parts')
+        
+        # Restore vehicles
+        for v in data.get('vehicles', []):
+            conn.execute('''INSERT INTO vehicle 
+                (title, make, model, year, reg, engine, fuel, transmission, 
+                 mileage, status, image_url, parts_available, description) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (v['title'], v['make'], v['model'], v['year'], v['reg'],
+                 v['engine'], v['fuel'], v['transmission'], v['mileage'],
+                 v['status'], v['image_url'], v['parts_available'], v['description']))
+        
+        # Restore parts
+        for p in data.get('parts', []):
+            conn.execute('''INSERT INTO parts 
+                (stock_id, part_name, category, part_type, make, model, generation, 
+                 oem_number, engine_code, condition, price, stock_status, location, notes, slug)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (p['stock_id'], p['part_name'], p['category'], p.get('part_type', ''),
+                 p.get('make', ''), p.get('model', ''), p.get('generation', ''),
+                 p.get('oem_number', ''), p.get('engine_code', ''),
+                 p.get('condition', 'Good'), p.get('price', 0),
+                 p.get('stock_status', 'Available'), p.get('location', ''),
+                 p.get('notes', ''), p.get('slug', '')))
+        
+        conn.commit()
+        conn.close()
+        
+        flash(f'✅ Restored {len(data["vehicles"])} vehicles and {len(data["parts"])} parts successfully!', 'success')
+        return redirect(url_for('index'))
+    except Exception as e:
+        flash(f'❌ Restore failed: {e}', 'error')
         return redirect(url_for('index'))
 # ============================================
 # INFO PAGES
