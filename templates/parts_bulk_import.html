@@ -26,7 +26,8 @@
             </a>
         </div>
 
-        <form method="POST" enctype="multipart/form-data" class="space-y-4">
+      <form method="POST" enctype="multipart/form-data" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div>
                 <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Select CSV File</label>
                 <input type="file" name="file" accept=".csv" required
