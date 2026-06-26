@@ -651,6 +651,85 @@ def parts_bulk_update():
             return redirect(url_for('parts_bulk_update'))
 
     return render_template('parts_bulk_update.html')
+
+@app.route('/admin/restore', methods=['POST'])
+@login_required
+def restore_vehicles():
+    try:
+        # Get the latest backup file
+        backup_dir = '/data/backups/'
+        files = sorted([f for f in os.listdir(backup_dir) if f.startswith('full_backup_')], reverse=True)
+        if not files:
+            flash('❌ No backup files found', 'error')
+            return redirect(url_for('index'))
+        
+        latest_backup = os.path.join(backup_dir, files[0])
+        
+        # Load backup data
+        with open(latest_backup, 'r') as f:
+            data = json.load(f)
+        
+        vehicles = data.get('vehicles', [])
+        parts = data.get('parts', [])
+        
+        # Confirm with user (via flash + session)
+        flash(f'⚠️ This will REPLACE all current data with backup from {data["timestamp"]}', 'warning')
+        flash(f'📊 Vehicles: {len(vehicles)} | Parts: {len(parts)}', 'info')
+        flash('👉 Click "Restore" again to confirm, or "Cancel" to abort.', 'info')
+        
+        # Store backup data in session for confirmation
+        session['pending_restore'] = data
+        
+        return redirect(url_for('index'))
+    except Exception as e:
+        flash(f'❌ Error: {e}', 'error')
+        return redirect(url_for('index'))
+
+@app.route('/admin/restore-confirm', methods=['POST'])
+@login_required
+def restore_confirm():
+    try:
+        data = session.pop('pending_restore', None)
+        if not data:
+            flash('❌ No restore pending', 'error')
+            return redirect(url_for('index'))
+        
+        conn = sqlite3.connect(DATABASE)
+        conn.execute('DELETE FROM vehicle')
+        conn.execute('DELETE FROM parts')
+        
+        # Restore vehicles
+        for v in data.get('vehicles', []):
+            conn.execute('''INSERT INTO vehicle 
+                (title, make, model, year, reg, engine, fuel, transmission, 
+                 mileage, status, image_url, parts_available, description) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (v['title'], v['make'], v['model'], v['year'], v['reg'],
+                 v['engine'], v['fuel'], v['transmission'], v['mileage'],
+                 v['status'], v['image_url'], v['parts_available'], v['description']))
+        
+        # Restore parts (if any)
+        for p in data.get('parts', []):
+            conn.execute('''INSERT INTO parts 
+                (stock_id, part_name, category, part_type, make, model, generation, 
+                 oem_number, engine_code, condition, price, stock_status, location, notes, slug)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (p['stock_id'], p['part_name'], p['category'], p.get('part_type', ''),
+                 p.get('make', ''), p.get('model', ''), p.get('generation', ''),
+                 p.get('oem_number', ''), p.get('engine_code', ''),
+                 p.get('condition', 'Good'), p.get('price', 0),
+                 p.get('stock_status', 'Available'), p.get('location', ''),
+                 p.get('notes', ''), p.get('slug', '')))
+        
+        conn.commit()
+        conn.close()
+        
+        flash(f'✅ Restored {len(data["vehicles"])} vehicles and {len(data["parts"])} parts successfully!', 'success')
+        return redirect(url_for('index'))
+    except Exception as e:
+        flash(f'❌ Restore failed: {e}', 'error')
+        return redirect(url_for('index'))
+        
 # ============================================
 # RUN THE APP
 # ============================================
