@@ -12,6 +12,14 @@ from forms import PartForm
 app = Flask(__name__)
 csrf = CSRFProtect(app)
 # ============================================
+# CACHE-BUSTING
+# ============================================
+
+@app.context_processor
+def inject_version():
+    import time
+    return {'version': int(time.time())}
+# ============================================
 # CONTENT SECURITY POLICY (CSP)
 # ============================================
 
