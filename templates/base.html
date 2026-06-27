@@ -7,6 +7,8 @@
     <title>{% block title %}Cherrywood Auto Parts{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- ✅ CACHE-BUSTING: Version parameter forces fresh CSS -->
     <style>
         body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
         .orange-gradient { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
@@ -36,6 +38,7 @@
             }
         }
     </style>
+    
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -61,6 +64,11 @@
     </script>
 </head>
 <body class="bg-[#0f172a] text-slate-200 min-h-screen flex flex-col">
+
+    <!-- ===== SKIP TO CONTENT (Accessibility) ===== -->
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-[#f97316] focus:text-black focus:p-4 focus:rounded-lg">
+        Skip to main content
+    </a>
 
     <!-- ===== NAVIGATION ===== -->
     <nav class="bg-[#111827] border-b border-slate-800 sticky top-0 z-50">
@@ -91,7 +99,7 @@
                 {% if session.get('logged_in') %}
                     <a href="/logout" class="text-xs bg-red-600 px-3 py-1.5 rounded font-bold text-white">Logout</a>
                 {% endif %}
-                <button id="mobile-menu-btn" class="md:hidden text-white text-xl">
+                <button id="mobile-menu-btn" aria-expanded="false" aria-controls="mobile-menu" class="md:hidden text-white text-xl">
                     <i class="fa-solid fa-bars"></i>
                 </button>
             </div>
@@ -111,7 +119,7 @@
     </nav>
 
     <!-- ===== MAIN CONTENT ===== -->
-    <main class="flex-1">
+    <main id="main-content" class="flex-1">
         {% block content %}{% endblock %}
     </main>
 
@@ -126,7 +134,11 @@
 
     <script>
         document.getElementById('mobile-menu-btn').addEventListener('click', function() {
-            document.getElementById('mobile-menu').classList.toggle('hidden');
+            const menu = document.getElementById('mobile-menu');
+            const btn = document.getElementById('mobile-menu-btn');
+            const isOpen = !menu.classList.contains('hidden');
+            menu.classList.toggle('hidden');
+            btn.setAttribute('aria-expanded', !isOpen);
         });
     </script>
 
