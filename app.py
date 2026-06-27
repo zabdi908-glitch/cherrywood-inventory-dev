@@ -11,7 +11,24 @@ from forms import PartForm
 
 app = Flask(__name__)
 csrf = CSRFProtect(app)
+# ============================================
+# CONTENT SECURITY POLICY (CSP)
+# ============================================
 
+@app.after_request
+def add_csp_header(response):
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; "
+        "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
+        "img-src 'self' data: https://via.placeholder.com https://images.pexels.com; "
+        "font-src 'self' https://cdnjs.cloudflare.com; "
+        "connect-src 'self'; "
+        "frame-src 'self'; "
+        "object-src 'none'; "
+        "base-uri 'self'"
+    )
+    return response
 # ============================================
 # CONFIGURATION
 # ============================================
