@@ -539,8 +539,14 @@ def parts_view(id):
 
 @app.route('/parts-public')
 def parts_public():
-    parts = parts_agent.get_all_parts()
-    return render_template('parts_public.html', parts=parts)
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    all_parts = parts_agent.get_all_parts()
+    total = len(all_parts)
+    start = (page - 1) * per_page
+    parts = all_parts[start:start + per_page]
+    pages = (total + per_page - 1) // per_page
+    return render_template('parts_public.html', parts=parts, page=page, pages=pages)
 
 @app.route('/parts-public/search')
 def parts_public_search():
