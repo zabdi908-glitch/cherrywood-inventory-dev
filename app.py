@@ -554,7 +554,14 @@ def parts_public_search():
     if not query:
         return redirect(url_for('parts_public'))
     parts = parts_agent.search_parts(query)
-    return render_template('parts_public.html', parts=parts, search_query=query)
+    # Add pagination to search results
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    total = len(parts)
+    start = (page - 1) * per_page
+    parts = parts[start:start + per_page]
+    pages = (total + per_page - 1) // per_page
+    return render_template('parts_public.html', parts=parts, search_query=query, page=page, pages=pages)
 
 @app.route('/parts-public/category/<category>')
 def parts_public_category(category):
