@@ -585,6 +585,34 @@ def part_public_view(slug):
 
 # (Note: The old /parts-public/price, /status, /sort routes are no longer needed since we handle them in the master route above)
 
+@app.route('/parts/bulk-import', methods=['GET', 'POST'])
+@login_required
+def parts_bulk_import():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file uploaded', 'error')
+            return redirect(url_for('parts_bulk_import'))
+        file = request.files['file']
+        if file.filename == '':
+            flash('No file selected', 'error')
+            return redirect(url_for('parts_bulk_import'))
+        if file and file.filename.endswith('.csv'):
+            import csv
+            import io
+            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+            result = parts_agent.bulk_import(stream.read())
+            if result['success']:
+                flash(f'✅ Added {result["added"]} parts successfully!', 'success')
+                if result['errors']:
+                    flash(f'⚠️ Errors: {", ".join(result["errors"][:5])}', 'error')
+            else:
+                flash(f'❌ Error: {result["error"]}', 'error')
+            return redirect(url_for('parts_index'))
+        else:
+            flash('Please upload a CSV file', 'error')
+            return redirect(url_for('parts_bulk_import'))
+    return render_template('parts_bulk_import.html')
+    
 # ============================================
 # SITEMAP & ROBOTS
 # ============================================
