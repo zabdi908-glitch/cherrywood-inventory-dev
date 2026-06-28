@@ -572,12 +572,14 @@ def parts_view(id):
         return redirect(url_for('parts_index'))
     return render_template('parts_view.html', part=part, parts_agent=parts_agent)
 
-@app.route('/part/<int:id>')
-def part_public_view(id):
-    part = parts_agent.get_part(id)
+@app.route('/part/<slug>')
+def part_public_view(slug):
+    # We now fetch the part using the slug, not the ID
+    part = parts_agent.get_part_by_slug(slug)
     if not part:
         flash('Part not found', 'error')
         return redirect(url_for('parts_public'))
+    
     meta_description = f"{part['part_name']} - OEM: {part['oem_number'] or 'N/A'}. Price: £{part['price']}. Available from Cherrywood Auto Parts."
     return render_template('part_public_view.html', part=part, parts_agent=parts_agent, meta_description=meta_description, request=request)
 
