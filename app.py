@@ -29,7 +29,7 @@ def add_csp_header(response):
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://maps.googleapis.com https://maps.gstatic.com; "
         "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://maps.googleapis.com; "
-        "img-src 'self' data: https://via.placeholder.com https://images.pexels.com https://maps.googleapis.com https://maps.gstatic.com; "
+        "img-src 'self' data: https://via.placeholder.com https://images.pexels.com https://maps.googleapis.com https://maps.gstatic.com https://i.postimg.cc; "
         "font-src 'self' https://cdnjs.cloudflare.com; "
         "connect-src 'self' https://maps.googleapis.com; "
         "frame-src 'self' https://www.google.com https://maps.google.com; "
