@@ -39,7 +39,6 @@ class PartsAgent:
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )''')
-            # Add slug column if it doesn't exist
             try:
                 conn.execute('ALTER TABLE parts ADD COLUMN slug TEXT')
             except:
@@ -62,12 +61,7 @@ class PartsAgent:
         conn.row_factory = sqlite3.Row
         return conn
 
-    # ============================================
-    # SLUG FUNCTIONS
-    # ============================================
-
     def slugify(self, text):
-        """Convert text to a URL-friendly slug"""
         if not text:
             return ''
         text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
@@ -76,7 +70,6 @@ class PartsAgent:
         return text
 
     def generate_slug(self, part_name, part_id):
-        """Generate a unique slug from part name and ID"""
         base_slug = self.slugify(part_name)
         if not base_slug:
             base_slug = f"part-{part_id}"
@@ -125,6 +118,7 @@ class PartsAgent:
         except Exception as e:
             return None
 
+    # === KEEP THIS for admin panel ===
     def get_all_parts(self):
         try:
             conn = self.get_db()
@@ -133,6 +127,57 @@ class PartsAgent:
             return [dict(p) for p in parts]
         except Exception as e:
             return []
+
+    # === NEW FAST METHOD FOR PUBLIC PAGE (Handles Pagination, Sorting, Filters all in SQL) ===
+    def get_parts(self, page=1, per_page=20, category=None, price_range=None, status=None, sort='newest', search_query=None):
+        try:
+            conn = self.get_db()
+            where_clauses = []
+            params = []
+            
+            if category:
+                where_clauses.append("category = ?")
+                params.append(category)
+            if status:
+                where_clauses.append("stock_status = ?")
+                params.append(status)
+            if price_range:
+                min_p, max_p = map(float, price_range.split('-'))
+                where_clauses.append("price >= ? AND price <= ?")
+                params.extend([min_p, max_p])
+            if search_query:
+                search_term = f'%{search_query}%'
+                where_clauses.append("(part_name LIKE ? OR oem_number LIKE ? OR make LIKE ? OR model LIKE ? OR engine_code LIKE ? OR stock_id LIKE ?)")
+                params.extend([search_term, search_term, search_term, search_term, search_term, search_term])
+
+            where_sql = ""
+            if where_clauses:
+                where_sql = "WHERE " + " AND ".join(where_clauses)
+
+            # Count total
+            count_sql = f"SELECT COUNT(*) as total FROM parts {where_sql}"
+            total = conn.execute(count_sql, params).fetchone()['total']
+
+            # Build Order By
+            order_sql = "ORDER BY created_at DESC"
+            if sort == 'price_asc':
+                order_sql = "ORDER BY price ASC"
+            elif sort == 'price_desc':
+                order_sql = "ORDER BY price DESC"
+            elif sort == 'name':
+                order_sql = "ORDER BY part_name ASC"
+
+            # Main query with limit/offset
+            offset = (page - 1) * per_page
+            sql = f"SELECT * FROM parts {where_sql} {order_sql} LIMIT ? OFFSET ?"
+            params.extend([per_page, offset])
+
+            rows = conn.execute(sql, params).fetchall()
+            conn.close()
+            return {'parts': [dict(r) for r in rows], 'total': total}
+        except Exception as e:
+            print(f"Error in get_parts: {e}")
+            return {'parts': [], 'total': 0}
 
     def search_parts(self, query):
         try:
@@ -167,7 +212,6 @@ class PartsAgent:
                  data.get('generation'), data.get('oem_number'), data.get('engine_code'),
                  data.get('condition'), data.get('price'), data.get('stock_status', 'Available'),
                  data.get('location'), data.get('notes'), part_id))
-            # Update slug
             slug = self.generate_slug(data.get('part_name', ''), part_id)
             conn.execute('UPDATE parts SET slug = ? WHERE id = ?', (slug, part_id))
             conn.commit()
@@ -187,22 +231,17 @@ class PartsAgent:
             return {'success': False, 'error': str(e)}
 
     # ============================================
-    # PHOTO FUNCTIONS
+    # PHOTO FUNCTIONS & BULK IMPORT (Kept exactly as you had them)
     # ============================================
 
     def add_photo(self, part_id, photo_url, order=0):
         try:
-            # ✅ Compress the image before saving
             from compress_images import compress_image, create_thumbnail
             compress_image(photo_url)
-
-            # ✅ Create thumbnail for listing pages
             thumb_path = create_thumbnail(photo_url)
-
             conn = self.get_db()
             conn.execute('INSERT INTO part_photos (part_id, photo_url, photo_order) VALUES (?, ?, ?)',
                         (part_id, photo_url, order))
-            # If thumbnail was created, save it too
             if thumb_path:
                 conn.execute('INSERT INTO part_photos (part_id, photo_url, photo_order) VALUES (?, ?, ?)',
                             (part_id, thumb_path, order + 100))
@@ -231,17 +270,12 @@ class PartsAgent:
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
-    # ============================================
-    # BULK IMPORT
-    # ============================================
-
     def bulk_import(self, csv_content):
         try:
             reader = csv.DictReader(io.StringIO(csv_content))
             added = 0
             errors = []
             line = 1
-
             for row in reader:
                 line += 1
                 try:
@@ -264,7 +298,6 @@ class PartsAgent:
                     if not data['stock_id']:
                         errors.append(f"Row {line}: Missing stock_id")
                         continue
-
                     result = self.add_part(data)
                     if result['success']:
                         added += 1
@@ -273,7 +306,6 @@ class PartsAgent:
                     time.sleep(0.01)
                 except Exception as e:
                     errors.append(f"Row {line}: {str(e)}")
-
             return {'success': True, 'added': added, 'errors': errors}
         except Exception as e:
             return {'success': False, 'error': str(e)}
