@@ -25,8 +25,7 @@
                 <i class="fa-solid fa-download mr-2"></i> Download Template
             </a>
         </div>
-
-      <form method="POST" enctype="multipart/form-data" class="space-y-4">
+<form method="POST" action="/parts/bulk-import" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div>
                 <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Select CSV File</label>
