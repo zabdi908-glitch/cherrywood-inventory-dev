@@ -27,17 +27,17 @@ def inject_version():
 def add_csp_header(response):
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; "  # <-- Added unsafe-inline
-        "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
-        "img-src 'self' data: https://via.placeholder.com https://images.pexels.com; "
+        "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://maps.googleapis.com https://maps.gstatic.com; "
+        "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://maps.googleapis.com; "
+        "img-src 'self' data: https://via.placeholder.com https://images.pexels.com https://maps.googleapis.com https://maps.gstatic.com; "
         "font-src 'self' https://cdnjs.cloudflare.com; "
-        "connect-src 'self'; "
-        "frame-src 'self'; "
+        "connect-src 'self' https://maps.googleapis.com; "
+        "frame-src 'self' https://www.google.com https://maps.google.com; "
         "object-src 'none'; "
         "base-uri 'self'"
     )
     return response
-
+    
 # ============================================
 # CONFIGURATION
 # ============================================
