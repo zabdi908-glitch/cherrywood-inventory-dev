@@ -632,6 +632,82 @@ def google_verify():
 def google_verify_static():
     return send_from_directory('static', 'googlea8a0fd57acfb2a7e.html')
 
+@app.route('/parts/bulk-update', methods=['GET', 'POST'])
+@login_required
+def parts_bulk_update():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file uploaded', 'error')
+            return redirect(url_for('parts_bulk_update'))
+        file = request.files['file']
+        if file.filename == '':
+            flash('No file selected', 'error')
+            return redirect(url_for('parts_bulk_update'))
+        if file and file.filename.endswith('.csv'):
+            import csv
+            import io
+            
+            # Fix: use utf-8-sig to handle Windows BOM encoding perfectly
+            stream = io.StringIO(file.stream.read().decode("utf-8-sig"), newline=None)
+            reader = csv.DictReader(stream)
+            updated = 0
+            errors = []
+            line = 1
+            
+            # Connect directly to the database to update efficiently
+            db = get_db()
+            
+            for row in reader:
+                line += 1
+                stock_id = row.get('stock_id', '').strip()
+                if not stock_id:
+                    errors.append(f"Row {line}: Missing stock_id")
+                    continue
+                
+                # Build the dynamic SQL update statement based on what columns the user provided
+                updates = []
+                params = []
+                if 'price' in row and row['price'].strip():
+                    updates.append("price = ?")
+                    params.append(float(row['price'].strip()))
+                if 'stock_status' in row and row['stock_status'].strip():
+                    updates.append("stock_status = ?")
+                    params.append(row['stock_status'].strip())
+                if 'location' in row and row['location'].strip():
+                    updates.append("location = ?")
+                    params.append(row['location'].strip())
+                if 'notes' in row and row['notes'].strip():
+                    updates.append("notes = ?")
+                    params.append(row['notes'].strip())
+                
+                if not updates:
+                    errors.append(f"Row {line}: No valid fields to update (price/status/location/notes)")
+                    continue
+                
+                # Always update the timestamp
+                updates.append("updated_at = CURRENT_TIMESTAMP")
+                
+                # Run the update query directly against the stock_id
+                sql = f"UPDATE parts SET {', '.join(updates)} WHERE stock_id = ?"
+                params.append(stock_id)
+                
+                try:
+                    db.execute(sql, params)
+                    updated += 1
+                except Exception as e:
+                    errors.append(f"Row {line}: {str(e)}")
+            
+            db.commit()
+            db.close()
+            flash(f'✅ Updated {updated} parts successfully!', 'success')
+            if errors:
+                flash(f'⚠️ Errors: {", ".join(errors[:5])}', 'error')
+            return redirect(url_for('parts_index'))
+        else:
+            flash('Please upload a CSV file', 'error')
+            return redirect(url_for('parts_bulk_update'))
+    return render_template('parts_bulk_update.html')
+    
 # ============================================
 # RUN THE APP
 # ============================================
