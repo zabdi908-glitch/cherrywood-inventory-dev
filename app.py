@@ -11,23 +11,23 @@ from forms import PartForm
 
 app = Flask(__name__)
 csrf = CSRFProtect(app)
+
 # ============================================
 # CACHE-BUSTING
 # ============================================
-
 @app.context_processor
 def inject_version():
     import time
     return {'version': int(time.time())}
-# ============================================
-# CONTENT SECURITY POLICY (CSP)
-# ============================================
 
+# ============================================
+# CONTENT SECURITY POLICY (CSP) - FIXED
+# ============================================
 @app.after_request
 def add_csp_header(response):
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
-        "script-src 'self' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; "
+        "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; "  # <-- Added unsafe-inline
         "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
         "img-src 'self' data: https://via.placeholder.com https://images.pexels.com; "
         "font-src 'self' https://cdnjs.cloudflare.com; "
@@ -37,21 +37,20 @@ def add_csp_header(response):
         "base-uri 'self'"
     )
     return response
+
 # ============================================
 # CONFIGURATION
 # ============================================
-
 app.secret_key = os.getenv('SECRET_KEY', 'cherrywood_yard_secret_key_2026')
 
 if os.getenv('RENDER'):
-    DATABASE = os.path.join('/data', 'inventory.db')  # Persistent disk
+    DATABASE = os.path.join('/data', 'inventory.db')
 else:
     DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inventory.db')
 
 # ============================================
 # DATABASE FUNCTIONS
 # ============================================
-
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -85,7 +84,6 @@ init_db()
 # ============================================
 # BACKUP SYSTEM
 # ============================================
-
 def auto_backup_vehicles():
     try:
         db = get_db()
@@ -133,7 +131,6 @@ def backup_after_change(func):
 # ============================================
 # VEHICLE ROUTES
 # ============================================
-
 @app.route('/')
 def index():
     try:
@@ -219,7 +216,6 @@ def logout():
 # ============================================
 # VEHICLE ADMIN
 # ============================================
-
 @app.route('/add', methods=['POST'])
 @login_required
 @backup_after_change
@@ -294,24 +290,17 @@ def backup_now():
         db = get_db()
         rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
         db.close()
-        
         vehicles = []
         for row in rows:
             vehicles.append(dict(row))
-        
         backup_file = os.path.join('/data', 'vehicles_backup.json')
         with open(backup_file, 'w') as f:
             json.dump(vehicles, f, indent=2)
-        
         flash(f'✅ Backup created with {len(vehicles)} vehicles!', 'success')
         return redirect(url_for('index'))
     except Exception as e:
         flash(f'❌ Backup failed: {e}', 'error')
         return redirect(url_for('index'))
-
-# ============================================
-# IMPROVED RESTORE (WITH CONFIRMATION)
-# ============================================
 
 @app.route('/admin/restore', methods=['POST'])
 @login_required
@@ -321,24 +310,18 @@ def restore_vehicles():
         if not os.path.exists(backup_dir):
             flash('❌ No backup folder found. Please run a backup first.', 'error')
             return redirect(url_for('index'))
-        
         files = sorted([f for f in os.listdir(backup_dir) if f.startswith('full_backup_')], reverse=True)
         if not files:
             flash('❌ No backup files found. Please run a backup first.', 'error')
             return redirect(url_for('index'))
-        
         latest_backup = os.path.join(backup_dir, files[0])
-        
         with open(latest_backup, 'r') as f:
             data = json.load(f)
-        
         vehicles = data.get('vehicles', [])
         parts = data.get('parts', [])
-        
         flash(f'⚠️ This will REPLACE all current data with backup from {data["timestamp"]}', 'warning')
         flash(f'📊 Vehicles: {len(vehicles)} | Parts: {len(parts)}', 'info')
         flash('👉 Click "Restore" again to confirm, or "Cancel" to abort.', 'info')
-        
         session['pending_restore'] = data
         return redirect(url_for('index'))
     except Exception as e:
@@ -353,12 +336,9 @@ def restore_confirm():
         if not data:
             flash('❌ No restore pending', 'error')
             return redirect(url_for('index'))
-        
         conn = sqlite3.connect(DATABASE)
         conn.execute('DELETE FROM vehicle')
         conn.execute('DELETE FROM parts')
-        
-        # Restore vehicles
         for v in data.get('vehicles', []):
             conn.execute('''INSERT INTO vehicle 
                 (title, make, model, year, reg, engine, fuel, transmission, 
@@ -367,8 +347,6 @@ def restore_confirm():
                 (v['title'], v['make'], v['model'], v['year'], v['reg'],
                  v['engine'], v['fuel'], v['transmission'], v['mileage'],
                  v['status'], v['image_url'], v['parts_available'], v['description']))
-        
-        # Restore parts
         for p in data.get('parts', []):
             conn.execute('''INSERT INTO parts 
                 (stock_id, part_name, category, part_type, make, model, generation, 
@@ -380,10 +358,8 @@ def restore_confirm():
                  p.get('condition', 'Good'), p.get('price', 0),
                  p.get('stock_status', 'Available'), p.get('location', ''),
                  p.get('notes', ''), p.get('slug', '')))
-        
         conn.commit()
         conn.close()
-        
         flash(f'✅ Restored {len(data["vehicles"])} vehicles and {len(data["parts"])} parts successfully!', 'success')
         return redirect(url_for('index'))
     except Exception as e:
@@ -393,7 +369,6 @@ def restore_confirm():
 # ============================================
 # INFO PAGES
 # ============================================
-
 @app.route('/gallery')
 def gallery():
     try:
@@ -451,8 +426,42 @@ def delivery():
     return render_template('delivery.html')
 
 # ============================================
-# PARTS INVENTORY ROUTES
+# PARTS INVENTORY ROUTES - FIXED MASTER ROUTE
 # ============================================
+@app.route('/parts-public')
+def parts_public():
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    
+    # Get filter parameters
+    category = request.args.get('category', None)
+    price_range = request.args.get('price', None)
+    status = request.args.get('status', None)
+    sort = request.args.get('sort', 'newest')
+    search_query = request.args.get('q', '').strip()
+
+    # Call the NEW fast database method
+    result = parts_agent.get_parts(
+        page=page, per_page=per_page,
+        category=category, price_range=price_range,
+        status=status, sort=sort, search_query=search_query
+    )
+    
+    parts = result['parts']
+    total = result['total']
+    pages = (total + per_page - 1) // per_page
+
+    # Preserve current filters for pagination links
+    filter_args = request.args.copy()
+    filter_args.pop('page', None)
+
+    return render_template('parts_public.html', 
+                           parts=parts, 
+                           page=page, 
+                           pages=pages, 
+                           selected_category=category,
+                           search_query=search_query,
+                           filter_args=filter_args)
 
 @app.route('/parts')
 def parts_index():
@@ -463,6 +472,7 @@ def parts_index():
         flash(f'Error loading parts: {e}', 'error')
         return render_template('parts_index.html', parts=[])
 
+# ===== Other Parts routes =====
 @app.route('/parts/search')
 def parts_search():
     query = request.args.get('q', '').strip()
@@ -562,151 +572,6 @@ def parts_view(id):
         return redirect(url_for('parts_index'))
     return render_template('parts_view.html', part=part, parts_agent=parts_agent)
 
-@app.route('/parts-public')
-def parts_public():
-    page = request.args.get('page', 1, type=int)
-    per_page = 20
-    all_parts = parts_agent.get_all_parts()
-    total = len(all_parts)
-    start = (page - 1) * per_page
-    parts = all_parts[start:start + per_page]
-    pages = (total + per_page - 1) // per_page
-    return render_template('parts_public.html', parts=parts, page=page, pages=pages)
-
-@app.route('/parts-public/search')
-def parts_public_search():
-    query = request.args.get('q', '').strip()
-    if not query:
-        return redirect(url_for('parts_public'))
-    parts = parts_agent.search_parts(query)
-    # Add pagination to search results
-    page = request.args.get('page', 1, type=int)
-    per_page = 20
-    total = len(parts)
-    start = (page - 1) * per_page
-    parts = parts[start:start + per_page]
-    pages = (total + per_page - 1) // per_page
-    return render_template('parts_public.html', parts=parts, search_query=query, page=page, pages=pages)
-
-@app.route('/parts-public/category/<category>')
-def parts_public_category(category):
-    all_parts = parts_agent.get_all_parts()
-    parts = [p for p in all_parts if p.get('category') == category]
-    return render_template('parts_public.html', parts=parts, selected_category=category)
-
-@app.route('/parts-public/price/<min_price>-<max_price>')
-def parts_public_price(min_price, max_price):
-    all_parts = parts_agent.get_all_parts()
-    parts = [p for p in all_parts if float(min_price) <= float(p.get('price', 0)) <= float(max_price)]
-    return render_template('parts_public.html', parts=parts)
-
-@app.route('/parts-public/status/<status>')
-def parts_public_status(status):
-    all_parts = parts_agent.get_all_parts()
-    parts = [p for p in all_parts if p.get('stock_status') == status]
-    return render_template('parts_public.html', parts=parts)
-
-@app.route('/parts-public/sort/<sort_by>')
-def parts_public_sort(sort_by):
-    all_parts = parts_agent.get_all_parts()
-    if sort_by == 'price_asc':
-        parts = sorted(all_parts, key=lambda x: float(x.get('price', 0)))
-    elif sort_by == 'price_desc':
-        parts = sorted(all_parts, key=lambda x: float(x.get('price', 0)), reverse=True)
-    elif sort_by == 'name':
-        parts = sorted(all_parts, key=lambda x: x.get('part_name', ''))
-    else:
-        parts = all_parts
-    return render_template('parts_public.html', parts=parts)
-
-@app.route('/parts/bulk-import', methods=['GET', 'POST'])
-@login_required
-def parts_bulk_import():
-    if request.method == 'POST':
-        if 'file' not in request.files:
-            flash('No file uploaded', 'error')
-            return redirect(url_for('parts_bulk_import'))
-        file = request.files['file']
-        if file.filename == '':
-            flash('No file selected', 'error')
-            return redirect(url_for('parts_bulk_import'))
-        if file and file.filename.endswith('.csv'):
-            import csv
-            import io
-            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-            result = parts_agent.bulk_import(stream.read())
-            if result['success']:
-                flash(f'✅ Added {result["added"]} parts successfully!', 'success')
-                if result['errors']:
-                    flash(f'⚠️ Errors: {", ".join(result["errors"][:5])}', 'error')
-            else:
-                flash(f'❌ Error: {result["error"]}', 'error')
-            return redirect(url_for('parts_index'))
-        else:
-            flash('Please upload a CSV file', 'error')
-            return redirect(url_for('parts_bulk_import'))
-    return render_template('parts_bulk_import.html')
-
-@app.route('/parts/bulk-update', methods=['GET', 'POST'])
-@login_required
-def parts_bulk_update():
-    if request.method == 'POST':
-        if 'file' not in request.files:
-            flash('No file uploaded', 'error')
-            return redirect(url_for('parts_bulk_update'))
-        file = request.files['file']
-        if file.filename == '':
-            flash('No file selected', 'error')
-            return redirect(url_for('parts_bulk_update'))
-        if file and file.filename.endswith('.csv'):
-            import csv
-            import io
-            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-            reader = csv.DictReader(stream)
-            updated = 0
-            errors = []
-            line = 1
-            for row in reader:
-                line += 1
-                stock_id = row.get('stock_id', '').strip()
-                if not stock_id:
-                    errors.append(f"Row {line}: Missing stock_id")
-                    continue
-                all_parts = parts_agent.get_all_parts()
-                part = next((p for p in all_parts if p.get('stock_id') == stock_id), None)
-                if not part:
-                    errors.append(f"Row {line}: stock_id '{stock_id}' not found")
-                    continue
-                data = {
-                    'stock_id': part['stock_id'],
-                    'part_name': part['part_name'],
-                    'category': part['category'],
-                    'part_type': part.get('part_type', ''),
-                    'make': part.get('make', ''),
-                    'model': part.get('model', ''),
-                    'generation': part.get('generation', ''),
-                    'oem_number': part.get('oem_number', ''),
-                    'engine_code': part.get('engine_code', ''),
-                    'condition': part.get('condition', 'Good'),
-                    'price': float(row.get('price', part.get('price', 0))),
-                    'stock_status': row.get('stock_status', part.get('stock_status', 'Available')),
-                    'location': row.get('location', part.get('location', '')),
-                    'notes': row.get('notes', part.get('notes', ''))
-                }
-                result = parts_agent.update_part(part['id'], data)
-                if result['success']:
-                    updated += 1
-                else:
-                    errors.append(f"Row {line}: {result['error']}")
-            flash(f'✅ Updated {updated} parts successfully!', 'success')
-            if errors:
-                flash(f'⚠️ Errors: {", ".join(errors[:5])}', 'error')
-            return redirect(url_for('parts_index'))
-        else:
-            flash('Please upload a CSV file', 'error')
-            return redirect(url_for('parts_bulk_update'))
-    return render_template('parts_bulk_update.html')
-
 @app.route('/part/<int:id>')
 def part_public_view(id):
     part = parts_agent.get_part(id)
@@ -716,10 +581,11 @@ def part_public_view(id):
     meta_description = f"{part['part_name']} - OEM: {part['oem_number'] or 'N/A'}. Price: £{part['price']}. Available from Cherrywood Auto Parts."
     return render_template('part_public_view.html', part=part, parts_agent=parts_agent, meta_description=meta_description, request=request)
 
+# (Note: The old /parts-public/price, /status, /sort routes are no longer needed since we handle them in the master route above)
+
 # ============================================
 # SITEMAP & ROBOTS
 # ============================================
-
 @app.route('/sitemap.xml')
 def sitemap():
     return send_from_directory('.', 'sitemap.xml', mimetype='application/xml')
@@ -739,7 +605,6 @@ def google_verify_static():
 # ============================================
 # RUN THE APP
 # ============================================
-
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
