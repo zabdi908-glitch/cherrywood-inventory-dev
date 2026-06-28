@@ -1,5 +1,7 @@
 {% extends "base.html" %}
-
+{% block meta_description %}
+<meta name="description" content="Browse our full inventory of used Audi, VW, SEAT and Škoda car parts. Search by make, model, or part number. Nationwide delivery available.">
+{% endblock %}
 {% block title %}Parts - Cherrywood Auto Parts{% endblock %}
 
 {% block content %}
@@ -33,7 +35,11 @@
                 {% endif %}
             </div>
         </form>
-
+{% if page > 1 %}
+    <meta name="robots" content="noindex, follow">
+    <link rel="canonical" href="https://cherrywoodautoparts.co.uk/parts-public">
+{% endif %}
+        
         <!-- Category Filters -->
         <div class="flex flex-wrap gap-3 mt-4">
             <div class="flex flex-wrap gap-2">
