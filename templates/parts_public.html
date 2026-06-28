@@ -15,7 +15,7 @@
     <!-- ===== SEARCH & FILTERS ===== -->
     <div class="mb-6">
         <!-- Search Bar -->
-        <form action="/parts-public/search" method="GET" class="flex flex-col md:flex-row gap-3">
+        <form action="/parts-public" method="GET" class="flex flex-col md:flex-row gap-3">
             <div class="flex-1">
                 <input type="text" name="q" 
                        placeholder="🔍 Search part number, model, engine code..." 
@@ -41,49 +41,49 @@
                     All Parts
                 </a>
                 {% for cat in ['Engine', 'Gearbox', 'Electronics', 'Body Panel', 'Interior', 'Wheels', 'Lighting', 'Suspension', 'Brakes', 'Exhaust'] %}
-                    <a href="/parts-public/category/{{ cat }}" class="px-4 py-2 rounded-full text-sm font-bold bg-slate-800 text-slate-300 hover:bg-[#f97316] hover:text-black transition">
+                    <a href="/parts-public?category={{ cat }}" class="px-4 py-2 rounded-full text-sm font-bold bg-slate-800 text-slate-300 hover:bg-[#f97316] hover:text-black transition">
                         {{ cat }}
                     </a>
                 {% endfor %}
             </div>
         </div>
 
-        <!-- Price, Status, Sort Filters -->
-        <div class="flex flex-wrap gap-3 mt-3">
+        <!-- Price, Status, Sort Filters as a single form -->
+        <form id="filter-form" action="/parts-public" method="GET" class="flex flex-wrap gap-3 mt-3">
             <!-- Price Filter -->
             <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
                 <span class="text-xs text-slate-400 font-bold">Price:</span>
-                <select name="price_filter" class="bg-[#0f172a] text-white text-sm rounded px-2 py-1 focus:outline-none" onchange="window.location.href=this.value">
-                    <option value="/parts-public">All</option>
-                    <option value="/parts-public/price/0-100">Under £100</option>
-                    <option value="/parts-public/price/100-500">£100 - £500</option>
-                    <option value="/parts-public/price/500-1000">£500 - £1000</option>
-                    <option value="/parts-public/price/1000-99999">Over £1000</option>
+                <select name="price" class="bg-[#0f172a] text-white text-sm rounded px-2 py-1 focus:outline-none" onchange="document.getElementById('filter-form').submit()">
+                    <option value="">All</option>
+                    <option value="0-100">Under £100</option>
+                    <option value="100-500">£100 - £500</option>
+                    <option value="500-1000">£500 - £1000</option>
+                    <option value="1000-99999">Over £1000</option>
                 </select>
             </div>
 
             <!-- Stock Status Filter -->
             <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
                 <span class="text-xs text-slate-400 font-bold">Status:</span>
-                <select name="stock_filter" class="bg-[#0f172a] text-white text-sm rounded px-2 py-1 focus:outline-none" onchange="window.location.href=this.value">
-                    <option value="/parts-public">All</option>
-                    <option value="/parts-public/status/Available">Available</option>
-                    <option value="/parts-public/status/Reserved">Reserved</option>
-                    <option value="/parts-public/status/Sold">Sold</option>
+                <select name="status" class="bg-[#0f172a] text-white text-sm rounded px-2 py-1 focus:outline-none" onchange="document.getElementById('filter-form').submit()">
+                    <option value="">All</option>
+                    <option value="Available">Available</option>
+                    <option value="Reserved">Reserved</option>
+                    <option value="Sold">Sold</option>
                 </select>
             </div>
 
             <!-- Sort Filter -->
             <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
                 <span class="text-xs text-slate-400 font-bold">Sort:</span>
-                <select name="sort" class="bg-[#0f172a] text-white text-sm rounded px-2 py-1 focus:outline-none" onchange="window.location.href=this.value">
-                    <option value="/parts-public">Newest First</option>
-                    <option value="/parts-public/sort/price_asc">Price: Low → High</option>
-                    <option value="/parts-public/sort/price_desc">Price: High → Low</option>
-                    <option value="/parts-public/sort/name">Name A → Z</option>
+                <select name="sort" class="bg-[#0f172a] text-white text-sm rounded px-2 py-1 focus:outline-none" onchange="document.getElementById('filter-form').submit()">
+                    <option value="newest">Newest First</option>
+                    <option value="price_asc">Price: Low → High</option>
+                    <option value="price_desc">Price: High → Low</option>
+                    <option value="name">Name A → Z</option>
                 </select>
             </div>
-        </div>
+        </form>
     </div>
 
     <!-- ===== PARTS GRID ===== -->
@@ -128,21 +128,21 @@
             {% endfor %}
         </div>
 
-        <!-- ===== PAGINATION ===== -->
+        <!-- ===== PAGINATION (NOW KEEPS FILTERS) ===== -->
         {% if pages > 1 %}
         <div class="flex justify-center gap-2 mt-8 flex-wrap">
             {% if page > 1 %}
-                <a href="/parts-public?page={{ page - 1 }}" class="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600 transition">Previous</a>
+                <a href="/parts-public?page={{ page - 1 }}{% for key, val in filter_args.items() %}&{{ key }}={{ val }}{% endfor %}" class="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600 transition">Previous</a>
             {% endif %}
             {% for p in range(1, pages + 1) %}
                 {% if p == page %}
                     <span class="px-4 py-2 bg-[#f97316] text-black rounded font-bold">{{ p }}</span>
                 {% else %}
-                    <a href="/parts-public?page={{ p }}" class="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600 transition">{{ p }}</a>
+                    <a href="/parts-public?page={{ p }}{% for key, val in filter_args.items() %}&{{ key }}={{ val }}{% endfor %}" class="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600 transition">{{ p }}</a>
                 {% endif %}
             {% endfor %}
             {% if page < pages %}
-                <a href="/parts-public?page={{ page + 1 }}" class="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600 transition">Next</a>
+                <a href="/parts-public?page={{ page + 1 }}{% for key, val in filter_args.items() %}&{{ key }}={{ val }}{% endfor %}" class="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600 transition">Next</a>
             {% endif %}
         </div>
         {% endif %}
