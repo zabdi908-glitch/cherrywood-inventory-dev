@@ -856,16 +856,15 @@ def proxy_chat():
         if not api_key:
             return jsonify({'error': 'API key not configured'}), 500
 
-        # 1. Manage the conversation history (capped to keep payload size/speed under control)
+        # 1. Manage the conversation history
         if session_id not in sessions:
             sessions[session_id] = []
         sessions[session_id].append({"role": "user", "content": user_message})
         sessions[session_id] = sessions[session_id][-10:]
 
-        # 2. Fetch live inventory — filtered by keywords from the user's message
+        # 2. Fetch live inventory
         try:
             db = get_db()
-
             stopwords = {
                 'the', 'and', 'for', 'with', 'have', 'has', 'you', 'your', 'are',
                 'can', 'need', 'looking', 'price', 'cost', 'much', 'how', 'what',
@@ -873,17 +872,14 @@ def proxy_chat():
                 'other', 'options', 'do', 'does', 'a', 'an', 'of', 'on', 'in'
             }
             words = re.findall(r'[a-zA-Z0-9]+', user_message.lower())
-
             keywords = []
             for w in words:
                 if len(w) <= 1 or w in stopwords:
                     continue
-                # Singularize simple plurals (e.g. "engines" -> "engine", "brakes" -> "brake")
-                # so they still match singular category names stored in the database.
                 singular = w[:-1] if len(w) > 3 and w.endswith('s') and not w.endswith('ss') else w
                 keywords.append(singular)
                 if singular != w:
-                    keywords.append(w)  # keep the original too, in case it's stored plural somewhere
+                    keywords.append(w)
 
             parts_rows = []
             if keywords:
@@ -895,7 +891,6 @@ def proxy_chat():
                         "(part_name LIKE ? OR make LIKE ? OR model LIKE ? OR category LIKE ? OR oem_number LIKE ? OR engine_code LIKE ?)"
                     )
                     params.extend([term, term, term, term, term, term])
-
                 where_sql = " OR ".join(like_clauses)
                 sql = f"""SELECT part_name, make, model, category, price, stock_status, oem_number
                           FROM parts
@@ -909,7 +904,6 @@ def proxy_chat():
                     "FROM parts WHERE stock_status = 'Available' "
                     "ORDER BY created_at DESC LIMIT 20"
                 ).fetchall()
-
             db.close()
 
             parts_list = "\n".join([
@@ -925,45 +919,26 @@ def proxy_chat():
         system_prompt = f"""You are a friendly auto parts assistant for Cherrywood Auto Parts.
 Your job is to help customers find parts, and when they are ready, collect their details for a staff member to follow up.
 {inventory_context}
-
-MULTI-LIST SELECTION PROTOCOL (READ THIS CAREFULLY):
+MULTI-LIST SELECTION PROTOCOL:
 When you provide a list of parts, explicitly label them (e.g., "Here are the **Engine** parts available:").
-When a customer asks for an option from a previous list (e.g., "option 1 from the first list"), you MUST:
-1. Identify which list they are referring to by reading the most recent messages.
-2. Extract the exact part name and price from that list's option.
-3. CRITICAL RULE: Do NOT guess the part! If you are uncertain about which list the customer is referring to, do NOT guess. Instead, politely say: "I'm sorry, I want to make sure I have the right part for you. Could you please copy and paste the exact part name you're interested in?"
-This guarantees you never assign the wrong part to their order.
-
-When you provide a list of parts, keep the list SHORT (maximum 5 items per message).
-
-CRITICAL RULE FOR VEHICLE MATCHING:
-When a customer asks for a specific vehicle model (e.g., "Audi A3"), you must prioritize parts that EXACTLY match that model. 
-If you do not have an exact match, DO NOT suggest parts from a different vehicle model (e.g., VW Golf).
-Instead, politely tell them: "I don't have any specific stock for that vehicle model at the moment. I can ask a staff member to check the yard for you, or if you prefer, I can check for alternatives from other models."
-
-IF THE CUSTOMER ASKS FOR AN EXTRA PART:
-If a customer submits an enquiry, and then asks about a DIFFERENT part or vehicle, treat this as a BRAND NEW separate enquiry.
-
-ENQUIRY SUBMISSION - FOLLOW THIS EXACTLY:
-At the very end of the conversation, after the customer has confirmed the specific parts they want, you MUST ask ONLY for their Name, Phone number, and Email address. 
-DO NOT ask them for the part or vehicle again.
-Once they provide those 3 details, respond with ONLY this exact format and nothing else:
+If you are uncertain about which list the customer is referring to, say: "I'm sorry, I want to make sure I have the right part for you. Could you please copy and paste the exact part name you're interested in?"
+Keep lists short (maximum 5 items per message).
+If a customer says "Option 1", look ONLY at the most recent list.
+If no exact vehicle match is found (e.g., Audi A3), DO NOT suggest a different model. Tell them a staff member will check the yard.
+ENQUIRY SUBMISSION:
+Once the customer confirms the parts and gives their Name, Phone, and Email, respond ONLY with:
 [ENQUIRY_COMPLETE]{{"name": "their name", "phone": "their phone", "email": "their email", "vehicle": "vehicle mentioned", "part": "part mentioned"}}
-Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted your details" - the system will generate that confirmation automatically. Your entire response in this case must be the [ENQUIRY_COMPLETE] tag immediately followed by valid JSON, with no other text before or after it.
+No other text.
 """
 
-        # 4. Call OpenAI with the HISTORY
+        # 4. Call OpenAI
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         payload = {
             "model": "gpt-4o-mini",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                *sessions[session_id]
-            ],
+            "messages": [{"role": "system", "content": system_prompt}] + sessions[session_id][-10:],
             "max_tokens": 400
         }
         response = requests.post("https://api.openai.com/v1/chat/completions", json=payload, headers=headers)
-
         if response.status_code != 200:
             return jsonify({'error': f"OpenAI API Error: {response.text}"}), response.status_code
         reply = response.json()['choices'][0]['message']['content']
@@ -971,38 +946,21 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
         sessions[session_id].append({"role": "assistant", "content": reply})
         sessions[session_id] = sessions[session_id][-10:]
 
-        # 5. Check for the Enquiry Completion flag
+        # 5. Check for completion
         if "[ENQUIRY_COMPLETE]" in reply:
             json_str = reply.replace("[ENQUIRY_COMPLETE]", "").strip()
-
             try:
                 customer_data = json.loads(json_str)
-
-                # Save to database
                 enquiry_id = enquiries_store.add_enquiry(customer_data)
-
                 if enquiry_id:
                     print(f"💾 Enquiry #{enquiry_id} saved to database", flush=True)
                 else:
                     print("⚠️ Enquiry DB save failed", flush=True)
-
-                # Notify staff
                 send_enquiry_email(customer_data)
-
-                # Send automatic customer reply
                 customer_reply = handle_enquiry_auto_reply(customer_data, get_db)
-
                 if enquiry_id and customer_reply:
-                    enquiries_store.update_status(
-                        enquiry_id,
-                        "Contacted",
-                        notes=customer_reply
-                    )
-
-                return jsonify({
-                    "reply": "✅ Your enquiry has been sent! We will call or email you back within 2 hours."
-                })
-
+                    enquiries_store.update_status(enquiry_id, "Contacted", notes=customer_reply)
+                return jsonify({"reply": "✅ Your enquiry has been sent! We will call or email you back within 2 hours."})
             except json.JSONDecodeError:
                 print(f"⚠️ [AI] Failed to parse enquiry JSON: {json_str}", flush=True)
 
