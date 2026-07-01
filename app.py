@@ -927,9 +927,10 @@ def proxy_chat():
             # given to the model, so "item 3" always means the same real row everywhere.
             current_list_id = None
             if parts_rows:
-            label_guess = keywords[0] if keywords else "parts"
+               # Everything inside the if block must be indented by the same amount (usually 4 spaces)
+               label_guess = keywords[0] if keywords else "parts"
             
-            try:  # <--- You must have this
+               try:
                 current_list_id = tracker.register_list(
                     label=label_guess,
                     items=[
@@ -942,21 +943,19 @@ def proxy_chat():
                         }
                         for p in parts_rows
                     ],
-                )  # <--- Make sure this closing parenthesis is here
-                
-            except Exception as e:
+                )
+             except Exception as e:
                 print(f"❌ [AI] Inventory fetch error: {e}", flush=True)
                 inventory_context = "Inventory temporarily unavailable."
                 current_list_id = None
 
-        # This is now outside the if/try/except block logic correctly
-        reference_block = tracker.build_reference_block()
+      # These lines are outside the 'if' block, so they are not indented
+      reference_block = tracker.build_reference_block()
 
         current_list_note = (
             f"(This list's ID is {current_list_id} — use it if the customer selects from it.)"
             if current_list_id else ""
         )
-      
         # 3. System prompt
         system_prompt = f"""You are a friendly auto parts assistant for Cherrywood Auto Parts.
 Your job is to help customers find parts, and when they are ready, collect their details for a staff member to follow up.
