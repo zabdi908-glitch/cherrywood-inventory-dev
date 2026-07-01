@@ -640,6 +640,21 @@ def parts_bulk_import():
             flash('Please upload a CSV file', 'error')
             return redirect(url_for('parts_bulk_import'))
     return render_template('parts_bulk_import.html')
+
+@app.route('/parts/bulk-delete', methods=['POST'])
+@login_required
+def parts_bulk_delete():
+    part_ids = request.form.getlist('part_ids')
+    if part_ids:
+        db = get_db()
+        placeholders = ', '.join(['?'] * len(part_ids))
+        db.execute(f'DELETE FROM parts WHERE id IN ({placeholders})', part_ids)
+        db.commit()
+        db.close()
+        flash(f'✅ Successfully deleted {len(part_ids)} part(s).', 'success')
+    else:
+        flash('❌ No parts selected.', 'error')
+    return redirect(url_for('parts_index'))
     
 # ============================================
 # SITEMAP & ROBOTS
