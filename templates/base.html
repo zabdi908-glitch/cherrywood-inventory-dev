@@ -7,7 +7,6 @@
     <title>{% block title %}Cherrywood Auto Parts{% endblock %}</title>
    <link rel="stylesheet" href="/static/output.css">
 <!-- Keep the CDN as a safe fallback just in case Render fails to build -->
-<script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- ✅ CACHE-BUSTING: Version parameter forces fresh CSS -->
@@ -143,6 +142,190 @@
             btn.setAttribute('aria-expanded', !isOpen);
         });
     </script>
+
+<style>
+  #bap-widget {
+    position: fixed; bottom: 24px; right: 24px; z-index: 99999;
+    font-family: 'Segoe UI', Arial, sans-serif; display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
+  }
+  #bap-trigger {
+    background: #C62828; color: white; padding: 13px 20px; border-radius: 50px; cursor: pointer;
+    font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 4px 24px rgba(198,40,40,0.45); transition: transform 0.2s, box-shadow 0.2s; user-select: none;
+  }
+  #bap-trigger:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(198,40,40,0.55); }
+  #bap-box {
+    width: 360px; height: 520px; background: #0f0f0f; border-radius: 16px; border: 1px solid #2a2a2a;
+    display: none; flex-direction: column; overflow: hidden; box-shadow: 0 12px 50px rgba(0,0,0,0.6);
+  }
+  #bap-box.open { display: flex; }
+  #bap-header { background: #C62828; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+  #bap-header-left { display: flex; align-items: center; gap: 10px; }
+  #bap-avatar { width: 38px; height: 38px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 11px; color: white; }
+  #bap-title { color: white; font-weight: 700; font-size: 14px; }
+  #bap-status { display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+  #bap-dot { width: 7px; height: 7px; background: #69F0AE; border-radius: 50%; animation: bapPulse 2s infinite; }
+  @keyframes bapPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  #bap-status-text { color: rgba(255,255,255,0.8); font-size: 11px; }
+  #bap-close { background: rgba(255,255,255,0.15); border: none; color: white; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  #bap-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  #bap-messages::-webkit-scrollbar { width: 4px; }
+  #bap-messages::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+  .bap-msg { max-width: 82%; padding: 10px 13px; font-size: 13.5px; line-height: 1.55; border-radius: 4px; }
+  .bap-msg-user { background: #C62828; color: white; align-self: flex-end; border-radius: 16px 16px 3px 16px; }
+  .bap-msg-ai { background: #1c1c1c; color: #f0f0f0; align-self: flex-start; border-radius: 16px 16px 16px 3px; border: 1px solid #2a2a2a; }
+  #bap-quick-replies { padding: 0 12px 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+  #bap-quick-replies button { background: transparent; border: 1px solid #333; color: #aaa; border-radius: 20px; padding: 5px 12px; font-size: 12px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  #bap-quick-replies button:hover { border-color: #C62828; color: white; background: rgba(198,40,40,0.1); }
+  #bap-input-row { padding: 10px 12px; border-top: 1px solid #1e1e1e; display: flex; gap: 8px; background: #141414; }
+  #bap-input { flex: 1; background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 10px; padding: 10px 13px; color: #f0f0f0; font-size: 13.5px; outline: none; }
+  #bap-input:focus { border-color: #C62828; }
+  #bap-send-btn { background: #C62828; border: none; border-radius: 10px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; }
+  #bap-send-btn:hover { background: #B71C1C; }
+  #bap-send-btn:disabled { background: #333; cursor: not-allowed; }
+  #bap-footer { text-align: center; font-size: 10.5px; color: #444; padding: 6px 0 8px; background: #141414; }
+  @media (max-width: 480px) { #bap-box { width: calc(100vw - 24px); height: 70vh; } #bap-widget { right: 12px; bottom: 12px; } }
+</style>
+
+<div id="bap-widget">
+  <div id="bap-trigger" onclick="bapToggle()">
+    <span id="bap-trigger-icon">💬</span>
+    <span id="bap-trigger-label">Parts Assistant</span>
+  </div>
+  <div id="bap-box">
+    <div id="bap-header">
+      <div id="bap-header-left">
+        <div id="bap-avatar">BAP</div>
+        <div>
+          <div id="bap-title">Auto Parts Pro</div>
+          <div id="bap-status">
+            <span id="bap-dot"></span>
+            <span id="bap-status-text">AI Assistant</span>
+          </div>
+        </div>
+      </div>
+      <button id="bap-close" onclick="bapToggle()">✕</button>
+    </div>
+    <div id="bap-messages"></div>
+    <div id="bap-quick-replies">
+      <button onclick="bapQuick('Check part availability')">Check availability</button>
+      <button onclick="bapQuick('I need a price')">Get a price</button>
+      <button onclick="bapQuick('Place an enquiry')">Place enquiry</button>
+    </div>
+    <div id="bap-input-row">
+      <input id="bap-input" type="text" placeholder="Ask about a part..." onkeydown="if(event.key==='Enter') bapSend()" autocomplete="off" />
+      <button id="bap-send-btn" onclick="bapSend()">➤</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const SERVER_URL = "/api/proxy-chat"; // Points directly to your Python backend!
+  let isOpen = false;
+  let isLoading = false;
+  let hasOpened = false;
+
+  function bapToggle() {
+    isOpen = !isOpen;
+    const box = document.getElementById("bap-box");
+    if (isOpen) {
+      box.classList.add("open");
+      if (!hasOpened) {
+        hasOpened = true;
+        setTimeout(() => {
+          addMessage("ai", "Hi there! 👋 I can help you find parts, check prices, or take an enquiry. What can I help you with today?");
+        }, 300);
+      }
+    } else {
+      box.classList.remove("open");
+    }
+  }
+
+  function addMessage(type, text) {
+    const box = document.getElementById("bap-messages");
+    const div = document.createElement("div");
+    div.className = "bap-msg " + (type === "user" ? "bap-msg-user" : "bap-msg-ai");
+    div.innerHTML = text.replace(/\n/g, "<br>");
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+    return div;
+  }
+
+  function showTyping() {
+    const box = document.getElementById("bap-messages");
+    const div = document.createElement("div");
+    div.className = "bap-msg bap-msg-ai typing";
+    div.id = "bap-typing";
+    div.innerHTML = `<span class="bap-dot-anim">●</span><span class="bap-dot-anim">●</span><span class="bap-dot-anim">●</span>`;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function removeTyping() {
+    const el = document.getElementById("bap-typing");
+    if (el) el.remove();
+  }
+
+    async function bapSend() {
+        const input = document.getElementById("bap-input");
+        const btn = document.getElementById("bap-send-btn");
+        const message = input.value.trim();
+        if (!message || isLoading) return;
+
+        isLoading = true;
+        btn.disabled = true;
+        input.value = "";
+
+        addMessage("user", message);
+        showTyping();
+
+        try {
+            // Generate a persistent session ID for this browser tab
+            let sessionId = localStorage.getItem("bap_session_id");
+            if (!sessionId) {
+                sessionId = "chat_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem("bap_session_id", sessionId);
+            }
+
+            console.log("📤 Sending message with Session:", sessionId);
+            const response = await fetch("/api/proxy-chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message, sessionId }), // <-- Sending the ID now
+            });
+            
+            const data = await response.json();
+            removeTyping();
+
+            if (data.error) {
+                console.error("⚠️ Backend Error:", data.error);
+                addMessage("ai", "⚠️ Server Error: " + data.error);
+            } else {
+                console.log("✅ AI Reply:", data.reply);
+                addMessage("ai", data.reply);
+            }
+        } catch (err) {
+            removeTyping();
+            console.error("❌ Frontend Catch Error:", err);
+            addMessage("ai", "Connection issue: " + err.message);
+        }
+
+        isLoading = false;
+        btn.disabled = false;
+        input.focus();
+    }
+
+  function bapQuick(text) {
+    document.getElementById("bap-input").value = text;
+    bapSend();
+  }
+
+  window.bapToggle = bapToggle;
+  window.bapSend = bapSend;
+  window.bapQuick = bapQuick;
+})();
+</script>
 
 </body>
 </html>
