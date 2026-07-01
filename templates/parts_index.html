@@ -50,94 +50,119 @@
                     </a>
                 {% endif %}
             </form>
-          <div class="flex gap-2">
-    <a href="/parts/add" class="px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition">
-        <i class="fa-solid fa-plus mr-2"></i> Add Part
-    </a>
-    <a href="/parts/bulk-import" class="px-6 py-3 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition">
-        <i class="fa-solid fa-upload mr-2"></i> Bulk Import
-    </a>
-    <!-- ✅ ADD THIS NEW BUTTON -->
-    <a href="/parts/bulk-update" class="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition">
-        <i class="fa-solid fa-pen mr-2"></i> Bulk Update
-    </a>
-</div>
+            <div class="flex gap-2">
+                <a href="/parts/add" class="px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition">
+                    <i class="fa-solid fa-plus mr-2"></i> Add Part
+                </a>
+                <a href="/parts/bulk-import" class="px-6 py-3 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition">
+                    <i class="fa-solid fa-upload mr-2"></i> Bulk Import
+                </a>
+                <a href="/parts/bulk-update" class="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition">
+                    <i class="fa-solid fa-pen mr-2"></i> Bulk Update
+                </a>
+            </div>
         </div>
 
-        <!-- Parts Grid -->
+        <!-- ====== PARTS GRID WITH BULK DELETE ====== -->
         {% if not parts %}
             <div class="text-center py-12 bg-[#111827] rounded-2xl border border-slate-800">
                 <i class="fa-solid fa-cubes text-4xl text-slate-600 mb-4 block"></i>
                 <p class="text-slate-400">No parts in inventory yet. Add your first part!</p>
             </div>
         {% else %}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- ADD THIS FORM WRAPPER AND BUTTON AT THE TOP (Only for Admin) -->
- <!-- BULK DELETE FORM (Only visible to logged in admins) -->
-{% if session.get('logged_in') %}
-<form action="/parts/bulk-delete" method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="flex justify-between items-center mb-4 bg-slate-800/50 p-3 rounded-lg border border-slate-700">
-        <div class="flex items-center gap-2">
-            <input type="checkbox" id="select-all-parts" class="w-4 h-4 accent-[#f97316] cursor-pointer">
-            <label for="select-all-parts" class="text-xs text-slate-300 font-bold cursor-pointer">Select All</label>
-        </div>
-        <button type="submit" onclick="return confirm('⚠️ Are you sure you want to permanently delete the selected parts?');" class="bg-red-600 text-white px-4 py-2 rounded font-bold text-sm hover:bg-red-700 transition">
-            🗑️ Delete Selected
-        </button>
-    </div>
-{% endif %}
+            
+            {% if session.get('logged_in') %}
+                <!-- ===== ADMIN VIEW (With Bulk Delete) ===== -->
+                <form action="/parts/bulk-delete" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="flex justify-between items-center mb-4 bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="select-all-parts" class="w-4 h-4 accent-[#f97316] cursor-pointer">
+                            <label for="select-all-parts" class="text-xs text-slate-300 font-bold cursor-pointer">Select All</label>
+                        </div>
+                        <button type="submit" onclick="return confirm('⚠️ Are you sure you want to permanently delete the selected parts?');" class="bg-red-600 text-white px-4 py-2 rounded font-bold text-sm hover:bg-red-700 transition">
+                            🗑️ Delete Selected
+                        </button>
+                    </div>
 
-<!-- PARTS GRID -->
-<div class="parts-grid">
-    {% for part in parts %}
-    <div class="bg-[#111827] border border-slate-800 rounded-xl p-4 hover:border-[#f97316] transition relative">
-        
-        <!-- CHECKBOX FOR BULK DELETE (Only for admins) -->
-        {% if session.get('logged_in') %}
-        <div class="absolute top-3 left-3 z-10">
-            <input type="checkbox" name="part_ids" value="{{ part.id }}" class="w-4 h-4 accent-[#f97316] parts-checkbox cursor-pointer">
-        </div>
+                    <div class="parts-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {% for part in parts %}
+                        <div class="bg-[#111827] border border-slate-800 rounded-xl p-4 hover:border-[#f97316] transition relative">
+                            <div class="absolute top-3 left-3 z-10">
+                                <input type="checkbox" name="part_ids" value="{{ part.id }}" class="w-4 h-4 accent-[#f97316] parts-checkbox cursor-pointer">
+                            </div>
+                            <div class="flex justify-between items-start pl-6">
+                                <div>
+                                    <h3 class="font-bold text-white">{{ part.part_name }}</h3>
+                                    <p class="text-xs text-slate-400">{{ part.make }} {{ part.model }}</p>
+                                    <p class="text-xs text-slate-500 mt-1">OEM: {{ part.oem_number or 'N/A' }}</p>
+                                </div>
+                                <span class="text-xs px-2 py-1 rounded font-bold 
+                                    {% if part.stock_status == 'Available' %}bg-green-600/20 text-green-400{% endif %}
+                                    {% if part.stock_status == 'Reserved' %}bg-yellow-600/20 text-yellow-400{% endif %}
+                                    {% if part.stock_status == 'Sold' %}bg-red-600/20 text-red-400{% endif %}">
+                                    {{ part.stock_status }}
+                                </span>
+                            </div>
+                            <div class="mt-2 flex flex-wrap gap-1 text-xs pl-6">
+                                <span class="bg-slate-800 px-2 py-0.5 rounded">{{ part.category }}</span>
+                                <span class="bg-slate-800 px-2 py-0.5 rounded">£{{ part.price }}</span>
+                            </div>
+                            <div class="mt-3 flex gap-2 pl-6">
+                                <a href="/parts/view/{{ part.id }}" class="text-[#f97316] hover:underline text-sm">View</a>
+                                <a href="/parts/edit/{{ part.id }}" class="text-blue-400 hover:underline text-sm">Edit</a>
+                                <form action="/parts/delete/{{ part.id }}" method="POST" onsubmit="return confirm('Delete this part?');" class="inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="text-red-400 hover:underline text-sm">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <script>
+                        document.getElementById('select-all-parts')?.addEventListener('change', function() {
+                            document.querySelectorAll('.parts-checkbox').forEach(cb => cb.checked = this.checked);
+                        });
+                    </script>
+                </form>
+            
+            {% else %}
+                <!-- ===== PUBLIC VIEW (No Delete Options) ===== -->
+                <div class="parts-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {% for part in parts %}
+                    <div class="bg-[#111827] border border-slate-800 rounded-xl p-4 hover:border-[#f97316] transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-white">{{ part.part_name }}</h3>
+                                <p class="text-xs text-slate-400">{{ part.make }} {{ part.model }}</p>
+                                <p class="text-xs text-slate-500 mt-1">OEM: {{ part.oem_number or 'N/A' }}</p>
+                            </div>
+                            <span class="text-xs px-2 py-1 rounded font-bold 
+                                {% if part.stock_status == 'Available' %}bg-green-600/20 text-green-400{% endif %}
+                                {% if part.stock_status == 'Reserved' %}bg-yellow-600/20 text-yellow-400{% endif %}
+                                {% if part.stock_status == 'Sold' %}bg-red-600/20 text-red-400{% endif %}">
+                                {{ part.stock_status }}
+                            </span>
+                        </div>
+                        <div class="mt-2 flex flex-wrap gap-1 text-xs">
+                            <span class="bg-slate-800 px-2 py-0.5 rounded">{{ part.category }}</span>
+                            <span class="bg-slate-800 px-2 py-0.5 rounded">£{{ part.price }}</span>
+                        </div>
+                        <div class="mt-3 flex gap-2">
+                            <a href="/parts/view/{{ part.id }}" class="text-[#f97316] hover:underline text-sm">View</a>
+                            <a href="/parts/edit/{{ part.id }}" class="text-blue-400 hover:underline text-sm">Edit</a>
+                            <form action="/parts/delete/{{ part.id }}" method="POST" onsubmit="return confirm('Delete this part?');" class="inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-red-400 hover:underline text-sm">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
         {% endif %}
-
-        <div class="flex justify-between items-start {% if session.get('logged_in') %}pl-6{% endif %}">
-            <div>
-                <h3 class="font-bold text-white">{{ part.part_name }}</h3>
-                <p class="text-xs text-slate-400">{{ part.make }} {{ part.model }}</p>
-                <p class="text-xs text-slate-500 mt-1">OEM: {{ part.oem_number or 'N/A' }}</p>
-            </div>
-            <span class="text-xs px-2 py-1 rounded font-bold 
-                {% if part.stock_status == 'Available' %}bg-green-600/20 text-green-400{% endif %}
-                {% if part.stock_status == 'Reserved' %}bg-yellow-600/20 text-yellow-400{% endif %}
-                {% if part.stock_status == 'Sold' %}bg-red-600/20 text-red-400{% endif %}">
-                {{ part.stock_status }}
-            </span>
-        </div>
-        <div class="mt-2 flex flex-wrap gap-1 text-xs {% if session.get('logged_in') %}pl-6{% endif %}">
-            <span class="bg-slate-800 px-2 py-0.5 rounded">{{ part.category }}</span>
-            <span class="bg-slate-800 px-2 py-0.5 rounded">£{{ part.price }}</span>
-        </div>
-        <div class="mt-3 flex gap-2 {% if session.get('logged_in') %}pl-6{% endif %}">
-            <a href="/parts/view/{{ part.id }}" class="text-[#f97316] hover:underline text-sm">View</a>
-            <a href="/parts/edit/{{ part.id }}" class="text-blue-400 hover:underline text-sm">Edit</a>
-            <form action="/parts/delete/{{ part.id }}" method="POST" onsubmit="return confirm('Delete this part?');" class="inline">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="text-red-400 hover:underline text-sm">Delete</button>
-            </form>
-        </div>
-    </div>
-    {% endfor %}
-</div>
-
-<!-- CLOSE THE FORM AND ADD SELECT-ALL SCRIPT (Only for admins) -->
-{% if session.get('logged_in') %}
-</form>
-<script>
-    document.getElementById('select-all-parts')?.addEventListener('change', function() {
-        document.querySelectorAll('.parts-checkbox').forEach(cb => cb.checked = this.checked);
-    });
-</script>
-{% endif %}
     </div>
 
 </body>
