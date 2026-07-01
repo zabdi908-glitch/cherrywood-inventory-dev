@@ -1,4 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from enquiries_store import enquiries_store
+from email_reply_agent import handle_enquiry_auto_reply
 import sqlite3
 import os
 import json
@@ -8,6 +10,15 @@ from parts_agent import parts_agent
 from flask_wtf.csrf import CSRFProtect
 from flask import send_from_directory
 from forms import PartForm
+from openai import OpenAI
+import httpx
+from flask import jsonify
+import requests
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+sessions = {}
+import re
 
 app = Flask(__name__)
 csrf = CSRFProtect(app)
@@ -366,6 +377,23 @@ def restore_confirm():
         flash(f'❌ Restore failed: {e}', 'error')
         return redirect(url_for('index'))
 
+@app.route('/admin/enquiries')
+@login_required
+def enquiries_list():
+    status = request.args.get('status', 'All')
+    enquiries = enquiries_store.get_all_enquiries(status_filter=status)
+    counts = enquiries_store.get_counts()
+    return render_template('enquiries_list.html', enquiries=enquiries, counts=counts, current_status=status)
+
+
+@app.route('/admin/enquiries/<int:id>/status', methods=['POST'])
+@login_required
+def enquiry_update_status(id):
+    new_status = request.form.get('status', 'New')
+    enquiries_store.update_status(id, new_status)
+    flash(f'✅ Enquiry #{id} marked as {new_status}', 'success')
+    return redirect(url_for('enquiries_list'))
+
 # ============================================
 # INFO PAGES
 # ============================================
@@ -707,7 +735,272 @@ def parts_bulk_update():
             flash('Please upload a CSV file', 'error')
             return redirect(url_for('parts_bulk_update'))
     return render_template('parts_bulk_update.html')
-    
+
+def send_enquiry_email(data):
+    try:
+        sender = os.getenv('EMAIL_USER')
+        password = os.getenv('EMAIL_PASS')
+        staff_recipient = os.getenv('STAFF_EMAIL')
+        
+        if not sender or not password or not staff_recipient:
+            print("❌ Missing email environment variables", flush=True)
+            return
+
+        # --- 1. EMAIL TO THE STAFF (The one you already had) ---
+        staff_subject = f"🔔 New Parts Enquiry from {data.get('name', 'Customer')}"
+        staff_body = f"""
+New Enquiry Received!
+
+👤 Name: {data.get('name')}
+📞 Phone: {data.get('phone')}
+📧 Email: {data.get('email')}
+🚗 Vehicle: {data.get('vehicle')}
+🔧 Part Needed: {data.get('part')}
+
+This enquiry was captured by the Cherrywood AI Chat Assistant.
+        """
+        staff_msg = MIMEMultipart()
+        staff_msg['From'] = sender
+        staff_msg['To'] = staff_recipient
+        staff_msg['Subject'] = staff_subject
+        staff_msg.attach(MIMEText(staff_body, 'plain'))
+
+        # --- 2. EMAIL TO THE CUSTOMER (The new auto-reply) ---
+        customer_email = data.get('email')
+        if customer_email: # Only send if we actually have the email address
+            customer_name = data.get('name')
+            customer_vehicle = data.get('vehicle')
+            customer_part = data.get('part')
+
+            customer_subject = f"Thank you for your enquiry, {customer_name}!"
+            customer_body = f"""
+Dear {customer_name},
+
+Thank you for reaching out to Cherrywood Auto Parts!
+
+We have received your enquiry regarding the following:
+🚗 Vehicle: {customer_vehicle}
+🔧 Part Needed: {customer_part}
+
+A member of our parts team will review this and will reach out to you at **{data.get('phone')}** within the next 2 business hours.
+
+If you have any immediate questions, feel free to reply directly to this email or call us at 07440 369576.
+
+Best regards,
+The Cherrywood Auto Parts Team
+            """
+            customer_msg = MIMEMultipart()
+            customer_msg['From'] = sender
+            customer_msg['To'] = customer_email
+            customer_msg['Subject'] = customer_subject
+            customer_msg.attach(MIMEText(customer_body, 'plain'))
+
+        # --- 3. SEND BOTH EMAILS ---
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender, password)
+        
+        server.send_message(staff_msg)   # Send to staff
+        if customer_email:
+            server.send_message(customer_msg) # Send to customer
+        
+        server.quit()
+        
+        print(f"📧 Staff email sent to {staff_recipient}", flush=True)
+        if customer_email:
+            print(f"📧 Customer auto-reply sent to {customer_email}", flush=True)
+            
+    except Exception as e:
+        print(f"❌ Failed to send emails: {e}", flush=True)
+# ============================================
+# TEMPORARY ENQUIRY STORE (Replace with real DB later)
+# ============================================
+class MockEnquiryStore:
+    def __init__(self):
+        self.enquiries = []
+        self.counter = 0
+
+    def add_enquiry(self, data):
+        self.counter += 1
+        record = {**data, 'id': self.counter, 'status': 'Pending'}
+        self.enquiries.append(record)
+        print(f"💾 Mock Enquiry #{self.counter} saved", flush=True)
+        return self.counter
+
+    def update_status(self, enquiry_id, status, notes=None):
+        for e in self.enquiries:
+            if e['id'] == enquiry_id:
+                e['status'] = status
+                if notes:
+                    e['notes'] = notes
+                print(f"✅ Mock Enquiry #{enquiry_id} updated to {status}", flush=True)
+                return True
+        return False
+
+enquiries_store = MockEnquiryStore()
+# ============================================
+
+# ============================================
+# AI CHAT PROXY ROUTE (Connects Python to Node)
+# ============================================
+@app.route('/api/proxy-chat', methods=['POST'])
+@csrf.exempt
+def proxy_chat():
+    try:
+        data = request.get_json(force=True)
+        if not data:
+            return jsonify({'error': 'No JSON body received'}), 400
+        user_message = data.get('message', '').strip()
+        session_id = data.get('sessionId', 'unknown')
+        if not user_message:
+            return jsonify({'error': 'No message provided'}), 400
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            return jsonify({'error': 'API key not configured'}), 500
+
+        # 1. Manage the conversation history (capped to keep payload size/speed under control)
+        if session_id not in sessions:
+            sessions[session_id] = []
+        sessions[session_id].append({"role": "user", "content": user_message})
+        sessions[session_id] = sessions[session_id][-10:]
+
+        # 2. Fetch live inventory — filtered by keywords from the user's message
+        try:
+            db = get_db()
+
+            stopwords = {
+                'the', 'and', 'for', 'with', 'have', 'has', 'you', 'your', 'are',
+                'can', 'need', 'looking', 'price', 'cost', 'much', 'how', 'what',
+                'this', 'that', 'got', 'any', 'please', 'hi', 'hello', 'thanks',
+                'other', 'options', 'do', 'does', 'a', 'an', 'of', 'on', 'in'
+            }
+            words = re.findall(r'[a-zA-Z0-9]+', user_message.lower())
+
+            keywords = []
+            for w in words:
+                if len(w) <= 1 or w in stopwords:
+                    continue
+                # Singularize simple plurals (e.g. "engines" -> "engine", "brakes" -> "brake")
+                # so they still match singular category names stored in the database.
+                singular = w[:-1] if len(w) > 3 and w.endswith('s') and not w.endswith('ss') else w
+                keywords.append(singular)
+                if singular != w:
+                    keywords.append(w)  # keep the original too, in case it's stored plural somewhere
+
+            parts_rows = []
+            if keywords:
+                like_clauses = []
+                params = []
+                for kw in keywords[:8]:
+                    term = f'%{kw}%'
+                    like_clauses.append(
+                        "(part_name LIKE ? OR make LIKE ? OR model LIKE ? OR category LIKE ? OR oem_number LIKE ? OR engine_code LIKE ?)"
+                    )
+                    params.extend([term, term, term, term, term, term])
+
+                where_sql = " OR ".join(like_clauses)
+                sql = f"""SELECT part_name, make, model, category, price, stock_status, oem_number
+                          FROM parts
+                          WHERE stock_status = 'Available' AND ({where_sql})
+                          LIMIT 25"""
+                parts_rows = db.execute(sql, params).fetchall()
+
+            if not parts_rows:
+                parts_rows = db.execute(
+                    "SELECT part_name, make, model, category, price, stock_status, oem_number "
+                    "FROM parts WHERE stock_status = 'Available' "
+                    "ORDER BY created_at DESC LIMIT 20"
+                ).fetchall()
+
+            db.close()
+
+            parts_list = "\n".join([
+                f"- {p['part_name']} | {p['make']} {p['model']} | £{p['price']:.2f} | OEM: {p['oem_number'] or 'N/A'} | {p['category']}"
+                for p in parts_rows
+            ])
+            inventory_context = f"Relevant available parts:\n{parts_list}" if parts_list else "No matching parts currently in stock."
+        except Exception as e:
+            print(f"❌ [AI] Inventory fetch error: {e}", flush=True)
+            inventory_context = "Inventory temporarily unavailable."
+
+                # 3. System prompt
+        system_prompt = f"""You are a friendly auto parts assistant for Cherrywood Auto Parts.
+Your job is to help customers find parts, and when they are ready, collect their details for a staff member to follow up.
+{inventory_context}
+CRITICAL RULE: Keep your answers short and specific. Always answer based on what you just said previously.
+If the customer says "1", "2", "3", etc., it means they are selecting an option from the list YOU just gave them. Respond to that selection naturally!
+If the inventory shown doesn't seem to match what the customer is asking for, let them know you'll have a staff member check current stock rather than guessing.
+If a part exists for a different model than what the customer asked for, mention it but be clear it isn't confirmed for their specific model.
+
+IF THE CUSTOMER ASKS FOR AN EXTRA PART:
+If a customer submits an enquiry, and then asks about a DIFFERENT part or vehicle, treat this as a BRAND NEW separate enquiry.
+You must re-collect their contact details (Name, Phone, Email, Vehicle, Part) again for this new request before triggering the final completion JSON.
+
+ENQUIRY SUBMISSION - FOLLOW THIS EXACTLY:
+Once the customer has provided their name, phone number, and/or email address along with the part or vehicle they are asking about, you MUST respond with ONLY this exact format and nothing else:
+[ENQUIRY_COMPLETE]{{"name": "their name", "phone": "their phone", "email": "their email", "vehicle": "vehicle mentioned", "part": "part mentioned"}}
+Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted your details" or anything similar - the system will generate that confirmation automatically once it receives your JSON. Your entire response in this case must be the [ENQUIRY_COMPLETE] tag immediately followed by valid JSON, with no other text before or after it.
+"""
+
+        # 4. Call OpenAI with the HISTORY
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        payload = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                *sessions[session_id]
+            ],
+            "max_tokens": 400
+        }
+        response = requests.post("https://api.openai.com/v1/chat/completions", json=payload, headers=headers)
+
+        if response.status_code != 200:
+            return jsonify({'error': f"OpenAI API Error: {response.text}"}), response.status_code
+        reply = response.json()['choices'][0]['message']['content']
+
+        sessions[session_id].append({"role": "assistant", "content": reply})
+        sessions[session_id] = sessions[session_id][-10:]
+
+               # 5. Check for the Enquiry Completion flag
+        if "[ENQUIRY_COMPLETE]" in reply:
+            json_str = reply.replace("[ENQUIRY_COMPLETE]", "").strip()
+
+            try:
+                customer_data = json.loads(json_str)
+
+                # Save to database
+                enquiry_id = enquiries_store.add_enquiry(customer_data)
+
+                if enquiry_id:
+                    print(f"💾 Enquiry #{enquiry_id} saved to database", flush=True)
+                else:
+                    print("⚠️ Enquiry DB save failed", flush=True)
+
+                # Notify staff
+                send_enquiry_email(customer_data)
+
+                # Send automatic customer reply
+                customer_reply = handle_enquiry_auto_reply(customer_data, get_db)
+
+                if enquiry_id and customer_reply:
+                    enquiries_store.update_status(
+                        enquiry_id,
+                        "Contacted",
+                        notes=customer_reply
+                    )
+
+                return jsonify({
+                    "reply": "✅ Your enquiry has been sent! We will call or email you back within 2 hours."
+                })
+
+            except json.JSONDecodeError:
+                print(f"⚠️ [AI] Failed to parse enquiry JSON: {json_str}", flush=True)
+
+        return jsonify({'reply': reply})
+
+    except Exception as e:
+        print(f"❌ [AI] FATAL ERROR: {str(e)}", flush=True)
+        return jsonify({'error': str(e)}), 500
 # ============================================
 # RUN THE APP
 # ============================================
