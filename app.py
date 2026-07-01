@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from email_reply_agent import handle_enquiry_auto_reply
+from list_tracker import SessionListTracker
 import sqlite3
 import os
 import json
@@ -837,11 +838,9 @@ class MockEnquiryStore:
         return False
 
 enquiries_store = MockEnquiryStore()
-# ============================================
+# ===========================================
 
-# ============================================
-# AI CHAT PROXY ROUTE (Connects Python to Node)
-# ============================================
+
 @app.route('/api/proxy-chat', methods=['POST'])
 @csrf.exempt
 def proxy_chat():
@@ -856,6 +855,8 @@ def proxy_chat():
         api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
             return jsonify({'error': 'API key not configured'}), 500
+
+        tracker = SessionListTracker(session_id)
 
         # 1. Manage the conversation history (capped to keep payload size/speed under control)
         if session_id not in sessions:
@@ -879,12 +880,10 @@ def proxy_chat():
             for w in words:
                 if len(w) <= 1 or w in stopwords:
                     continue
-                # Singularize simple plurals (e.g. "engines" -> "engine", "brakes" -> "brake")
-                # so they still match singular category names stored in the database.
                 singular = w[:-1] if len(w) > 3 and w.endswith('s') and not w.endswith('ss') else w
                 keywords.append(singular)
                 if singular != w:
-                    keywords.append(w)  # keep the original too, in case it's stored plural somewhere
+                    keywords.append(w)
 
             parts_rows = []
             if keywords:
@@ -898,48 +897,78 @@ def proxy_chat():
                     params.extend([term, term, term, term, term, term])
 
                 where_sql = " OR ".join(like_clauses)
+                # NOTE: LIMIT lowered from 25 to 8. The model was previously told to show
+                # "max 5 items" out of up to 25 candidates, which meant it silently chose
+                # a subset and renumbered it — breaking any later "option 1/2/3" reference.
+                # Capping the query itself means every row returned here IS what gets shown,
+                # in this exact order, so item numbers stay reliable end to end.
                 sql = f"""SELECT part_name, make, model, category, price, stock_status, oem_number
                           FROM parts
                           WHERE stock_status = 'Available' AND ({where_sql})
-                          LIMIT 25"""
+                          LIMIT 8"""
                 parts_rows = db.execute(sql, params).fetchall()
 
             if not parts_rows:
                 parts_rows = db.execute(
                     "SELECT part_name, make, model, category, price, stock_status, oem_number "
                     "FROM parts WHERE stock_status = 'Available' "
-                    "ORDER BY created_at DESC LIMIT 20"
+                    "ORDER BY created_at DESC LIMIT 8"
                 ).fetchall()
 
             db.close()
 
             parts_list = "\n".join([
-                f"- {p['part_name']} | {p['make']} {p['model']} | £{p['price']:.2f} | OEM: {p['oem_number'] or 'N/A'} | {p['category']}"
-                for p in parts_rows
+                f"{i+1}. {p['part_name']} | {p['make']} {p['model']} | £{p['price']:.2f} | OEM: {p['oem_number'] or 'N/A'} | {p['category']}"
+                for i, p in enumerate(parts_rows)
             ])
-            inventory_context = f"Relevant available parts:\n{parts_list}" if parts_list else "No matching parts currently in stock."
+            inventory_context = f"Relevant available parts (show ALL of these, in this exact order and numbering):\n{parts_list}" if parts_list else "No matching parts currently in stock."
+
+            # Register this turn's results as a trackable list, using the SAME order
+            # given to the model, so "item 3" always means the same real row everywhere.
+            current_list_id = None
+            if parts_rows:
+                label_guess = keywords[0] if keywords else "parts"
+                current_list_id = tracker.register_list(
+                    label=label_guess,
+                    items=[
+                        {
+                            "name": p["part_name"],
+                            "price": p["price"],
+                            "oem": p["oem_number"] or "N/A",
+                            "vehicle": f"{p['make']} {p['model']}",
+                            "category": p["category"],
+                        }
+                        for p in parts_rows
+                    ],
+                )
         except Exception as e:
             print(f"❌ [AI] Inventory fetch error: {e}", flush=True)
             inventory_context = "Inventory temporarily unavailable."
+            current_list_id = None
 
-                                             # 3. System prompt
+        reference_block = tracker.build_reference_block()
+
+        # 3. System prompt
         system_prompt = f"""You are a friendly auto parts assistant for Cherrywood Auto Parts.
 Your job is to help customers find parts, and when they are ready, collect their details for a staff member to follow up.
 {inventory_context}
+{f"(This list's ID is {current_list_id} — use it if the customer selects from it.)" if current_list_id else ""}
 
-MULTI-LIST SELECTION PROTOCOL (READ THIS CAREFULLY):
-When you provide a list of parts, explicitly label them (e.g., "Here are the **Engine** parts available:" or "Here are the **Lighting** parts for Audi:").
-When a customer asks for an option from a previous list (e.g., "option 1 from the first list"), you MUST:
-1. Identify which list they are referring to by reading the most recent messages.
-2. Extract the exact part name and price from that list's option.
+{reference_block}
 
-CRITICAL RULE: Do NOT guess the part!
-If you are uncertain about which list the customer is referring to, do NOT guess. Instead, politely say: 
-"I'm sorry, I want to make sure I have the right part for you. Could you please copy and paste the exact part name you're interested in?"
-This guarantees you never assign the wrong part to their order.
+SELECTION PROTOCOL (READ THIS CAREFULLY):
+You must NEVER type out a part's name or price yourself when confirming what the customer has chosen.
+Whenever the customer confirms they want a specific item — from the list you just showed, or from an
+earlier list in this conversation — respond with a [SELECT:list_id:item_number] tag using the exact
+list_id and item_number from the reference table above (e.g. [SELECT:L1:3]). You can add normal
+conversational text around it, but the tag must exactly match a real entry in the table.
 
-When you provide a list of parts, keep the list SHORT (maximum 5 items per message).
-If a customer says "Option 1" or "I want the first one", look ONLY at the most recent list you provided to determine what they are selecting.
+If you cannot confidently match what the customer is asking for to an entry in the table, do NOT guess
+and do NOT emit a [SELECT] tag. Instead say: "Could you tell me which list you meant, or paste the exact
+part name you're interested in?"
+
+When you first present a list of parts, show every item from "Relevant available parts" above, in the
+exact order and numbering given — do not reorder, skip, or renumber them.
 
 CRITICAL RULE FOR VEHICLE MATCHING:
 When a customer asks for a specific vehicle model (e.g., "Audi A3"), you must prioritize parts that EXACTLY match that model. 
@@ -950,7 +979,8 @@ IF THE CUSTOMER ASKS FOR AN EXTRA PART:
 If a customer submits an enquiry, and then asks about a DIFFERENT part or vehicle, treat this as a BRAND NEW separate enquiry.
 
 ENQUIRY SUBMISSION - FOLLOW THIS EXACTLY:
-At the very end of the conversation, after the customer has confirmed the specific parts they want, you MUST ask ONLY for their Name, Phone number, and Email address. 
+At the very end of the conversation, after the customer has confirmed the specific parts they want (using
+[SELECT] tags as instructed above), you MUST ask ONLY for their Name, Phone number, and Email address. 
 DO NOT ask them for the part or vehicle again.
 Once they provide those 3 details, respond with ONLY this exact format and nothing else:
 [ENQUIRY_COMPLETE]{{"name": "their name", "phone": "their phone", "email": "their email", "vehicle": "vehicle mentioned", "part": "part mentioned"}}
@@ -972,15 +1002,37 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
             return jsonify({'error': f"OpenAI API Error: {response.text}"}), response.status_code
         reply = response.json()['choices'][0]['message']['content']
 
+        # 4b. Resolve any [SELECT:list_id:item_number] tags against REAL stored data.
+        # This is the step that actually kills hallucination: whatever the model wrote
+        # about the selected item is discarded, and we substitute the true DB record.
+        if tracker.has_unresolvable_tags(reply):
+            reply = "I want to make sure I get you the right part — could you tell me which list you meant, or paste the exact part name you're interested in?"
+            resolved_items = []
+        else:
+            resolved_items = tracker.resolve_selections(reply)
+            reply = tracker.strip_select_tags(reply)
+            # If the model emitted only a tag with no other text, give the customer
+            # a clean confirmation built from real data instead of an empty message.
+            if resolved_items and not reply:
+                names = ", ".join(f"{it['name']} (£{it['price']:.2f})" for it in resolved_items)
+                reply = f"Got it — {names}. Could I get your name, phone number, and email to log this enquiry?"
+
         sessions[session_id].append({"role": "assistant", "content": reply})
         sessions[session_id] = sessions[session_id][-10:]
 
-               # 5. Check for the Enquiry Completion flag
+        # 5. Check for the Enquiry Completion flag
         if "[ENQUIRY_COMPLETE]" in reply:
             json_str = reply.replace("[ENQUIRY_COMPLETE]", "").strip()
 
             try:
                 customer_data = json.loads(json_str)
+
+                # Prefer real resolved item data over whatever the model wrote for "part",
+                # since resolved_items came straight from the DB, not model text.
+                if resolved_items:
+                    customer_data["part"] = ", ".join(it["name"] for it in resolved_items)
+                    if not customer_data.get("vehicle") or customer_data["vehicle"] == "vehicle mentioned":
+                        customer_data["vehicle"] = resolved_items[0]["vehicle"]
 
                 # Save to database
                 enquiry_id = enquiries_store.add_enquiry(customer_data)
@@ -1002,6 +1054,8 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
                         "Contacted",
                         notes=customer_reply
                     )
+
+                tracker.clear()  # fresh slate for any follow-up enquiry in this session
 
                 return jsonify({
                     "reply": "✅ Your enquiry has been sent! We will call or email you back within 2 hours."
