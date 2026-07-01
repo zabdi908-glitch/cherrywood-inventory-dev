@@ -927,7 +927,9 @@ def proxy_chat():
             # given to the model, so "item 3" always means the same real row everywhere.
             current_list_id = None
             if parts_rows:
-                label_guess = keywords[0] if keywords else "parts"
+            label_guess = keywords[0] if keywords else "parts"
+            
+            try:  # <--- You must have this
                 current_list_id = tracker.register_list(
                     label=label_guess,
                     items=[
@@ -940,20 +942,20 @@ def proxy_chat():
                         }
                         for p in parts_rows
                     ],
+                )  # <--- Make sure this closing parenthesis is here
+                
             except Exception as e:
-            print(f"❌ [AI] Inventory fetch error: {e}", flush=True)
-            inventory_context = "Inventory temporarily unavailable."
-            current_list_id = None
+                print(f"❌ [AI] Inventory fetch error: {e}", flush=True)
+                inventory_context = "Inventory temporarily unavailable."
+                current_list_id = None
 
-        # This line must be at the same indentation level as the 'try' or 'except'
-        # keyword to be outside of the try/except block.
+        # This is now outside the if/try/except block logic correctly
         reference_block = tracker.build_reference_block()
 
-        # Build this piece separately to avoid nesting...
         current_list_note = (
             f"(This list's ID is {current_list_id} — use it if the customer selects from it.)"
             if current_list_id else ""
-        )    
+        )
       
         # 3. System prompt
         system_prompt = f"""You are a friendly auto parts assistant for Cherrywood Auto Parts.
