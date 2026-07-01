@@ -946,13 +946,21 @@ def proxy_chat():
             inventory_context = "Inventory temporarily unavailable."
             current_list_id = None
 
-        reference_block = tracker.build_reference_block()
+       reference_block = tracker.build_reference_block()
+
+        # Build this piece separately to avoid nesting an f-string with the
+        # same quote character inside another f-string (SyntaxError on Python < 3.12,
+        # which is what crashed the whole app and caused the 502s).
+        current_list_note = (
+            f"(This list's ID is {current_list_id} — use it if the customer selects from it.)"
+            if current_list_id else ""
+        )
 
         # 3. System prompt
         system_prompt = f"""You are a friendly auto parts assistant for Cherrywood Auto Parts.
 Your job is to help customers find parts, and when they are ready, collect their details for a staff member to follow up.
 {inventory_context}
-{f"(This list's ID is {current_list_id} — use it if the customer selects from it.)" if current_list_id else ""}
+{current_list_note}
 
 {reference_block}
 
