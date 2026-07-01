@@ -922,15 +922,18 @@ def proxy_chat():
             print(f"❌ [AI] Inventory fetch error: {e}", flush=True)
             inventory_context = "Inventory temporarily unavailable."
 
-                        # 3. System prompt
+                               # 3. System prompt
         system_prompt = f"""You are a friendly auto parts assistant for Cherrywood Auto Parts.
 Your job is to help customers find parts, and when they are ready, collect their details for a staff member to follow up.
 {inventory_context}
-CRITICAL RULE: Keep your answers short and specific. Always answer based on what you just said previously.
-If the customer says "1", "2", "3", etc., it means they are selecting an option from the list YOU just gave them. Respond to that selection naturally!
-If the inventory shown doesn't seem to match what the customer is asking for, let them know you'll have a staff member check current stock rather than guessing.
 
-KEY UPDATE FOR VEHICLE MATCHING:
+CRITICAL RULE FOR LISTS AND SELECTIONS:
+When you provide a list of parts, keep the list SHORT (maximum 5 items per message) so the customer isn't overwhelmed. If they ask for "more", you can show the next 5.
+You MUST track which list you just provided. 
+If a customer says "Option 1" or "I want the first one", look ONLY at the most recent list you provided to determine what they are selecting.
+If they ask for an option from a PREVIOUS list, explicitly confirm which one they mean before proceeding. For example: "Did you want [Part Name] from the [Category Name] list?" Do not dump your entire inventory to try and show them the old list.
+
+CRITICAL RULE FOR VEHICLE MATCHING:
 When a customer asks for a specific vehicle model (e.g., "Audi A3"), you must prioritize parts that EXACTLY match that model. 
 If you do not have an exact match, DO NOT suggest parts from a different vehicle model (e.g., VW Golf).
 Instead, politely tell them: "I don't have any specific stock for that vehicle model at the moment. I can ask a staff member to check the yard for you, or if you prefer, I can check for alternatives from other models." Let the customer decide if they want alternatives.
@@ -944,7 +947,6 @@ Once the customer has provided their name, phone number, and/or email address al
 [ENQUIRY_COMPLETE]{{"name": "their name", "phone": "their phone", "email": "their email", "vehicle": "vehicle mentioned", "part": "part mentioned"}}
 Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted your details" or anything similar - the system will generate that confirmation automatically once it receives your JSON. Your entire response in this case must be the [ENQUIRY_COMPLETE] tag immediately followed by valid JSON, with no other text before or after it.
 """
-
         # 4. Call OpenAI with the HISTORY
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         payload = {
