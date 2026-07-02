@@ -920,6 +920,23 @@ def proxy_chat():
 
         tracker = chat_store.SessionListTracker(db, session_id)
 
+        # Manual reset — mainly for testing, but harmless for real customers too. Typing
+        # this wipes all state for the session so a fresh conversation starts clean,
+        # without needing a new browser session.
+        if user_message.strip().lower() in ("/reset", "reset chat", "start over"):
+            tracker.clear()
+            return jsonify({'reply': "Started a fresh conversation — what part are you looking for?"})
+
+        # Idle-gap auto-clear — if this session went quiet for a while (e.g. a customer
+        # closed the tab and came back hours later, or reused an old widget session),
+        # treat it as a new conversation rather than risk leftover selections from a
+        # conversation that never reached a successful enquiry silently carrying over.
+        SESSION_IDLE_TTL_SECONDS = 1800  # 30 minutes
+        last_message_time = chat_store.get_last_message_time(db, session_id)
+        if last_message_time and (time.time() - last_message_time) > SESSION_IDLE_TTL_SECONDS:
+            print(f"🧹 [AI] Session idle >30min, auto-clearing — session={session_id}", flush=True)
+            tracker.clear()
+
         # 1. Record the user's message and load recent history — all from SQLite now,
         # so a Render restart/redeploy no longer wipes an in-progress conversation.
         chat_store.append_message(db, session_id, "user", user_message, keep=10)
