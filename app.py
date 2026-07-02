@@ -861,27 +861,6 @@ class MockEnquiryStore:
 enquiries_store = MockEnquiryStore()
 
 
-# Matches things like "option 2", "list 3", "2nd item" — used to detect when a customer
-# message is likely selecting from multiple lists, so an untagged model reply can be
-# treated as untrustworthy rather than shown as-is.
-SELECTION_REQUEST_PATTERN = re.compile(r'\b(?:option|list)\s*\d+|\d+\s*(?:st|nd|rd|th)?\s*(?:option|item)\b', re.IGNORECASE)
-
-FRICTION_ESCALATION_THRESHOLD = 3  # consecutive unhelpful turns before offering a human
-
-
-def _has_duplicate_selection(items: list[dict]) -> bool:
-    """True if the same (list_id, item name) pair appears more than once —
-    a strong signal the model tagged the wrong index for one of the items,
-    since customers don't genuinely ask for the same part twice."""
-    seen = set()
-    for it in items:
-        key = (it.get("_list_id"), it.get("name"))
-        if key in seen:
-            return True
-        seen.add(key)
-    return False
-
-
 
 # Matches things like "option 2", "list 3", "2nd item" — used to detect when a customer
 # message is likely selecting from multiple lists, so an untagged model reply can be
@@ -1020,6 +999,12 @@ def proxy_chat():
                             for p in parts_rows
                         ],
                     )
+                    print(
+                        f"📋 [AI] Registered list {current_list_id} — session={session_id}, "
+                        f"label={label_guess!r}, items={[p['part_name'] for p in parts_rows]}, "
+                        f"user_message={user_message!r}",
+                        flush=True
+                    )
         except Exception as e:
             print(f"❌ [AI] Inventory fetch error: {e}", flush=True)
             inventory_context = "Inventory temporarily unavailable."
@@ -1140,6 +1125,14 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
         else:
             resolved_items = tracker.resolve_selections(reply)
 
+            if resolved_items:
+                print(
+                    f"🔎 [AI] Resolved selections — session={session_id}, "
+                    f"items={[(it.get('_list_id'), it.get('name'), it.get('oem')) for it in resolved_items]}, "
+                    f"raw_reply={reply!r}",
+                    flush=True
+                )
+
             if len(resolved_items) >= 2 and _has_duplicate_selection(resolved_items):
                 # Tags were syntactically valid (each pointed at a real item), but two of them
                 # point at the exact same item — a customer never genuinely asks for the same
@@ -1242,7 +1235,6 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
     finally:
         if db:
             db.close()
-
 
 # ============================================
 # RUN THE APP
