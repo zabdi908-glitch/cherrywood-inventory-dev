@@ -51,6 +51,36 @@ def init_chat_tables(db):
             counter INTEGER NOT NULL
         )
     """)
+
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS chat_friction (
+            session_id TEXT PRIMARY KEY,
+            count INTEGER NOT NULL
+        )
+    """)
+    db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Friction tracking — powers the "offer a human" escalation path. A "friction"
+# turn is one where the bot couldn't help (no matching parts, had to ask for
+# clarification, etc). Consecutive friction turns trigger a handoff offer;
+# any genuinely helpful turn resets the counter.
+# ---------------------------------------------------------------------------
+
+def increment_friction(db, session_id: str) -> int:
+    row = db.execute("SELECT count FROM chat_friction WHERE session_id = ?", (session_id,)).fetchone()
+    count = (row["count"] if row else 0) + 1
+    if row:
+        db.execute("UPDATE chat_friction SET count = ? WHERE session_id = ?", (count, session_id))
+    else:
+        db.execute("INSERT INTO chat_friction (session_id, count) VALUES (?, ?)", (session_id, count))
+    db.commit()
+    return count
+
+
+def reset_friction(db, session_id: str):
+    db.execute("DELETE FROM chat_friction WHERE session_id = ?", (session_id,))
     db.commit()
 
 
@@ -88,6 +118,7 @@ def clear_session(db, session_id: str):
     db.execute("DELETE FROM chat_messages WHERE session_id = ?", (session_id,))
     db.execute("DELETE FROM chat_lists WHERE session_id = ?", (session_id,))
     db.execute("DELETE FROM chat_list_counters WHERE session_id = ?", (session_id,))
+    db.execute("DELETE FROM chat_friction WHERE session_id = ?", (session_id,))
     db.commit()
 
 
