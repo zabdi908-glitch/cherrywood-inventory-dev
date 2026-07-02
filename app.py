@@ -861,7 +861,6 @@ class MockEnquiryStore:
 enquiries_store = MockEnquiryStore()
 
 
-
 # Matches things like "option 2", "list 3", "2nd item" — used to detect when a customer
 # message is likely selecting from multiple lists, so an untagged model reply can be
 # treated as untrustworthy rather than shown as-is.
@@ -932,7 +931,10 @@ def proxy_chat():
                 'the', 'and', 'for', 'with', 'have', 'has', 'you', 'your', 'are',
                 'can', 'need', 'looking', 'price', 'cost', 'much', 'how', 'what',
                 'this', 'that', 'got', 'any', 'please', 'hi', 'hello', 'thanks',
-                'other', 'options', 'do', 'does', 'a', 'an', 'of', 'on', 'in'
+                'other', 'options', 'do', 'does', 'a', 'an', 'of', 'on', 'in',
+                'about', 'from', 'then', 'give', 'get', 'me', 'also', 'some',
+                'all', 'just', 'like', 'want', 'would', 'could', 'should',
+                'will', 'im', 'id', 'we', 'they', 'it', 'its', 'is', 'to', 'be'
             }
             words = re.findall(r'[a-zA-Z0-9]+', user_message.lower())
 
@@ -957,12 +959,26 @@ def proxy_chat():
                         )
                         params.extend([term, term, term, term, term, term])
 
-                    where_sql = " OR ".join(like_clauses)
-                    sql = f"""SELECT part_name, make, model, category, price, stock_status, oem_number
-                              FROM parts
-                              WHERE stock_status = 'Available' AND ({where_sql})
-                              LIMIT 8"""
-                    parts_rows = db.execute(sql, params).fetchall()
+                    # Try AND first — every keyword must match somewhere on the row. This is
+                    # the real narrowing search. Without it, a brand word like "audi" (which
+                    # matches almost every row in a single-brand shop via make/model) drowns
+                    # out a specific category word like "lighting" once combined with OR,
+                    # returning a random mix of engines/gearboxes/bumpers instead of lighting.
+                    where_sql_and = " AND ".join(like_clauses)
+                    sql_and = f"""SELECT part_name, make, model, category, price, stock_status, oem_number
+                                  FROM parts
+                                  WHERE stock_status = 'Available' AND ({where_sql_and})
+                                  LIMIT 8"""
+                    parts_rows = db.execute(sql_and, params).fetchall()
+
+                    if not parts_rows:
+                        # Fall back to the looser OR match only if the strict AND match found nothing.
+                        where_sql_or = " OR ".join(like_clauses)
+                        sql_or = f"""SELECT part_name, make, model, category, price, stock_status, oem_number
+                                     FROM parts
+                                     WHERE stock_status = 'Available' AND ({where_sql_or})
+                                     LIMIT 8"""
+                        parts_rows = db.execute(sql_or, params).fetchall()
 
                 if not parts_rows:
                     parts_rows = db.execute(
