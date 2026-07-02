@@ -911,6 +911,13 @@ def proxy_chat():
             print(f"⚠️ [AI] Rate limited — reason={reason}, ip={client_ip}, session={session_id}", flush=True)
             return jsonify({'reply': "You're sending messages a bit fast — please wait a moment and try again, or WhatsApp us directly."}), 429
 
+        # A message referencing "option 2"/"list 3" etc is the customer selecting from an
+        # EXISTING list, not browsing a new category — even if a stray word like "engine"
+        # in their confirmation would otherwise trigger a fresh keyword search below. We use
+        # this to skip registering a new list on such turns, since doing so was pushing older
+        # (still relevant) lists out of the model's last-N reference window.
+        is_selection_turn = bool(SELECTION_REQUEST_PATTERN.search(user_message))
+
         tracker = chat_store.SessionListTracker(db, session_id)
 
         # 1. Record the user's message and load recent history — all from SQLite now,
@@ -938,52 +945,59 @@ def proxy_chat():
                     keywords.append(w)
 
             parts_rows = []
-            if keywords:
-                like_clauses = []
-                params = []
-                for kw in keywords[:8]:
-                    term = f'%{kw}%'
-                    like_clauses.append(
-                        "(part_name LIKE ? OR make LIKE ? OR model LIKE ? OR category LIKE ? OR oem_number LIKE ? OR engine_code LIKE ?)"
-                    )
-                    params.extend([term, term, term, term, term, term])
+            if not is_selection_turn:
+                if keywords:
+                    like_clauses = []
+                    params = []
+                    for kw in keywords[:8]:
+                        term = f'%{kw}%'
+                        like_clauses.append(
+                            "(part_name LIKE ? OR make LIKE ? OR model LIKE ? OR category LIKE ? OR oem_number LIKE ? OR engine_code LIKE ?)"
+                        )
+                        params.extend([term, term, term, term, term, term])
 
-                where_sql = " OR ".join(like_clauses)
-                sql = f"""SELECT part_name, make, model, category, price, stock_status, oem_number
-                          FROM parts
-                          WHERE stock_status = 'Available' AND ({where_sql})
-                          LIMIT 8"""
-                parts_rows = db.execute(sql, params).fetchall()
+                    where_sql = " OR ".join(like_clauses)
+                    sql = f"""SELECT part_name, make, model, category, price, stock_status, oem_number
+                              FROM parts
+                              WHERE stock_status = 'Available' AND ({where_sql})
+                              LIMIT 8"""
+                    parts_rows = db.execute(sql, params).fetchall()
 
-            if not parts_rows:
-                parts_rows = db.execute(
-                    "SELECT part_name, make, model, category, price, stock_status, oem_number "
-                    "FROM parts WHERE stock_status = 'Available' "
-                    "ORDER BY created_at DESC LIMIT 8"
-                ).fetchall()
-
-            parts_list = "\n".join([
-                f"{i+1}. {p['part_name']} | {p['make']} {p['model']} | £{p['price']:.2f} | OEM: {p['oem_number'] or 'N/A'} | {p['category']}"
-                for i, p in enumerate(parts_rows)
-            ])
-            inventory_context = f"Relevant available parts (show ALL of these, in this exact order and numbering):\n{parts_list}" if parts_list else "No matching parts currently in stock."
+                if not parts_rows:
+                    parts_rows = db.execute(
+                        "SELECT part_name, make, model, category, price, stock_status, oem_number "
+                        "FROM parts WHERE stock_status = 'Available' "
+                        "ORDER BY created_at DESC LIMIT 8"
+                    ).fetchall()
 
             current_list_id = None
-            if parts_rows:
-                label_guess = keywords[0] if keywords else "parts"
-                current_list_id = tracker.register_list(
-                    label=label_guess,
-                    items=[
-                        {
-                            "name": p["part_name"],
-                            "price": p["price"],
-                            "oem": p["oem_number"] or "N/A",
-                            "vehicle": f"{p['make']} {p['model']}",
-                            "category": p["category"],
-                        }
-                        for p in parts_rows
-                    ],
-                )
+            if is_selection_turn:
+                # Don't run a fresh search or register a new list — this turn is the customer
+                # picking from lists already shown, and re-registering here is exactly what
+                # was pushing older (still-needed) lists out of the model's reference window.
+                inventory_context = "(No new parts search this turn — the customer is selecting from a list already shown below.)"
+            else:
+                parts_list = "\n".join([
+                    f"{i+1}. {p['part_name']} | {p['make']} {p['model']} | £{p['price']:.2f} | OEM: {p['oem_number'] or 'N/A'} | {p['category']}"
+                    for i, p in enumerate(parts_rows)
+                ])
+                inventory_context = f"Relevant available parts (show ALL of these, in this exact order and numbering):\n{parts_list}" if parts_list else "No matching parts currently in stock."
+
+                if parts_rows:
+                    label_guess = keywords[0] if keywords else "parts"
+                    current_list_id = tracker.register_list(
+                        label=label_guess,
+                        items=[
+                            {
+                                "name": p["part_name"],
+                                "price": p["price"],
+                                "oem": p["oem_number"] or "N/A",
+                                "vehicle": f"{p['make']} {p['model']}",
+                                "category": p["category"],
+                            }
+                            for p in parts_rows
+                        ],
+                    )
         except Exception as e:
             print(f"❌ [AI] Inventory fetch error: {e}", flush=True)
             inventory_context = "Inventory temporarily unavailable."
@@ -991,7 +1005,7 @@ def proxy_chat():
             if monitoring.should_send_alert(db, "inventory_fetch_failure"):
                 mailer.alert_staff("Inventory DB fetch failing", f"Error: {e}\nSession: {session_id}")
 
-        reference_block = tracker.build_reference_block()
+        reference_block = tracker.build_reference_block(max_lists=8)
 
         current_list_note = (
             f'If the customer selects an item from the list you just showed above, '
