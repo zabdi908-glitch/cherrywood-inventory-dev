@@ -882,6 +882,27 @@ def _has_duplicate_selection(items: list[dict]) -> bool:
     return False
 
 
+# Matches things like "option 2", "list 3", "2nd item" — used to detect when a customer
+# message is likely selecting from multiple lists, so an untagged model reply can be
+# treated as untrustworthy rather than shown as-is.
+SELECTION_REQUEST_PATTERN = re.compile(r'\b(?:option|list)\s*\d+|\d+\s*(?:st|nd|rd|th)?\s*(?:option|item)\b', re.IGNORECASE)
+
+FRICTION_ESCALATION_THRESHOLD = 3  # consecutive unhelpful turns before offering a human
+
+
+def _has_duplicate_selection(items: list[dict]) -> bool:
+    """True if the same (list_id, item name) pair appears more than once —
+    a strong signal the model tagged the wrong index for one of the items,
+    since customers don't genuinely ask for the same part twice."""
+    seen = set()
+    for it in items:
+        key = (it.get("_list_id"), it.get("name"))
+        if key in seen:
+            return True
+        seen.add(key)
+    return False
+
+
 @app.route('/api/proxy-chat', methods=['POST'])
 @csrf.exempt
 def proxy_chat():
@@ -1214,7 +1235,6 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
     finally:
         if db:
             db.close()
-
 
 
 # ============================================
