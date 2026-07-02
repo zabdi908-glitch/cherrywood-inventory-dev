@@ -882,6 +882,7 @@ def _has_duplicate_selection(items: list[dict]) -> bool:
     return False
 
 
+
 # Matches things like "option 2", "list 3", "2nd item" — used to detect when a customer
 # message is likely selecting from multiple lists, so an untagged model reply can be
 # treated as untrustworthy rather than shown as-is.
@@ -1154,9 +1155,15 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
                 reply = tracker.strip_select_tags(reply)
                 if resolved_items:
                     chat_store.add_confirmed_selections(db, session_id, resolved_items)
-                if resolved_items and not reply:
+                    # ALWAYS show what was actually matched, regardless of whatever other text
+                    # the model wrote in the same turn. Previously this only happened when the
+                    # model's reply was completely empty after stripping tags — meaning if the
+                    # model bundled its own "could I get your details" text in alongside the
+                    # tags, the customer (and we, reading transcripts later) never saw the actual
+                    # matched items at all, so a wrong match could go completely unnoticed.
                     names = ", ".join(f"{it['name']} (£{it['price']:.2f})" for it in resolved_items)
-                    reply = f"Got it — {names}. Could I get your name, phone number, and email to log this enquiry?"
+                    confirmation = f"Got it — {names}."
+                    reply = f"{confirmation} {reply}".strip() if reply else f"{confirmation} Could I get your name, phone number, and email to log this enquiry?"
                 if not resolved_items and current_list_id is None and "No matching parts" in inventory_context:
                     friction_event = True
 
