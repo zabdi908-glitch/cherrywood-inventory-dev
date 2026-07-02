@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from email_reply_agent import handle_enquiry_auto_reply
 from list_tracker import SessionListTracker
+from email_templates import build_confirmation_email
 import sqlite3
 import os
 import json
