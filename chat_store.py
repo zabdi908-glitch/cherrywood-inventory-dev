@@ -174,6 +174,14 @@ def clear_session(db, session_id: str):
     db.commit()
 
 
+def get_last_message_time(db, session_id: str):
+    row = db.execute(
+        "SELECT MAX(created_at) as last_time FROM chat_messages WHERE session_id = ?",
+        (session_id,)
+    ).fetchone()
+    return row["last_time"] if row and row["last_time"] else None
+
+
 def purge_old_sessions(db, older_than_days: int = 7):
     """Optional housekeeping — call this occasionally (e.g. from a scheduled
     Render Cron Job, or once at app startup) to stop the chat tables growing
