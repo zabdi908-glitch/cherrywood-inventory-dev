@@ -95,7 +95,21 @@ def get_confirmed_selections(db, session_id: str) -> list[dict]:
         "SELECT item_json FROM chat_confirmed_selections WHERE session_id = ? ORDER BY id ASC",
         (session_id,)
     ).fetchall()
-    return [json.loads(r["item_json"]) for r in rows]
+    items = [json.loads(r["item_json"]) for r in rows]
+
+    # Dedupe by OEM (the real unique identity of a part) — if the same item got
+    # resolved more than once across the conversation, it should still only
+    # appear once in the final enquiry/email, not inflate the total.
+    seen_oems = set()
+    deduped = []
+    for item in items:
+        oem = item.get("oem")
+        key = oem if oem and oem != "N/A" else item.get("name")
+        if key in seen_oems:
+            continue
+        seen_oems.add(key)
+        deduped.append(item)
+    return deduped
 
 
 # ---------------------------------------------------------------------------
