@@ -857,6 +857,7 @@ class MockEnquiryStore:
 enquiries_store = MockEnquiryStore()
 # ===========================================
 
+SELECTION_REQUEST_PATTERN = re.compile(r'\b(?:option|list)\s*\d+|\d+\s*(?:st|nd|rd|th)?\s*(?:option|item)\b', re.IGNORECASE)
 
 @app.route('/api/proxy-chat', methods=['POST'])
 @csrf.exempt
@@ -985,12 +986,18 @@ SELECTION PROTOCOL (READ THIS CAREFULLY):
 You must NEVER type out a part's name or price yourself when confirming what the customer has chosen.
 {current_list_note}
 For an earlier list, use [SELECT:list_id:item_number] with the list_id and item_number from the
-reference table below (e.g. [SELECT:L1:3]). You can add normal conversational text around the tag,
-but it must exactly match a real entry in the table.
+reference table below (e.g. [SELECT:L1:3]).
 
-If you cannot confidently match what the customer is asking for to an entry in the table, do NOT guess
-and do NOT emit a [SELECT] tag. Instead say: "Could you tell me which list you meant, or paste the exact
-part name you're interested in?"
+If the customer selects MULTIPLE items in one message — even across different lists — output ONE
+[SELECT:list_id:item_number] tag per item, one after another (e.g. [SELECT:L1:1] [SELECT:L2:2] [SELECT:L3:2]).
+Do NOT summarize the selection yourself in a numbered list or prose (for example, never write something
+like "1. Engine from the first list (name) — 2. Gearbox from list 2 (name)"). The system will generate
+an accurate confirmation message from the tags automatically — your job is only to emit correct tags,
+nothing more, no matter how many items or lists are involved.
+
+If you cannot confidently match every part of what the customer is asking for to an entry in the table,
+do NOT guess and do NOT emit any [SELECT] tags at all. Instead say: "Could you tell me which list you
+meant, or paste the exact part name you're interested in?"
 
 When you first present a list of parts, show every item from "Relevant available parts" above, in the
 exact order and numbering given — do not reorder, skip, or renumber them.
@@ -1041,8 +1048,22 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
         reply = response.json()['choices'][0]['message']['content']
 
         # 4b. Resolve any [SELECT:list_id:item_number] tags against REAL stored data.
+        has_any_tag = bool(chat_store.SELECT_PATTERN.search(reply))
+        customer_is_selecting = bool(SELECTION_REQUEST_PATTERN.findall(user_message)) and len(
+            SELECTION_REQUEST_PATTERN.findall(user_message)
+        ) >= 2
+
         if tracker.has_unresolvable_tags(reply):
             reply = "I want to make sure I get you the right part — could you tell me which list you meant, or paste the exact part name you're interested in?"
+            resolved_items = []
+        elif not has_any_tag and customer_is_selecting:
+            # The model tried to confirm a multi-item selection in freeform prose instead of
+            # using [SELECT] tags — this is exactly the failure mode where it can silently mix
+            # up items across lists. We can't verify freeform text against real data, so we
+            # never show it to the customer, even if it happens to look right.
+            print(f"⚠️ [AI] Untagged selection confirmation blocked — session={session_id}, reply={reply!r}", flush=True)
+            reply = ("To make sure I get every part exactly right, could you confirm your choices one "
+                     "at a time? For example: \"option 2 from list 2\".")
             resolved_items = []
         else:
             resolved_items = tracker.resolve_selections(reply)
