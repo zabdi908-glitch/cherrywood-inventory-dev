@@ -861,8 +861,9 @@ class MockEnquiryStore:
 enquiries_store = MockEnquiryStore()
 
 
-
-
+# Matches things like "option 2", "list 3", "2nd item" — used to detect when a customer
+# message is likely selecting from multiple lists, so an untagged model reply can be
+# treated as untrustworthy rather than shown as-is.
 SELECTION_REQUEST_PATTERN = re.compile(r'\b(?:option|list)\s*\d+|\d+\s*(?:st|nd|rd|th)?\s*(?:option|item)\b', re.IGNORECASE)
 
 FRICTION_ESCALATION_THRESHOLD = 3  # consecutive unhelpful turns before offering a human
@@ -1090,6 +1091,8 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
         else:
             resolved_items = tracker.resolve_selections(reply)
             reply = tracker.strip_select_tags(reply)
+            if resolved_items:
+                chat_store.add_confirmed_selections(db, session_id, resolved_items)
             if resolved_items and not reply:
                 names = ", ".join(f"{it['name']} (£{it['price']:.2f})" for it in resolved_items)
                 reply = f"Got it — {names}. Could I get your name, phone number, and email to log this enquiry?"
@@ -1120,10 +1123,11 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
             try:
                 customer_data = json.loads(json_str)
 
-                if resolved_items:
-                    customer_data["part"] = ", ".join(it["name"] for it in resolved_items)
+                all_selected_items = chat_store.get_confirmed_selections(db, session_id)
+                if all_selected_items:
+                    customer_data["part"] = ", ".join(it["name"] for it in all_selected_items)
                     if not customer_data.get("vehicle") or customer_data["vehicle"] == "vehicle mentioned":
-                        customer_data["vehicle"] = resolved_items[0]["vehicle"]
+                        customer_data["vehicle"] = all_selected_items[0]["vehicle"]
 
                 enquiry_id = enquiries_store.add_enquiry(customer_data)
 
@@ -1137,14 +1141,14 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
                             f"Customer data: {customer_data}\nSession: {session_id}"
                         )
 
-                staff_sent = mailer.send_staff_notification(customer_data, resolved_items)
+                staff_sent = mailer.send_staff_notification(customer_data, all_selected_items)
                 if not staff_sent and monitoring.should_send_alert(db, "staff_notification_failure"):
                     mailer.alert_staff(
                         "Staff notification email failing",
                         f"Could not email STAFF_EMAIL for enquiry: {customer_data}\nSession: {session_id}"
                     )
 
-                customer_sent = mailer.send_customer_confirmation(customer_data, resolved_items)
+                customer_sent = mailer.send_customer_confirmation(customer_data, all_selected_items)
 
                 if enquiry_id and customer_sent:
                     enquiries_store.update_status(
@@ -1170,6 +1174,9 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
     finally:
         if db:
             db.close()
+
+
+
 # ============================================
 # RUN THE APP
 # ============================================
