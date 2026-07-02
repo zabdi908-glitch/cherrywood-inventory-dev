@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from email_reply_agent import handle_enquiry_auto_reply
 from list_tracker import SessionListTracker
 from email_templates import build_confirmation_email
+from email_templates import COMPANY_WHATSAPP_LINK, COMPANY_PHONE
 import sqlite3
 import os
 import json
@@ -22,6 +23,8 @@ sessions = {}
 import re
 import chat_store
 import rate_limiter
+import mailer
+import monitoring
 
 app = Flask(__name__)
 csrf = CSRFProtect(app)
@@ -856,9 +859,14 @@ class MockEnquiryStore:
         return False
 
 enquiries_store = MockEnquiryStore()
-# ===========================================
+
+
+
 
 SELECTION_REQUEST_PATTERN = re.compile(r'\b(?:option|list)\s*\d+|\d+\s*(?:st|nd|rd|th)?\s*(?:option|item)\b', re.IGNORECASE)
+
+FRICTION_ESCALATION_THRESHOLD = 3  # consecutive unhelpful turns before offering a human
+
 
 @app.route('/api/proxy-chat', methods=['POST'])
 @csrf.exempt
@@ -881,6 +889,7 @@ def proxy_chat():
         db = get_db()
         chat_store.init_chat_tables(db)
         rate_limiter.init_rate_limit_table(db)
+        monitoring.init_alert_table(db)
 
         client_ip = rate_limiter.get_client_ip(request)
         limited, reason = rate_limiter.is_rate_limited(db, ip=client_ip, session_id=session_id)
@@ -965,6 +974,8 @@ def proxy_chat():
             print(f"❌ [AI] Inventory fetch error: {e}", flush=True)
             inventory_context = "Inventory temporarily unavailable."
             current_list_id = None
+            if monitoring.should_send_alert(db, "inventory_fetch_failure"):
+                mailer.alert_staff("Inventory DB fetch failing", f"Error: {e}\nSession: {session_id}")
 
         reference_block = tracker.build_reference_block()
 
@@ -1038,13 +1049,19 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
                 json=payload, headers=headers, timeout=20
             )
         except requests.exceptions.Timeout:
+            if monitoring.should_send_alert(db, "openai_timeout"):
+                mailer.alert_staff("Chatbot: OpenAI timing out", f"Requests to OpenAI are timing out (>20s).\nSession: {session_id}")
             return jsonify({'reply': "Sorry, I'm taking a bit long to respond — please try again, or WhatsApp us directly and we'll help right away."}), 200
         except requests.exceptions.RequestException as e:
             print(f"❌ [AI] OpenAI request failed: {e}", flush=True)
+            if monitoring.should_send_alert(db, "openai_request_failure"):
+                mailer.alert_staff("Chatbot: OpenAI request failing", f"Error: {e}\nSession: {session_id}")
             return jsonify({'reply': "Sorry, I'm having trouble connecting right now — please WhatsApp us and we'll help right away."}), 200
 
         if response.status_code != 200:
             print(f"❌ [AI] OpenAI API Error: {response.text}", flush=True)
+            if monitoring.should_send_alert(db, "openai_bad_status"):
+                mailer.alert_staff("Chatbot: OpenAI returning errors", f"Status {response.status_code}: {response.text[:500]}\nSession: {session_id}")
             return jsonify({'reply': "Sorry, I'm having trouble right now — please WhatsApp us and we'll help right away."}), 200
         reply = response.json()['choices'][0]['message']['content']
 
@@ -1054,9 +1071,12 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
             SELECTION_REQUEST_PATTERN.findall(user_message)
         ) >= 2
 
+        friction_event = False
+
         if tracker.has_unresolvable_tags(reply):
             reply = "I want to make sure I get you the right part — could you tell me which list you meant, or paste the exact part name you're interested in?"
             resolved_items = []
+            friction_event = True
         elif not has_any_tag and customer_is_selecting:
             # The model tried to confirm a multi-item selection in freeform prose instead of
             # using [SELECT] tags — this is exactly the failure mode where it can silently mix
@@ -1066,12 +1086,30 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
             reply = ("To make sure I get every part exactly right, could you confirm your choices one "
                      "at a time? For example: \"option 2 from list 2\".")
             resolved_items = []
+            friction_event = True
         else:
             resolved_items = tracker.resolve_selections(reply)
             reply = tracker.strip_select_tags(reply)
             if resolved_items and not reply:
                 names = ", ".join(f"{it['name']} (£{it['price']:.2f})" for it in resolved_items)
                 reply = f"Got it — {names}. Could I get your name, phone number, and email to log this enquiry?"
+            if not resolved_items and current_list_id is None and "No matching parts" in inventory_context:
+                friction_event = True
+
+        # Escalation path: offer a human handoff after several unhelpful turns in a row.
+        # Any genuinely helpful turn (a list shown, a selection resolved) resets the streak.
+        if friction_event:
+            friction_count = chat_store.increment_friction(db, session_id)
+        else:
+            chat_store.reset_friction(db, session_id)
+            friction_count = 0
+
+        if friction_count >= FRICTION_ESCALATION_THRESHOLD:
+            reply += (
+                f"\n\nI want to make sure you get sorted quickly — would you like me to connect you with "
+                f"a staff member directly? WhatsApp us here: {COMPANY_WHATSAPP_LINK}, or call {COMPANY_PHONE}."
+            )
+            chat_store.reset_friction(db, session_id)  # don't repeat the nudge every message after
 
         chat_store.append_message(db, session_id, "assistant", reply, keep=10)
 
@@ -1093,23 +1131,26 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
                     print(f"💾 Enquiry #{enquiry_id} saved to database", flush=True)
                 else:
                     print("⚠️ Enquiry DB save failed", flush=True)
+                    if monitoring.should_send_alert(db, "enquiry_save_failure"):
+                        mailer.alert_staff(
+                            "Enquiry failed to save to database",
+                            f"Customer data: {customer_data}\nSession: {session_id}"
+                        )
 
-                try:
-                    send_enquiry_email(customer_data)
-                except Exception as e:
-                    print(f"⚠️ [AI] Failed to send staff notification email: {e}", flush=True)
+                staff_sent = mailer.send_staff_notification(customer_data, resolved_items)
+                if not staff_sent and monitoring.should_send_alert(db, "staff_notification_failure"):
+                    mailer.alert_staff(
+                        "Staff notification email failing",
+                        f"Could not email STAFF_EMAIL for enquiry: {customer_data}\nSession: {session_id}"
+                    )
 
-                try:
-                    customer_reply = handle_enquiry_auto_reply(customer_data, get_db)
-                except Exception as e:
-                    print(f"⚠️ [AI] Auto-reply failed: {e}", flush=True)
-                    customer_reply = None
+                customer_sent = mailer.send_customer_confirmation(customer_data, resolved_items)
 
-                if enquiry_id and customer_reply:
+                if enquiry_id and customer_sent:
                     enquiries_store.update_status(
                         enquiry_id,
                         "Contacted",
-                        notes=customer_reply
+                        notes="Confirmation email sent to customer."
                     )
 
                 tracker.clear()  # wipes both message history and list state for a fresh next enquiry
