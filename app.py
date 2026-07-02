@@ -869,6 +869,19 @@ SELECTION_REQUEST_PATTERN = re.compile(r'\b(?:option|list)\s*\d+|\d+\s*(?:st|nd|
 FRICTION_ESCALATION_THRESHOLD = 3  # consecutive unhelpful turns before offering a human
 
 
+def _has_duplicate_selection(items: list[dict]) -> bool:
+    """True if the same (list_id, item name) pair appears more than once —
+    a strong signal the model tagged the wrong index for one of the items,
+    since customers don't genuinely ask for the same part twice."""
+    seen = set()
+    for it in items:
+        key = (it.get("_list_id"), it.get("name"))
+        if key in seen:
+            return True
+        seen.add(key)
+    return False
+
+
 @app.route('/api/proxy-chat', methods=['POST'])
 @csrf.exempt
 def proxy_chat():
@@ -1090,14 +1103,27 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
             friction_event = True
         else:
             resolved_items = tracker.resolve_selections(reply)
-            reply = tracker.strip_select_tags(reply)
-            if resolved_items:
-                chat_store.add_confirmed_selections(db, session_id, resolved_items)
-            if resolved_items and not reply:
-                names = ", ".join(f"{it['name']} (£{it['price']:.2f})" for it in resolved_items)
-                reply = f"Got it — {names}. Could I get your name, phone number, and email to log this enquiry?"
-            if not resolved_items and current_list_id is None and "No matching parts" in inventory_context:
+
+            if len(resolved_items) >= 2 and _has_duplicate_selection(resolved_items):
+                # Tags were syntactically valid (each pointed at a real item), but two of them
+                # point at the exact same item — a customer never genuinely asks for the same
+                # part twice in one multi-select message, so this means the model mapped an
+                # index wrong (e.g. meant list 3 item 2, tagged list 2 item 1 again instead).
+                # has_unresolvable_tags() can't catch this since every tag IS individually valid.
+                print(f"⚠️ [AI] Duplicate selection tags blocked — session={session_id}, reply={reply!r}", flush=True)
+                reply = ("To make sure I get every part exactly right, could you confirm your choices one "
+                         "at a time? For example: \"option 2 from list 2\".")
+                resolved_items = []
                 friction_event = True
+            else:
+                reply = tracker.strip_select_tags(reply)
+                if resolved_items:
+                    chat_store.add_confirmed_selections(db, session_id, resolved_items)
+                if resolved_items and not reply:
+                    names = ", ".join(f"{it['name']} (£{it['price']:.2f})" for it in resolved_items)
+                    reply = f"Got it — {names}. Could I get your name, phone number, and email to log this enquiry?"
+                if not resolved_items and current_list_id is None and "No matching parts" in inventory_context:
+                    friction_event = True
 
         # Escalation path: offer a human handoff after several unhelpful turns in a row.
         # Any genuinely helpful turn (a list shown, a selection resolved) resets the streak.
