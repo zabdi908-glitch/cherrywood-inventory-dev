@@ -26,6 +26,7 @@ import rate_limiter
 import mailer
 import monitoring
 import time
+import data_retention
 
 app = Flask(__name__)
 csrf = CSRFProtect(app)
@@ -862,6 +863,8 @@ class MockEnquiryStore:
 enquiries_store = MockEnquiryStore()
 
 
+
+
 # Matches things like "option 2", "list 3", "2nd item" — used to detect when a customer
 # message is likely selecting from multiple lists, so an untagged model reply can be
 # treated as untrustworthy rather than shown as-is.
@@ -905,6 +908,7 @@ def proxy_chat():
         chat_store.init_chat_tables(db)
         rate_limiter.init_rate_limit_table(db)
         monitoring.init_alert_table(db)
+        data_retention.maybe_purge(db)
 
         client_ip = rate_limiter.get_client_ip(request)
         limited, reason = rate_limiter.is_rate_limited(db, ip=client_ip, session_id=session_id)
@@ -1112,20 +1116,46 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
             ],
             "max_tokens": 400
         }
-        try:
-            response = requests.post(
-                "https://api.openai.com/v1/chat/completions",
-                json=payload, headers=headers, timeout=20
-            )
-        except requests.exceptions.Timeout:
-            if monitoring.should_send_alert(db, "openai_timeout"):
-                mailer.alert_staff("Chatbot: OpenAI timing out", f"Requests to OpenAI are timing out (>20s).\nSession: {session_id}")
-            return jsonify({'reply': "Sorry, I'm taking a bit long to respond — please try again, or WhatsApp us directly and we'll help right away."}), 200
-        except requests.exceptions.RequestException as e:
-            print(f"❌ [AI] OpenAI request failed: {e}", flush=True)
-            if monitoring.should_send_alert(db, "openai_request_failure"):
+
+        response = None
+        last_error = None
+        # One quiet retry on transient failures (timeout, connection error, rate limit,
+        # server error) before giving up — most of these clear up within a second or two,
+        # and a single retry avoids showing customers an error for a blip that would have
+        # resolved itself.
+        for attempt in range(2):
+            try:
+                response = requests.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    json=payload, headers=headers, timeout=20
+                )
+                if response.status_code == 200:
+                    break
+                if response.status_code in (429, 500, 502, 503, 504) and attempt == 0:
+                    time.sleep(1.5)
+                    continue
+                break  # non-retryable status, stop here
+            except requests.exceptions.Timeout as e:
+                last_error = ("timeout", e)
+                if attempt == 0:
+                    time.sleep(1.5)
+                    continue
+            except requests.exceptions.RequestException as e:
+                last_error = ("request_error", e)
+                if attempt == 0:
+                    time.sleep(1.5)
+                    continue
+
+        if response is None:
+            kind, e = last_error
+            print(f"❌ [AI] OpenAI request failed after retry: {e}", flush=True)
+            alert_key = "openai_timeout" if kind == "timeout" else "openai_request_failure"
+            if monitoring.should_send_alert(db, alert_key):
                 mailer.alert_staff("Chatbot: OpenAI request failing", f"Error: {e}\nSession: {session_id}")
-            return jsonify({'reply': "Sorry, I'm having trouble connecting right now — please WhatsApp us and we'll help right away."}), 200
+            msg = ("Sorry, I'm taking a bit long to respond — please try again, or WhatsApp us directly and we'll help right away."
+                   if kind == "timeout" else
+                   "Sorry, I'm having trouble connecting right now — please WhatsApp us and we'll help right away.")
+            return jsonify({'reply': msg}), 200
 
         if response.status_code != 200:
             print(f"❌ [AI] OpenAI API Error: {response.text}", flush=True)
@@ -1269,7 +1299,6 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
     finally:
         if db:
             db.close()
-
 # ============================================
 # RUN THE APP
 # ============================================
