@@ -864,6 +864,7 @@ class MockEnquiryStore:
 enquiries_store = MockEnquiryStore()
 
 
+
 # Matches things like "option 2", "list 3", "2nd item" — the NUMBERED reference case.
 SELECTION_REQUEST_PATTERN = re.compile(r'\b(?:option|list)\s*\d+|\d+\s*(?:st|nd|rd|th)?\s*(?:option|item)\b', re.IGNORECASE)
 
@@ -1013,22 +1014,35 @@ def proxy_chat():
         # numeric and unambiguous named references — removes that failure mode structurally.
         # If this doesn't confidently resolve (ambiguous, a new browse, general chat), it
         # returns None and the existing LLM-tag-based flow handles the turn as before.
-        det_resolved, extra_count = selection_resolver.resolve(db, session_id, tracker, user_message)
+        det_resolved, invalid_count = selection_resolver.resolve(db, session_id, tracker, user_message)
         if det_resolved:
-            item = det_resolved[0]
             print(f"🎯 [AI] Deterministically resolved (no LLM call) — session={session_id}, "
-                  f"item={item.get('name')}, via={item.get('_resolved_by')}, extra_requested={extra_count}", flush=True)
+                  f"items={[it.get('name') for it in det_resolved]}, "
+                  f"via={[it.get('_resolved_by') for it in det_resolved]}, invalid_refs={invalid_count}", flush=True)
             chat_store.add_confirmed_selections(db, session_id, det_resolved)
             chat_store.reset_friction(db, session_id)
-            if extra_count > 0:
-                # The customer asked for more than one item in this message — say so honestly,
-                # rather than a plain "anything else?" that implies the whole request was handled.
-                reply = (f"Got it — {item['name']} (£{float(item['price']):.2f}). "
-                         f"You mentioned a few parts — let's add the rest one at a time so nothing "
-                         f"gets mixed up. What's next?")
-            else:
-                reply = (f"Got it — {item['name']} (£{float(item['price']):.2f}). "
-                         f"Anything else, or shall I take your name, phone number, and email to log this enquiry?")
+
+            basket_summary, basket_total = chat_store.build_basket_summary(db, session_id)
+            just_added = ", ".join(f"{it['name']} (£{float(it['price']):.2f})" for it in det_resolved)
+
+            reply_parts = [f"Got it — {just_added}."]
+            if invalid_count > 0:
+                reply_parts.append(
+                    f"I couldn't match {invalid_count} of the other part{'s' if invalid_count != 1 else ''} you mentioned — "
+                    f"could you double-check that reference?"
+                )
+            if basket_summary:
+                reply_parts.append(f"\nYour current selection:\n{basket_summary}\nTotal: £{basket_total:.2f}")
+            reply_parts.append("\nAnything else, or shall I take your name, phone number, and email to log this enquiry?")
+            reply = " ".join(reply_parts)
+
+            chat_store.append_message(db, session_id, "assistant", reply, keep=10)
+            return jsonify({'reply': reply})
+        elif invalid_count > 0:
+            # An explicit reference was found (e.g. "list 1 option 2") but it pointed
+            # at something out of range — say so directly rather than falling through
+            # to the LLM, which has no more insight into this than we do.
+            reply = "I couldn't find that option in the list you meant — could you double-check the number and try again?"
             chat_store.append_message(db, session_id, "assistant", reply, keep=10)
             return jsonify({'reply': reply})
 
