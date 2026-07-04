@@ -34,10 +34,12 @@ _NUMBER_WORDS = {
 }
 
 _TOKEN_PATTERN = re.compile(
-    r'\b(list|option|item)\s+(?:number\s+)?(\d+|one|two|three|four|five|six|seven|eight|nine|ten|'
+    r'\b(list|lst|liist|option|opton|item)\s+(?:number\s+)?(\d+|one|two|three|four|five|six|seven|eight|nine|ten|'
     r'first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\b',
     re.IGNORECASE
 )
+_LIST_ALIASES = {"list", "lst", "liist"}
+_OPTION_ALIASES = {"option", "opton", "item"}
 
 AFFIRMATIVE_ONLY = {"yes", "yeah", "yep", "yup", "sure", "ok", "okay", "please", "correct", "confirm", "confirmed"}
 
@@ -64,7 +66,7 @@ def _parse_numeric_references(user_message: str, list_lengths: dict) -> list:
         num = _to_number(value)
         if num is None:
             continue
-        if kind.lower() == "list":
+        if kind.lower() in _LIST_ALIASES:
             if pending_option is not None:
                 pairs.append((num, pending_option))
                 pending_option = None
@@ -73,7 +75,7 @@ def _parse_numeric_references(user_message: str, list_lengths: dict) -> list:
                 if pending_list is not None and list_lengths.get(pending_list) == 1:
                     pairs.append((pending_list, 1))
                 pending_list = num
-        else:  # option / item
+        else:  # option / item (including typo aliases)
             if pending_list is not None:
                 pairs.append((pending_list, num))
                 pending_list = None
@@ -88,16 +90,22 @@ def _parse_numeric_references(user_message: str, list_lengths: dict) -> list:
 def resolve(db, session_id: str, tracker, user_message: str):
     """
     Attempts full deterministic resolution of a customer's selection message.
-    Returns a list with exactly one resolved item dict (matching the shape
-    tracker.resolve_selections() produces, with '_list_id' set), or None if
-    nothing could be confidently resolved — in which case the caller should
-    fall back to the existing LLM-tag-based flow.
+
+    Returns a tuple (resolved_items, extra_count):
+      - resolved_items: a list with exactly one resolved item dict (matching the
+        shape tracker.resolve_selections() produces, with '_list_id' set), or
+        None if nothing could be confidently resolved — in which case the
+        caller should fall back to the existing LLM-tag-based flow.
+      - extra_count: how many ADDITIONAL numeric references were found in the
+        message beyond the one resolved (0 if none). Lets the caller give an
+        honest "let's add the rest one at a time" reply instead of a plain
+        "anything else?" that implies the whole request was handled.
     """
     import chat_store
 
     browse_map = chat_store.get_browse_sequence_map(db, session_id)
     if not browse_map:
-        return None
+        return None, 0
 
     items_by_browse_num = {}
     for bn, lid in browse_map.items():
@@ -106,7 +114,7 @@ def resolve(db, session_id: str, tracker, user_message: str):
             items_by_browse_num[bn] = items
 
     if not items_by_browse_num:
-        return None
+        return None, 0
 
     list_lengths = {bn: len(items) for bn, items in items_by_browse_num.items()}
 
@@ -114,13 +122,14 @@ def resolve(db, session_id: str, tracker, user_message: str):
     pairs = _parse_numeric_references(user_message, list_lengths)
     if pairs:
         list_num, option_num = pairs[0]  # one-item-per-turn policy — only take the first
+        extra_count = len(pairs) - 1
         items = items_by_browse_num.get(list_num)
         if items and 1 <= option_num <= len(items):
             item = dict(items[option_num - 1])
             item["_list_id"] = browse_map[list_num]
             item["_resolved_by"] = "numeric"
-            return [item]
-        return None  # explicit but out-of-range reference — don't guess, let normal flow handle it
+            return [item], extra_count
+        return None, 0  # explicit but out-of-range reference — don't guess, let normal flow handle it
 
     # --- Strategy 2: bare affirmative ("yes") when the most recent browsed
     # list has exactly one item — otherwise it's genuinely ambiguous. ---
@@ -132,8 +141,8 @@ def resolve(db, session_id: str, tracker, user_message: str):
             item = dict(items[0])
             item["_list_id"] = browse_map[most_recent_bn]
             item["_resolved_by"] = "affirmative"
-            return [item]
-        return None  # ambiguous — more than one item, "yes" alone can't disambiguate
+            return [item], 0
+        return None, 0  # ambiguous — more than one item, "yes" alone can't disambiguate
 
     # --- Strategy 3: named reference ("give me the a3 headlight"), only if
     # the match is unambiguous (exactly one candidate across all lists). ---
@@ -152,6 +161,6 @@ def resolve(db, session_id: str, tracker, user_message: str):
         resolved_item = dict(item)
         resolved_item["_list_id"] = browse_map[bn]
         resolved_item["_resolved_by"] = "name_match"
-        return [resolved_item]
+        return [resolved_item], 0
 
-    return None  # zero or ambiguous matches — fall back to the LLM-tag flow
+    return None, 0  # zero or ambiguous matches — fall back to the LLM-tag flow
