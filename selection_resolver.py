@@ -1,30 +1,34 @@
 """
 selection_resolver.py
 
-The core insight after a long day of debugging: gpt-4o-mini is unreliable at
-correctly mapping structured references like "list 2, option 1" against a
-reference table it read earlier in the conversation. No amount of prompt
-engineering or after-the-fact verification fully closes that gap, because
-the model is doing index arithmetic it isn't built to do reliably.
+Deterministic (no-LLM) resolution of customer selection messages. Handles:
 
-This module removes the model from that step entirely for the common,
-parseable cases:
-  - Numeric references: "list 2 option 1", "option 2 from list 3", "list one
-    give me the engine" (implicit option when the list has exactly one item)
-  - Bare affirmatives: "yes" when there's exactly one item in the most
-    recently browsed list
-  - Named references: "give me the a3 headlight" — resolved by matching
-    distinctive (non-brand) tokens against real item names, but ONLY when
-    the match is unambiguous (exactly one candidate)
+  - Numeric list/option references: "list 2 option 1", "option 1 from list 2",
+    "list one give me the engine" (implicit option when list has 1 item)
+  - Category + number references: "1 from engines", "engine 1", "2 from the
+    gearbox list", "take the first engine and second gearbox"
+  - Superlatives: "cheapest", "second cheapest", "most expensive" — resolved
+    against a named category if mentioned, else the most recently browsed list
+  - Quantifiers: "add both", "all three", "give me every A4 headlight" —
+    resolves to MULTIPLE items when the request is unambiguous
+  - Bare affirmatives: "yes" — only when genuinely unambiguous
+  - Single named references: "give me the a3 headlight" — only when exactly
+    one candidate matches
 
-If none of these confidently resolve, this module returns None and the
-existing LLM-tag-based flow handles it as before — this is a fast path for
-the common cases, not a replacement for the whole system.
+Multiple items can be resolved from ONE message now (e.g. "list 1 option 2
+and list 3 option 1") because resolution is deterministic — there's no LLM
+index arithmetic left to get wrong, so the earlier one-item-per-turn safety
+cap is no longer needed for anything this module can confidently parse.
+
+Anything not confidently resolved returns (None, 0) and the caller falls
+back to the existing LLM-tag-based flow (which still enforces one item per
+turn, as a safety net for phrasing this module doesn't recognize).
 """
 
 import re
 
 _GENERIC_BRAND_TOKENS = {"audi", "vw", "volkswagen", "seat", "skoda"}
+_MAX_ITEMS_PER_MESSAGE = 10  # sanity cap against absurd bulk requests
 
 _NUMBER_WORDS = {
     "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
@@ -32,16 +36,21 @@ _NUMBER_WORDS = {
     "first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5,
     "sixth": 6, "seventh": 7, "eighth": 8, "ninth": 9, "tenth": 10,
 }
+_NUMBER_WORD_ALTERNATION = "|".join(sorted(_NUMBER_WORDS.keys(), key=len, reverse=True))
 
 _TOKEN_PATTERN = re.compile(
-    r'\b(list|lst|liist|option|opton|item)\s+(?:number\s+)?(\d+|one|two|three|four|five|six|seven|eight|nine|ten|'
-    r'first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\b',
+    r'\b(list|lst|liist|option|opton|item)\s+(?:number\s+)?(\d+|' + _NUMBER_WORD_ALTERNATION + r')\b',
     re.IGNORECASE
 )
 _LIST_ALIASES = {"list", "lst", "liist"}
-_OPTION_ALIASES = {"option", "opton", "item"}
 
 AFFIRMATIVE_ONLY = {"yes", "yeah", "yep", "yup", "sure", "ok", "okay", "please", "correct", "confirm", "confirmed"}
+
+_SUPERLATIVE_PATTERN = re.compile(
+    r'\b(?:(first|second|third|fourth|fifth)\s+)?(cheapest|most expensive|priciest|dearest)\b',
+    re.IGNORECASE
+)
+_QUANTIFIER_PATTERN = re.compile(r'\b(both|all|every)\b', re.IGNORECASE)
 
 
 def _to_number(word: str):
@@ -51,13 +60,40 @@ def _to_number(word: str):
     return _NUMBER_WORDS.get(word)
 
 
+def _pluralize(word: str) -> str:
+    if word.endswith(("x", "s", "z", "ch", "sh")):
+        return word + "es"
+    return word + "s"
+
+
+def _build_category_index(items_by_browse_num: dict) -> dict:
+    """Maps category name (singular + simple plural, lowercase) -> browse_number,
+    derived from the real 'category' field on items, not guessed labels."""
+    index = {}
+    for bn, items in items_by_browse_num.items():
+        if not items:
+            continue
+        cat = (items[0].get("category") or "").strip().lower()
+        if not cat:
+            continue
+        index[cat] = bn
+        if cat.endswith("s") and not cat.endswith(("ss", "xs", "zs")):
+            # already looks plural-ish (e.g. a category literally stored as "brakes")
+            index[cat[:-1]] = bn
+        else:
+            index[_pluralize(cat)] = bn
+    return index
+
+
+def _distinctive_tokens(name: str) -> list:
+    raw = [t for t in re.findall(r'[a-zA-Z0-9]+', name.lower()) if len(t) >= 2]
+    return [t for t in raw if t not in _GENERIC_BRAND_TOKENS]
+
+
 def _parse_numeric_references(user_message: str, list_lengths: dict) -> list:
-    """Extracts (list_number, option_number) pairs from text like "list 2
-    option 1" OR "option 1 from list 2" (both orderings are common), in the
-    order referenced. Handles "list one give me the engine" (no explicit
-    option) by defaulting to option 1 when that list has exactly one item —
-    an unambiguous case. Only the FIRST pair is used by callers, matching
-    the one-item-per-turn policy."""
+    """Extracts ALL (list_number, option_number) pairs from text like "list 2
+    option 1" or "option 1 from list 2" (both orderings), in order. Handles
+    implicit single-item lists ("list one give me the engine")."""
     tokens = _TOKEN_PATTERN.findall(user_message)
     pairs = []
     pending_list = None
@@ -75,7 +111,7 @@ def _parse_numeric_references(user_message: str, list_lengths: dict) -> list:
                 if pending_list is not None and list_lengths.get(pending_list) == 1:
                     pairs.append((pending_list, 1))
                 pending_list = num
-        else:  # option / item (including typo aliases)
+        else:  # option / item
             if pending_list is not None:
                 pairs.append((pending_list, num))
                 pending_list = None
@@ -87,19 +123,126 @@ def _parse_numeric_references(user_message: str, list_lengths: dict) -> list:
     return pairs
 
 
+def _parse_category_references(user_message: str, category_index: dict) -> list:
+    """Extracts (browse_number, item_number) pairs from category-name phrasing:
+    "1 from engines", "engine 1", "2 from the gearbox list", "first engine",
+    "second gearbox". Category names come from real item data, not guesswork."""
+    if not category_index:
+        return []
+    cat_alternation = "|".join(sorted((re.escape(c) for c in category_index), key=len, reverse=True))
+    pattern = re.compile(
+        rf'\b(?P<num1>\d+|{_NUMBER_WORD_ALTERNATION})\s+(?:from\s+(?:the\s+)?)?(?P<cat1>{cat_alternation})\b'
+        rf'|\b(?P<cat2>{cat_alternation})\s+(?P<num2>\d+|{_NUMBER_WORD_ALTERNATION})\b',
+        re.IGNORECASE
+    )
+    pairs = []
+    for m in pattern.finditer(user_message):
+        if m.group("cat1"):
+            num_word, cat_word = m.group("num1"), m.group("cat1")
+        else:
+            num_word, cat_word = m.group("num2"), m.group("cat2")
+        num = _to_number(num_word)
+        bn = category_index.get(cat_word.lower())
+        if num is not None and bn is not None:
+            pairs.append((bn, num))
+    return pairs
+
+
+def _parse_superlatives(user_message: str, items_by_browse_num: dict, category_index: dict) -> list:
+    """Resolves "cheapest", "second cheapest", "most expensive" etc. Uses a
+    named category if mentioned in the same message, otherwise defaults to
+    the most recently browsed list."""
+    m = _SUPERLATIVE_PATTERN.search(user_message)
+    if not m:
+        return []
+    ordinal_word, kind = m.group(1), m.group(2).lower()
+    position = _to_number(ordinal_word) if ordinal_word else 1
+
+    target_bn = None
+    msg_lower = user_message.lower()
+    for cat_name, bn in category_index.items():
+        if re.search(rf'\b{re.escape(cat_name)}\b', msg_lower):
+            target_bn = bn
+            break
+    if target_bn is None:
+        if not items_by_browse_num:
+            return []
+        target_bn = max(items_by_browse_num.keys())
+
+    items = items_by_browse_num.get(target_bn)
+    if not items or position > len(items):
+        return []
+
+    reverse = kind in ("most expensive", "priciest", "dearest")
+    sorted_items = sorted(range(len(items)), key=lambda i: float(items[i].get("price", 0)), reverse=reverse)
+    chosen_idx = sorted_items[position - 1]
+    return [(target_bn, chosen_idx + 1)]
+
+
+def _parse_quantifier_matches(user_message: str, items_by_browse_num: dict, category_index: dict) -> list:
+    """Resolves "add both", "all three", "give me every A4 headlight" — can
+    return MULTIPLE items. Only fires on an explicit quantifier word, so it
+    never silently over-selects on an ordinary message."""
+    if not _QUANTIFIER_PATTERN.search(user_message):
+        return []
+    msg_lower = user_message.lower()
+    quantifier = _QUANTIFIER_PATTERN.search(user_message).group(1).lower()
+
+    # Quantifier + named category ("all three gearboxes", "every headlight")
+    for cat_name, bn in category_index.items():
+        if re.search(rf'\b{re.escape(cat_name)}\b', msg_lower):
+            items = items_by_browse_num.get(bn, [])
+            if quantifier == "both" and len(items) != 2:
+                continue
+            if items:
+                return [(bn, i + 1) for i in range(len(items))]
+
+    # Quantifier + named item filter ("give me every A4 headlight"). Build the
+    # vocabulary of real descriptive tokens from item names, so we can tell
+    # genuine query terms ("a4") apart from filler words ("give", "every").
+    # An item matches if ALL the query's descriptive tokens are present in
+    # that item's own tokens — the reverse direction of Strategy 6's single-
+    # item match, since here the message describes a CRITERION, not the
+    # full name of one specific part.
+    vocab = set()
+    for items in items_by_browse_num.values():
+        for item in items:
+            vocab.update(_distinctive_tokens(item.get("name", "")))
+    query_tokens = set(re.findall(r'[a-zA-Z0-9]+', msg_lower)) & vocab
+
+    if query_tokens:
+        for bn, items in items_by_browse_num.items():
+            matches = []
+            for idx, item in enumerate(items):
+                item_tokens = set(_distinctive_tokens(item.get("name", "")))
+                if query_tokens.issubset(item_tokens):
+                    matches.append(idx)
+            if matches and (quantifier != "both" or len(matches) == 2):
+                return [(bn, i + 1) for i in matches]
+
+    # Bare quantifier with no category/name — apply to the most recently
+    # browsed list only (e.g. "add both" right after seeing a 2-item list).
+    if items_by_browse_num:
+        most_recent_bn = max(items_by_browse_num.keys())
+        items = items_by_browse_num[most_recent_bn]
+        if quantifier == "both" and len(items) == 2:
+            return [(most_recent_bn, 1), (most_recent_bn, 2)]
+        if quantifier in ("all", "every"):
+            return [(most_recent_bn, i + 1) for i in range(len(items))]
+
+    return []
+
+
 def resolve(db, session_id: str, tracker, user_message: str):
     """
     Attempts full deterministic resolution of a customer's selection message.
 
-    Returns a tuple (resolved_items, extra_count):
-      - resolved_items: a list with exactly one resolved item dict (matching the
-        shape tracker.resolve_selections() produces, with '_list_id' set), or
-        None if nothing could be confidently resolved — in which case the
-        caller should fall back to the existing LLM-tag-based flow.
-      - extra_count: how many ADDITIONAL numeric references were found in the
-        message beyond the one resolved (0 if none). Lets the caller give an
-        honest "let's add the rest one at a time" reply instead of a plain
-        "anything else?" that implies the whole request was handled.
+    Returns (resolved_items, invalid_count):
+      - resolved_items: list of resolved item dicts (each with '_list_id' set),
+        possibly empty/None if nothing confidently resolved.
+      - invalid_count: number of explicit references found that pointed at
+        something out of range (so the caller can say "I couldn't find one
+        of those" rather than silently ignoring it).
     """
     import chat_store
 
@@ -117,22 +260,66 @@ def resolve(db, session_id: str, tracker, user_message: str):
         return None, 0
 
     list_lengths = {bn: len(items) for bn, items in items_by_browse_num.items()}
+    category_index = _build_category_index(items_by_browse_num)
 
-    # --- Strategy 1: explicit numeric reference ("list 2 option 1") ---
-    pairs = _parse_numeric_references(user_message, list_lengths)
-    if pairs:
-        list_num, option_num = pairs[0]  # one-item-per-turn policy — only take the first
-        extra_count = len(pairs) - 1
-        items = items_by_browse_num.get(list_num)
-        if items and 1 <= option_num <= len(items):
-            item = dict(items[option_num - 1])
-            item["_list_id"] = browse_map[list_num]
+    def _resolve_pairs(pairs):
+        resolved, invalid = [], 0
+        seen = set()
+        for list_num, option_num in pairs[:_MAX_ITEMS_PER_MESSAGE]:
+            items = items_by_browse_num.get(list_num)
+            if items and 1 <= option_num <= len(items):
+                key = (list_num, option_num)
+                if key in seen:
+                    continue
+                seen.add(key)
+                item = dict(items[option_num - 1])
+                item["_list_id"] = browse_map[list_num]
+                resolved.append(item)
+            else:
+                invalid += 1
+        return resolved, invalid
+
+    # --- Strategy 1: explicit numeric references ("list 2 option 1", "list 1
+    # option 2 and list 3 option 1") — now resolves ALL pairs found. ---
+    numeric_pairs = _parse_numeric_references(user_message, list_lengths)
+    if numeric_pairs:
+        resolved, invalid = _resolve_pairs(numeric_pairs)
+        for item in resolved:
             item["_resolved_by"] = "numeric"
-            return [item], extra_count
-        return None, 0  # explicit but out-of-range reference — don't guess, let normal flow handle it
+        # Explicit references are authoritative — if none resolved, report the
+        # invalid count rather than silently trying vaguer strategies on the
+        # same message (which could produce an unrelated, confusing result).
+        return (resolved or None), invalid
 
-    # --- Strategy 2: bare affirmative ("yes") when the most recent browsed
-    # list has exactly one item — otherwise it's genuinely ambiguous. ---
+    # --- Strategy 2: category-name references ("1 from engines", "engine 1",
+    # "take the first engine and second gearbox") ---
+    category_pairs = _parse_category_references(user_message, category_index)
+    if category_pairs:
+        resolved, invalid = _resolve_pairs(category_pairs)
+        for item in resolved:
+            item["_resolved_by"] = "category"
+        return (resolved or None), invalid
+
+    # --- Strategy 3: superlatives ("cheapest", "second cheapest gearbox") ---
+    superlative_pairs = _parse_superlatives(user_message, items_by_browse_num, category_index)
+    if superlative_pairs:
+        resolved, invalid = _resolve_pairs(superlative_pairs)
+        for item in resolved:
+            item["_resolved_by"] = "superlative"
+        if resolved:
+            return resolved, invalid
+
+    # --- Strategy 4: quantifiers ("add both", "all three", "every A4 headlight") ---
+    quantifier_pairs = _parse_quantifier_matches(user_message, items_by_browse_num, category_index)
+    if quantifier_pairs:
+        resolved, invalid = _resolve_pairs(quantifier_pairs)
+        for item in resolved:
+            item["_resolved_by"] = "quantifier"
+        if resolved:
+            return resolved, invalid
+
+    # --- Strategy 5: bare affirmative ("yes") — only when genuinely
+    # unambiguous (most recent list has exactly one item). ---
     normalized = user_message.strip().lower().strip("!.")
     if normalized in AFFIRMATIVE_ONLY:
         most_recent_bn = max(items_by_browse_num.keys())
@@ -142,17 +329,15 @@ def resolve(db, session_id: str, tracker, user_message: str):
             item["_list_id"] = browse_map[most_recent_bn]
             item["_resolved_by"] = "affirmative"
             return [item], 0
-        return None, 0  # ambiguous — more than one item, "yes" alone can't disambiguate
+        return None, 0
 
-    # --- Strategy 3: named reference ("give me the a3 headlight"), only if
-    # the match is unambiguous (exactly one candidate across all lists). ---
+    # --- Strategy 6: single named reference ("give me the a3 headlight"),
+    # only if unambiguous (exactly one candidate across all lists). ---
     msg_lower = user_message.lower()
     candidates = []
     for bn, items in items_by_browse_num.items():
         for idx, item in enumerate(items):
-            name = item.get("name", "")
-            raw_tokens = [t for t in re.findall(r'[a-zA-Z0-9]+', name.lower()) if len(t) >= 2]
-            distinctive = [t for t in raw_tokens if t not in _GENERIC_BRAND_TOKENS]
+            distinctive = _distinctive_tokens(item.get("name", ""))
             if distinctive and all(t in msg_lower for t in distinctive):
                 candidates.append((bn, idx, item))
 
@@ -163,4 +348,4 @@ def resolve(db, session_id: str, tracker, user_message: str):
         resolved_item["_resolved_by"] = "name_match"
         return [resolved_item], 0
 
-    return None, 0  # zero or ambiguous matches — fall back to the LLM-tag flow
+    return None, 0  # nothing confidently resolved — fall back to the LLM-tag flow
