@@ -153,6 +153,20 @@ def get_confirmed_selections(db, session_id: str) -> list[dict]:
     return deduped
 
 
+def build_basket_summary(db, session_id: str) -> tuple:
+    """Returns (summary_text, total_price) for everything confirmed so far
+    this session — used to show a running basket rather than just the last
+    item added, so the customer always sees the full picture before giving
+    contact details."""
+    items = get_confirmed_selections(db, session_id)
+    if not items:
+        return "", 0.0
+    lines = [f"✓ {it['name']} (£{float(it['price']):.2f})" for it in items]
+    total = sum(float(it.get("price", 0)) for it in items)
+    summary = "\n".join(lines)
+    return summary, total
+
+
 # ---------------------------------------------------------------------------
 # Friction tracking — powers the "offer a human" escalation path. A "friction"
 # turn is one where the bot couldn't help (no matching parts, had to ask for
