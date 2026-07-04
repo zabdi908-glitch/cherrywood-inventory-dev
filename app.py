@@ -863,12 +863,34 @@ class MockEnquiryStore:
 enquiries_store = MockEnquiryStore()
 
 
-
-
-# Matches things like "option 2", "list 3", "2nd item" — used to detect when a customer
-# message is likely selecting from multiple lists, so an untagged model reply can be
-# treated as untrustworthy rather than shown as-is.
+# Matches things like "option 2", "list 3", "2nd item" — the NUMBERED reference case.
 SELECTION_REQUEST_PATTERN = re.compile(r'\b(?:option|list)\s*\d+|\d+\s*(?:st|nd|rd|th)?\s*(?:option|item)\b', re.IGNORECASE)
+
+# Matches natural-language selection phrasing that doesn't reference a number at all —
+# e.g. "give me the a3 headlight", "I'll take that one", "can I get the gearbox". Without
+# this, a message like "give me the a3 headlight" was being treated as a brand new search
+# instead of a selection from the list already shown, so the model never got prompted to
+# use a [SELECT] tag for it — the item silently never made it into the confirmed selection.
+DIRECT_INTENT_PATTERN = re.compile(
+    r"\b(give me|i want|i'?ll take|get me|i would like|i'?d like|please add|add (it|that|this)|"
+    r"that one|i'?ll have|can i (have|get)|yes please|i'?ll go with|go with)\b",
+    re.IGNORECASE
+)
+AFFIRMATIVE_ONLY = {"yes", "yeah", "yep", "yup", "sure", "ok", "okay", "please", "correct", "confirm", "confirmed"}
+
+
+def is_selection_message(user_message: str) -> bool:
+    """True if this message is the customer selecting/confirming something already
+    shown — whether by number ('option 2'), by name ('give me the headlight'), or
+    a bare affirmative ('yes') — as opposed to browsing a new category."""
+    if SELECTION_REQUEST_PATTERN.search(user_message):
+        return True
+    if DIRECT_INTENT_PATTERN.search(user_message):
+        return True
+    if user_message.strip().lower().strip("!.") in AFFIRMATIVE_ONLY:
+        return True
+    return False
+
 
 FRICTION_ESCALATION_THRESHOLD = 3  # consecutive unhelpful turns before offering a human
 
@@ -883,6 +905,29 @@ def _has_duplicate_selection(items: list[dict]) -> bool:
         if key in seen:
             return True
         seen.add(key)
+    return False
+
+
+def _message_references_known_item(db, session_id: str, user_message: str) -> bool:
+    """True if the customer's message names an item that actually exists in
+    one of this session's registered lists — catches selections made by
+    name ("give me the a3 headlight") rather than by list/option number,
+    which the numeric SELECTION_REQUEST_PATTERN can't detect at all."""
+    import json as _json
+    msg_lower = user_message.lower()
+    rows = db.execute(
+        "SELECT items_json FROM chat_lists WHERE session_id = ?", (session_id,)
+    ).fetchall()
+    for row in rows:
+        items = _json.loads(row["items_json"])
+        for item in items:
+            name = item.get("name", "")
+            tokens = [t for t in re.findall(r'[a-zA-Z0-9]+', name.lower()) if len(t) > 2]
+            if not tokens:
+                continue
+            matched = sum(1 for t in tokens if t in msg_lower)
+            if matched >= max(1, len(tokens) - 1):
+                return True
     return False
 
 
@@ -916,12 +961,13 @@ def proxy_chat():
             print(f"⚠️ [AI] Rate limited — reason={reason}, ip={client_ip}, session={session_id}", flush=True)
             return jsonify({'reply': "You're sending messages a bit fast — please wait a moment and try again, or WhatsApp us directly."}), 429
 
-        # A message referencing "option 2"/"list 3" etc is the customer selecting from an
-        # EXISTING list, not browsing a new category — even if a stray word like "engine"
-        # in their confirmation would otherwise trigger a fresh keyword search below. We use
-        # this to skip registering a new list on such turns, since doing so was pushing older
-        # (still relevant) lists out of the model's last-N reference window.
-        is_selection_turn = bool(SELECTION_REQUEST_PATTERN.search(user_message))
+        # A message is a SELECTION turn (not a new browse) if it references an existing
+        # list by number ("option 2"), uses direct-intent phrasing ("give me the..."),
+        # is a bare affirmative ("yes"), or names an item that's actually in one of this
+        # session's already-shown lists ("give me the a3 headlight"). Treating it as a
+        # selection turn means we skip a fresh search/registration and instead nudge the
+        # model to resolve it against the existing reference table via a [SELECT] tag.
+        is_selection_turn = is_selection_message(user_message) or _message_references_known_item(db, session_id, user_message)
 
         tracker = chat_store.SessionListTracker(db, session_id)
 
@@ -1069,6 +1115,10 @@ Your job is to help customers find parts, and when they are ready, collect their
 
 SELECTION PROTOCOL (READ THIS CAREFULLY):
 You must NEVER type out a part's name or price yourself when confirming what the customer has chosen.
+This applies EVEN IF the customer names the part directly instead of using a number (e.g. "give me the
+a3 headlight" or "yes" to confirm the one you just showed) — you must still find it in the reference
+table below and respond with a [SELECT:list_id:item_number] tag, never freeform text like "I'll add the
+Audi A3 Headlight."
 {current_list_note}
 For an earlier list, use [SELECT:list_id:item_number] with the list_id and item_number from the
 reference table below (e.g. [SELECT:L1:3]).
@@ -1169,6 +1219,9 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
         customer_is_selecting = bool(SELECTION_REQUEST_PATTERN.findall(user_message)) and len(
             SELECTION_REQUEST_PATTERN.findall(user_message)
         ) >= 2
+        # Catches selections made by naming the part directly ("give me the a3 headlight")
+        # rather than by list/option number — the numeric pattern above can't see these at all.
+        references_named_item = _message_references_known_item(db, session_id, user_message)
 
         friction_event = False
 
@@ -1176,14 +1229,14 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
             reply = "I want to make sure I get you the right part — could you tell me which list you meant, or paste the exact part name you're interested in?"
             resolved_items = []
             friction_event = True
-        elif not has_any_tag and customer_is_selecting:
-            # The model tried to confirm a multi-item selection in freeform prose instead of
-            # using [SELECT] tags — this is exactly the failure mode where it can silently mix
-            # up items across lists. We can't verify freeform text against real data, so we
-            # never show it to the customer, even if it happens to look right.
+        elif not has_any_tag and (customer_is_selecting or references_named_item):
+            # The model tried to confirm a selection in freeform prose instead of using
+            # [SELECT] tags — whether that's a multi-item cross-list request or, as here,
+            # a single item referenced by name. Either way we can't verify freeform text
+            # against real data, so we never show it to the customer, even if it looks right.
             print(f"⚠️ [AI] Untagged selection confirmation blocked — session={session_id}, reply={reply!r}", flush=True)
-            reply = ("To make sure I get every part exactly right, could you confirm your choices one "
-                     "at a time? For example: \"option 2 from list 2\".")
+            reply = ("To make sure I get every part exactly right, could you confirm by the number shown "
+                     "next to it (e.g. \"option 2\"), or paste the exact part name?")
             resolved_items = []
             friction_event = True
         else:
