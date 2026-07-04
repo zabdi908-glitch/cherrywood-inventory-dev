@@ -12,9 +12,12 @@ Requires these Render environment variables (same ones you already have):
 """
 
 import os
+import time
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 
 from email_templates import build_confirmation_email
 
@@ -95,3 +98,45 @@ def alert_staff(subject: str, message: str) -> bool:
         print(f"❌ [MAILER] STAFF_EMAIL not configured, cannot send alert: {subject}", flush=True)
         return False
     return _send(staff_email, f"[Chatbot Alert] {subject}", text_body=message)
+
+
+def send_backup_email(file_path: str, size_mb: float) -> bool:
+    """Emails a database backup file as an attachment. Uses BACKUP_EMAIL if
+    set (recommended — a separate inbox/folder keeps backups from cluttering
+    day-to-day staff notifications), otherwise falls back to STAFF_EMAIL."""
+    backup_email = os.getenv("BACKUP_EMAIL") or os.getenv("STAFF_EMAIL")
+    if not backup_email:
+        print("❌ [MAILER] No BACKUP_EMAIL or STAFF_EMAIL configured, cannot send backup", flush=True)
+        return False
+
+    email_user = os.getenv("EMAIL_USER")
+    email_pass = os.getenv("EMAIL_PASS")
+    if not email_user or not email_pass:
+        print("❌ [MAILER] EMAIL_USER/EMAIL_PASS not configured", flush=True)
+        return False
+
+    date_str = time.strftime("%Y-%m-%d")
+    msg = MIMEMultipart()
+    msg["Subject"] = f"Cherrywood DB Backup - {date_str} ({size_mb:.2f} MB)"
+    msg["From"] = email_user
+    msg["To"] = backup_email
+    msg.attach(MIMEText(
+        f"Automatic daily database backup attached.\nSize: {size_mb:.2f} MB\nDate: {date_str}",
+        "plain"
+    ))
+
+    try:
+        with open(file_path, "rb") as f:
+            part = MIMEBase("application", "octet-stream")
+            part.set_payload(f.read())
+        encoders.encode_base64(part)
+        part.add_header("Content-Disposition", f'attachment; filename="inventory_backup_{date_str}.db"')
+        msg.attach(part)
+
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=30) as server:
+            server.login(email_user, email_pass)
+            server.sendmail(email_user, backup_email, msg.as_string())
+        return True
+    except Exception as e:
+        print(f"❌ [MAILER] Failed to send backup email: {e}", flush=True)
+        return False
