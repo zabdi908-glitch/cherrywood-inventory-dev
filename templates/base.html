@@ -152,8 +152,10 @@
     background: #C62828; color: white; padding: 13px 20px; border-radius: 50px; cursor: pointer;
     font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px;
     box-shadow: 0 4px 24px rgba(198,40,40,0.45); transition: transform 0.2s, box-shadow 0.2s; user-select: none;
+    border: none; font-family: inherit;
   }
   #bap-trigger:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(198,40,40,0.55); }
+  #bap-trigger:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
   #bap-box {
     width: 360px; height: 520px; background: #0f0f0f; border-radius: 16px; border: 1px solid #2a2a2a;
     display: none; flex-direction: column; overflow: hidden; box-shadow: 0 12px 50px rgba(0,0,0,0.6);
@@ -188,11 +190,11 @@
 </style>
 
 <div id="bap-widget">
-  <div id="bap-trigger" onclick="bapToggle()">
+  <button id="bap-trigger" onclick="bapToggle()" aria-expanded="false" aria-controls="bap-box">
     <span id="bap-trigger-icon">💬</span>
     <span id="bap-trigger-label">Parts Assistant</span>
-  </div>
-  <div id="bap-box">
+  </button>
+  <div id="bap-box" role="dialog" aria-label="Parts Assistant chat">
     <div id="bap-header">
       <div id="bap-header-left">
         <div id="bap-avatar">BAP</div>
@@ -204,17 +206,17 @@
           </div>
         </div>
       </div>
-      <button id="bap-close" onclick="bapToggle()">✕</button>
+      <button id="bap-close" onclick="bapToggle()" aria-label="Close chat">✕</button>
     </div>
-    <div id="bap-messages"></div>
+    <div id="bap-messages" role="log" aria-live="polite" aria-atomic="false"></div>
     <div id="bap-quick-replies">
       <button onclick="bapQuick('Check part availability')">Check availability</button>
       <button onclick="bapQuick('I need a price')">Get a price</button>
       <button onclick="bapQuick('Place an enquiry')">Place enquiry</button>
     </div>
     <div id="bap-input-row">
-      <input id="bap-input" type="text" placeholder="Ask about a part..." onkeydown="if(event.key==='Enter') bapSend()" autocomplete="off" />
-      <button id="bap-send-btn" onclick="bapSend()">➤</button>
+      <input id="bap-input" type="text" placeholder="Ask about a part..." onkeydown="if(event.key==='Enter') bapSend()" autocomplete="off" aria-label="Type your message" />
+      <button id="bap-send-btn" onclick="bapSend()" aria-label="Send message">➤</button>
     </div>
   </div>
 </div>
@@ -229,24 +231,40 @@
   function bapToggle() {
     isOpen = !isOpen;
     const box = document.getElementById("bap-box");
+    const trigger = document.getElementById("bap-trigger");
     if (isOpen) {
       box.classList.add("open");
+      trigger.setAttribute("aria-expanded", "true");
       if (!hasOpened) {
         hasOpened = true;
         setTimeout(() => {
           addMessage("ai", "Hi there! 👋 I can help you find parts, check prices, or take an enquiry. What can I help you with today?");
         }, 300);
       }
+      document.getElementById("bap-input").focus();
     } else {
       box.classList.remove("open");
+      trigger.setAttribute("aria-expanded", "false");
     }
+  }
+
+  // Escapes HTML special characters before inserting text into the DOM.
+  // Bot replies must NEVER be inserted as raw HTML — a reply containing
+  // "<" or ">" (whether coincidental or from a prompt-injection attempt)
+  // would otherwise be interpreted as real markup/script by the browser.
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
   }
 
   function addMessage(type, text) {
     const box = document.getElementById("bap-messages");
     const div = document.createElement("div");
     div.className = "bap-msg " + (type === "user" ? "bap-msg-user" : "bap-msg-ai");
-    div.innerHTML = text.replace(/\n/g, "<br>");
+    // Escape first, THEN convert newlines to <br> — safe because the <br> tags
+    // are added after escaping, so they're the only real HTML in the output.
+    div.innerHTML = escapeHtml(text).replace(/\n/g, "<br>");
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
     return div;
@@ -292,15 +310,30 @@
             const response = await fetch("/api/proxy-chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message, sessionId }), // <-- Sending the ID now
+                body: JSON.stringify({ message, sessionId }),
             });
-            
-            const data = await response.json();
+
             removeTyping();
+
+            // Guard against non-JSON responses (e.g. a raw HTML error page from
+            // an infrastructure-level failure) BEFORE attempting to parse —
+            // calling response.json() directly on an HTML body throws a raw
+            // JS parsing error that used to leak straight to the customer.
+            const contentType = response.headers.get("content-type") || "";
+            if (!contentType.includes("application/json")) {
+                console.error("⚠️ Non-JSON response, status:", response.status);
+                addMessage("ai", "Sorry, something went wrong on our end — please try again, or WhatsApp us and we'll help right away.");
+                isLoading = false;
+                btn.disabled = false;
+                input.focus();
+                return;
+            }
+
+            const data = await response.json();
 
             if (data.error) {
                 console.error("⚠️ Backend Error:", data.error);
-                addMessage("ai", "⚠️ Server Error: " + data.error);
+                addMessage("ai", "Sorry, something went wrong — please try again, or WhatsApp us and we'll help right away.");
             } else {
                 console.log("✅ AI Reply:", data.reply);
                 addMessage("ai", data.reply);
@@ -308,7 +341,7 @@
         } catch (err) {
             removeTyping();
             console.error("❌ Frontend Catch Error:", err);
-            addMessage("ai", "Connection issue: " + err.message);
+            addMessage("ai", "Connection issue — please try again, or WhatsApp us and we'll help right away.");
         }
 
         isLoading = false;
