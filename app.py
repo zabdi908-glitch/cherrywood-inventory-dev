@@ -865,6 +865,7 @@ enquiries_store = MockEnquiryStore()
 
 
 
+
 # Matches things like "option 2", "list 3", "2nd item" — the NUMBERED reference case.
 SELECTION_REQUEST_PATTERN = re.compile(r'\b(?:option|list)\s*\d+|\d+\s*(?:st|nd|rd|th)?\s*(?:option|item)\b', re.IGNORECASE)
 
@@ -967,6 +968,7 @@ def proxy_chat():
         rate_limiter.init_rate_limit_table(db)
         monitoring.init_alert_table(db)
         data_retention.maybe_purge(db)
+        backup.maybe_backup(db, DATABASE)
 
         client_ip = rate_limiter.get_client_ip(request)
         limited, reason = rate_limiter.is_rate_limited(db, ip=client_ip, session_id=session_id)
