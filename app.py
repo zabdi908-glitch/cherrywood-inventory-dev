@@ -908,11 +908,22 @@ def _has_duplicate_selection(items: list[dict]) -> bool:
     return False
 
 
+_GENERIC_BRAND_TOKENS = {"audi", "vw", "volkswagen", "seat", "skoda"}
+
+
 def _message_references_known_item(db, session_id: str, user_message: str) -> bool:
     """True if the customer's message names an item that actually exists in
     one of this session's registered lists — catches selections made by
     name ("give me the a3 headlight") rather than by list/option number,
-    which the numeric SELECTION_REQUEST_PATTERN can't detect at all."""
+    which the numeric SELECTION_REQUEST_PATTERN can't detect at all.
+
+    Brand words (audi, vw, etc) are excluded from matching — this is an
+    all-VAG-brand shop, so "audi" alone appears in almost every message and
+    almost every item name, and matching on it alone caused constant false
+    positives (e.g. "add audi lighting" being wrongly treated as referencing
+    the previously-shown engine, just because both mention "audi"). Requiring
+    ALL remaining distinctive tokens to match (not just most) keeps this
+    precise enough to only fire on genuine name references."""
     import json as _json
     msg_lower = user_message.lower()
     rows = db.execute(
@@ -922,11 +933,11 @@ def _message_references_known_item(db, session_id: str, user_message: str) -> bo
         items = _json.loads(row["items_json"])
         for item in items:
             name = item.get("name", "")
-            tokens = [t for t in re.findall(r'[a-zA-Z0-9]+', name.lower()) if len(t) > 2]
-            if not tokens:
-                continue
-            matched = sum(1 for t in tokens if t in msg_lower)
-            if matched >= max(1, len(tokens) - 1):
+            raw_tokens = [t for t in re.findall(r'[a-zA-Z0-9]+', name.lower()) if len(t) >= 2]
+            distinctive = [t for t in raw_tokens if t not in _GENERIC_BRAND_TOKENS]
+            if not distinctive:
+                continue  # nothing distinctive left to match on (shouldn't normally happen)
+            if all(t in msg_lower for t in distinctive):
                 return True
     return False
 
@@ -1216,12 +1227,12 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
 
         # 4b. Resolve any [SELECT:list_id:item_number] tags against REAL stored data.
         has_any_tag = bool(chat_store.SELECT_PATTERN.search(reply))
-        customer_is_selecting = bool(SELECTION_REQUEST_PATTERN.findall(user_message)) and len(
-            SELECTION_REQUEST_PATTERN.findall(user_message)
-        ) >= 2
-        # Catches selections made by naming the part directly ("give me the a3 headlight")
-        # rather than by list/option number — the numeric pattern above can't see these at all.
-        references_named_item = _message_references_known_item(db, session_id, user_message)
+        # Using is_selection_turn here (the SAME flag that decided whether to skip a fresh
+        # search) rather than a separate, narrower check — a bare "yes" or "add it" was
+        # correctly skipping the search but NOT being required to produce a tag, so the
+        # model could confirm a selection in freeform prose ("I've noted your interest...")
+        # that never got resolved/persisted at all. Any turn we treat as a selection should
+        # consistently require tag-based verification.
 
         friction_event = False
 
@@ -1229,7 +1240,7 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
             reply = "I want to make sure I get you the right part — could you tell me which list you meant, or paste the exact part name you're interested in?"
             resolved_items = []
             friction_event = True
-        elif not has_any_tag and (customer_is_selecting or references_named_item):
+        elif not has_any_tag and is_selection_turn:
             # The model tried to confirm a selection in freeform prose instead of using
             # [SELECT] tags — whether that's a multi-item cross-list request or, as here,
             # a single item referenced by name. Either way we can't verify freeform text
