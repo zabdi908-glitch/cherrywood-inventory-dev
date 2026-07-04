@@ -68,7 +68,48 @@ def init_chat_tables(db):
         )
     """)
     db.execute("CREATE INDEX IF NOT EXISTS idx_chat_confirmed_session ON chat_confirmed_selections(session_id)")
+
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS chat_browse_sequence (
+            session_id TEXT NOT NULL,
+            browse_number INTEGER NOT NULL,
+            list_id TEXT NOT NULL,
+            PRIMARY KEY (session_id, browse_number)
+        )
+    """)
     db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Browse sequence — deterministic customer-facing list numbering. "List 2"
+# should always mean the second category the customer actually browsed,
+# independent of the internal list_id counter (which today's bugs have shown
+# can drift due to spurious re-registrations). This is a separate, append-only
+# sequence assigned ONLY when a genuine new browse happens, so numeric
+# references like "list 2 option 1" can be resolved with zero LLM involvement.
+# ---------------------------------------------------------------------------
+
+def register_browse_number(db, session_id: str, list_id: str) -> int:
+    row = db.execute(
+        "SELECT MAX(browse_number) as m FROM chat_browse_sequence WHERE session_id = ?",
+        (session_id,)
+    ).fetchone()
+    next_num = (row["m"] if row and row["m"] is not None else 0) + 1
+    db.execute(
+        "INSERT INTO chat_browse_sequence (session_id, browse_number, list_id) VALUES (?, ?, ?)",
+        (session_id, next_num, list_id)
+    )
+    db.commit()
+    return next_num
+
+
+def get_browse_sequence_map(db, session_id: str) -> dict:
+    """Returns {browse_number: list_id} for this session."""
+    rows = db.execute(
+        "SELECT browse_number, list_id FROM chat_browse_sequence WHERE session_id = ?",
+        (session_id,)
+    ).fetchall()
+    return {r["browse_number"]: r["list_id"] for r in rows}
 
 
 # ---------------------------------------------------------------------------
@@ -171,6 +212,7 @@ def clear_session(db, session_id: str):
     db.execute("DELETE FROM chat_list_counters WHERE session_id = ?", (session_id,))
     db.execute("DELETE FROM chat_friction WHERE session_id = ?", (session_id,))
     db.execute("DELETE FROM chat_confirmed_selections WHERE session_id = ?", (session_id,))
+    db.execute("DELETE FROM chat_browse_sequence WHERE session_id = ?", (session_id,))
     db.commit()
 
 
@@ -253,6 +295,10 @@ class SessionListTracker:
             (self.session_id, list_id)
         ).fetchone()
         return json.loads(row["items_json"]) if row else None
+
+    def get_list_items(self, list_id: str):
+        """Public accessor — used by the deterministic selection resolver."""
+        return self._get_list_items(list_id)
 
     def resolve_selections(self, llm_text: str) -> list[dict]:
         resolved = []
