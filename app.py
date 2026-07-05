@@ -30,6 +30,7 @@ import time
 import data_retention
 import selection_resolver
 import backup
+import contact_parser
 
 app = Flask(__name__)
 csrf = CSRFProtect(app)
@@ -840,6 +841,7 @@ The Cherrywood Auto Parts Team
         print(f"❌ Failed to send emails: {e}", flush=True)
 
 
+
 # Matches things like "option 2", "list 3", "2nd item" — the NUMBERED reference case.
 SELECTION_REQUEST_PATTERN = re.compile(r'\b(?:option|list)\s*\d+|\d+\s*(?:st|nd|rd|th)?\s*(?:option|item)\b', re.IGNORECASE)
 
@@ -883,6 +885,46 @@ def looks_like_contact_info(message: str) -> bool:
     thinking it was still searching for a part rather than recognizing
     contact details had just been provided."""
     return bool(_EMAIL_PATTERN.search(message)) or bool(_PHONE_PATTERN.search(message))
+
+
+def finalize_enquiry(db, session_id: str, tracker, customer_data: dict) -> str:
+    """Saves the enquiry, notifies staff, confirms with the customer, and
+    clears session state. Shared by both the deterministic contact-parsing
+    path and the LLM [ENQUIRY_COMPLETE] fallback, so there's one place that
+    does this rather than two copies that could drift apart."""
+    all_selected_items = chat_store.get_confirmed_selections(db, session_id)
+    if all_selected_items:
+        customer_data["part"] = ", ".join(it["name"] for it in all_selected_items)
+        if not customer_data.get("vehicle") or customer_data.get("vehicle") == "vehicle mentioned":
+            customer_data["vehicle"] = all_selected_items[0]["vehicle"]
+
+    enquiry_id = enquiries_store.add_enquiry(customer_data)
+
+    if enquiry_id:
+        print(f"💾 Enquiry #{enquiry_id} saved to database", flush=True)
+    else:
+        print("⚠️ Enquiry DB save failed", flush=True)
+        if monitoring.should_send_alert(db, "enquiry_save_failure"):
+            mailer.alert_staff(
+                "Enquiry failed to save to database",
+                f"Customer data: {customer_data}\nSession: {session_id}"
+            )
+
+    staff_sent = mailer.send_staff_notification(customer_data, all_selected_items)
+    if not staff_sent and monitoring.should_send_alert(db, "staff_notification_failure"):
+        mailer.alert_staff(
+            "Staff notification email failing",
+            f"Could not email STAFF_EMAIL for enquiry: {customer_data}\nSession: {session_id}"
+        )
+
+    customer_sent = mailer.send_customer_confirmation(customer_data, all_selected_items)
+
+    if enquiry_id and customer_sent:
+        enquiries_store.update_status(enquiry_id, "Contacted", notes="Confirmation email sent to customer.")
+
+    tracker.clear()  # wipes message history, list state, AND contact progress for a fresh next enquiry
+
+    return "✅ Your enquiry has been sent! We will call or email you back within 2 hours."
 
 
 FRICTION_ESCALATION_THRESHOLD = 3  # consecutive unhelpful turns before offering a human
@@ -1045,6 +1087,49 @@ def proxy_chat():
             reply = "I couldn't find that option in the list you meant — could you double-check the number and try again?"
             chat_store.append_message(db, session_id, "assistant", reply, keep=10)
             return jsonify({'reply': reply})
+
+        # 1c. DETERMINISTIC CONTACT PARSING — same principle as the selection resolver
+        # above: extracting name/phone/email from free text is a regex job, not something
+        # that needs an LLM's judgement. This also fixes a real bug — messages that are
+        # purely contact details (no part-related words at all) used to fall through to
+        # the normal parts search, find nothing, and confuse the model into thinking it
+        # was still hunting for a part instead of recognizing contact info had been given.
+        if looks_like_contact_info(user_message):
+            extracted = contact_parser.extract_contact_info(user_message)
+            progress = chat_store.update_contact_progress(
+                db, session_id,
+                name=extracted["name"],
+                phone=extracted["phone"],  # only ever a normalized, VALID phone — never an invalid one
+                email=extracted["email"],
+            )
+
+            if progress["name"] and progress["phone"] and progress["email"]:
+                # All three fields confirmed — finalize the enquiry immediately, no LLM call.
+                customer_data = {
+                    "name": progress["name"],
+                    "phone": progress["phone"],
+                    "email": progress["email"],
+                    "vehicle": "",
+                    "part": "",
+                }
+                confirmation_reply = finalize_enquiry(db, session_id, tracker, customer_data)
+                chat_store.append_message(db, session_id, "assistant", confirmation_reply, keep=10)
+                return jsonify({"reply": confirmation_reply})
+
+            # Not all fields confirmed yet — report exactly what's confirmed vs. still
+            # needed, without ever discarding fields that were already valid.
+            status_lines = []
+            status_lines.append(f"✓ Name: {progress['name']}" if progress["name"] else "Still need: your name")
+            status_lines.append(f"✓ Phone: {progress['phone']}" if progress["phone"] else "Still need: your phone number")
+            status_lines.append(f"✓ Email: {progress['email']}" if progress["email"] else "Still need: your email")
+
+            extra_note = ""
+            if extracted["phone_raw"] and extracted["phone_valid"] is False:
+                extra_note = f"\n\nThe phone number \"{extracted['phone_raw']}\" doesn't look quite right — could you double-check it?"
+
+            reply = "Thanks! Here's where we're at:\n" + "\n".join(status_lines) + extra_note
+            chat_store.append_message(db, session_id, "assistant", reply, keep=10)
+            return jsonify({"reply": reply})
 
         # 2. Fetch live inventory — filtered by keywords from the user's message
         try:
@@ -1356,50 +1441,10 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
         # 5. Check for the Enquiry Completion flag
         if "[ENQUIRY_COMPLETE]" in reply:
             json_str = reply.replace("[ENQUIRY_COMPLETE]", "").strip()
-
             try:
                 customer_data = json.loads(json_str)
-
-                all_selected_items = chat_store.get_confirmed_selections(db, session_id)
-                if all_selected_items:
-                    customer_data["part"] = ", ".join(it["name"] for it in all_selected_items)
-                    if not customer_data.get("vehicle") or customer_data["vehicle"] == "vehicle mentioned":
-                        customer_data["vehicle"] = all_selected_items[0]["vehicle"]
-
-                enquiry_id = enquiries_store.add_enquiry(customer_data)
-
-                if enquiry_id:
-                    print(f"💾 Enquiry #{enquiry_id} saved to database", flush=True)
-                else:
-                    print("⚠️ Enquiry DB save failed", flush=True)
-                    if monitoring.should_send_alert(db, "enquiry_save_failure"):
-                        mailer.alert_staff(
-                            "Enquiry failed to save to database",
-                            f"Customer data: {customer_data}\nSession: {session_id}"
-                        )
-
-                staff_sent = mailer.send_staff_notification(customer_data, all_selected_items)
-                if not staff_sent and monitoring.should_send_alert(db, "staff_notification_failure"):
-                    mailer.alert_staff(
-                        "Staff notification email failing",
-                        f"Could not email STAFF_EMAIL for enquiry: {customer_data}\nSession: {session_id}"
-                    )
-
-                customer_sent = mailer.send_customer_confirmation(customer_data, all_selected_items)
-
-                if enquiry_id and customer_sent:
-                    enquiries_store.update_status(
-                        enquiry_id,
-                        "Contacted",
-                        notes="Confirmation email sent to customer."
-                    )
-
-                tracker.clear()  # wipes both message history and list state for a fresh next enquiry
-
-                return jsonify({
-                    "reply": "✅ Your enquiry has been sent! We will call or email you back within 2 hours."
-                })
-
+                confirmation_reply = finalize_enquiry(db, session_id, tracker, customer_data)
+                return jsonify({"reply": confirmation_reply})
             except json.JSONDecodeError:
                 print(f"⚠️ [AI] Failed to parse enquiry JSON: {json_str}", flush=True)
 
