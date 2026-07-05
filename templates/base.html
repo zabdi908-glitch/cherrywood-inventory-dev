@@ -238,7 +238,7 @@
       if (!hasOpened) {
         hasOpened = true;
         setTimeout(() => {
-          addMessage("ai", "Hi there! 👋 I can help you find parts, check prices, or take an enquiry. What can I help you with today?");
+          addMessage("ai", {{ bot_settings.greeting_message|tojson }});
         }, 300);
       }
       document.getElementById("bap-input").focus();
