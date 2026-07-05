@@ -29,6 +29,7 @@ import monitoring
 import time
 import data_retention
 import selection_resolver
+import backup
 
 app = Flask(__name__)
 csrf = CSRFProtect(app)
