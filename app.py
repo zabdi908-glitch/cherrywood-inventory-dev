@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from email_reply_agent import handle_enquiry_auto_reply
 from list_tracker import SessionListTracker
 from email_templates import build_confirmation_email
-from email_templates import COMPANY_WHATSAPP_LINK, COMPANY_PHONE
 from enquiries_store import enquiries_store
 import sqlite3
 import os
