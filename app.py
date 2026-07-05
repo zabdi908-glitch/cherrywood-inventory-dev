@@ -31,6 +31,7 @@ import data_retention
 import selection_resolver
 import backup
 import contact_parser
+import analytics
 
 app = Flask(__name__)
 csrf = CSRFProtect(app)
@@ -405,6 +406,20 @@ def enquiry_update_status(id):
     enquiries_store.update_status(id, new_status)
     flash(f'✅ Enquiry #{id} marked as {new_status}', 'success')
     return redirect(url_for('enquiries_list'))
+
+# Add this route to app.py, alongside your other /admin routes (e.g. near enquiries_list).
+# Also add: import analytics  (near your other imports, alongside chat_store etc.)
+
+@app.route('/admin/analytics')
+@login_required
+def analytics_dashboard():
+    db = get_db()
+    try:
+        analytics.init_analytics_table(db)
+        summary = analytics.get_summary(db, enquiries_store)
+    finally:
+        db.close()
+    return render_template('analytics.html', summary=summary)
 
 # ============================================
 # INFO PAGES
@@ -1000,6 +1015,7 @@ def proxy_chat():
         rate_limiter.init_rate_limit_table(db)
         monitoring.init_alert_table(db)
         data_retention.maybe_purge(db)
+        analytics.init_analytics_table(db)
         backup.maybe_backup(db, DATABASE)
 
         client_ip = rate_limiter.get_client_ip(request)
@@ -1061,6 +1077,7 @@ def proxy_chat():
             print(f"🎯 [AI] Deterministically resolved (no LLM call) — session={session_id}, "
                   f"items={[it.get('name') for it in det_resolved]}, "
                   f"via={[it.get('_resolved_by') for it in det_resolved]}, invalid_refs={invalid_count}", flush=True)
+            analytics.log_event(db, session_id, "deterministic_resolved", detail=user_message[:200])
             chat_store.add_confirmed_selections(db, session_id, det_resolved)
             chat_store.reset_friction(db, session_id)
 
@@ -1187,6 +1204,8 @@ def proxy_chat():
                         parts_rows = db.execute(sql_or, params).fetchall()
 
                 if not parts_rows:
+                    print(f"🔍 [AI] No keyword match — session={session_id}, message={user_message!r}", flush=True)
+                    analytics.log_event(db, session_id, "search_failed", detail=user_message[:200])
                     parts_rows = db.execute(
                         "SELECT part_name, make, model, category, price, stock_status, oem_number "
                         "FROM parts WHERE stock_status = 'Available' "
@@ -1409,6 +1428,7 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
                 reply = tracker.strip_select_tags(reply)
                 if resolved_items:
                     chat_store.add_confirmed_selections(db, session_id, resolved_items)
+                    analytics.log_event(db, session_id, "llm_resolved", detail=user_message[:200])
                     # ALWAYS show what was actually matched, regardless of whatever other text
                     # the model wrote in the same turn. Previously this only happened when the
                     # model's reply was completely empty after stripping tags — meaning if the
@@ -1434,6 +1454,7 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
                 f"\n\nI want to make sure you get sorted quickly — would you like me to connect you with "
                 f"a staff member directly? WhatsApp us here: {COMPANY_WHATSAPP_LINK}, or call {COMPANY_PHONE}."
             )
+            analytics.log_event(db, session_id, "escalation_offered")
             chat_store.reset_friction(db, session_id)  # don't repeat the nudge every message after
 
         chat_store.append_message(db, session_id, "assistant", reply, keep=10)
