@@ -127,11 +127,14 @@ def get_deterministic_resolution_rate(db, days: int = 30) -> dict:
     return {"deterministic": det, "llm_fallback": llm, "deterministic_pct": pct}
 
 
-def get_summary(db, enquiries_store_module) -> dict:
-    """Pulls everything together for the /admin/analytics page."""
+def get_summary(db, enquiries_store_obj) -> dict:
+    """Pulls everything together for the /admin/analytics page.
+    enquiries_store_obj should be the EnquiryStore instance itself
+    (e.g. from `from enquiries_store import enquiries_store` in app.py),
+    not the module."""
     total_conversations = get_conversation_count(db)
     conversations_30d = get_conversation_count(db, days=30)
-    total_enquiries = enquiries_store_module.enquiries_store.get_counts().get("Total", 0)
+    total_enquiries = enquiries_store_obj.get_counts().get("Total", 0)
     conversion_rate = round((total_enquiries / total_conversations) * 100, 1) if total_conversations else 0
     return {
         "total_conversations": total_conversations,
