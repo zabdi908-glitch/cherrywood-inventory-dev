@@ -12,11 +12,14 @@ Requires: pip install pytest --break-system-packages
 
 import re
 import sqlite3
+import os
 
 import pytest
 
 import chat_store
 import rate_limiter
+import selection_resolver
+import contact_parser
 
 
 @pytest.fixture
@@ -27,6 +30,37 @@ def db():
     rate_limiter.init_rate_limit_table(conn)
     yield conn
     conn.close()
+
+
+@pytest.fixture
+def browsed_session(db):
+    """A session with engine/gearbox/lighting already browsed, matching the
+    scenario that caused today's real production bugs — used by several
+    test classes below."""
+    sid = "test-session"
+    tracker = chat_store.SessionListTracker(db, sid)
+
+    lid1 = tracker.register_list("engine", [
+        {"name": "Audi A4 B9 Engine 2.0 TDI", "price": 1450.0, "oem": "04L103351", "category": "Engine"},
+    ])
+    chat_store.register_browse_number(db, sid, lid1)
+
+    lid2 = tracker.register_list("gearbox", [
+        {"name": "DQ381 DSG Gearbox", "price": 950.0, "oem": "DQ381", "category": "Gearbox"},
+        {"name": "DQ250 DSG Gearbox", "price": 850.0, "oem": "DQ250", "category": "Gearbox"},
+    ])
+    chat_store.register_browse_number(db, sid, lid2)
+
+    lid3 = tracker.register_list("lighting", [
+        {"name": "Audi A3 Headlight", "price": 185.0, "oem": "8V0941003", "category": "Lighting"},
+        {"name": "Audi A4 B8 Headlight", "price": 165.0, "oem": "8K0941003", "category": "Lighting"},
+        {"name": "Audi A6 C7 Headlight", "price": 200.0, "oem": "4G0941003", "category": "Lighting"},
+        {"name": "Audi A4 B9 Headlight", "price": 190.0, "oem": "8W0941003", "category": "Lighting"},
+        {"name": "Audi Q5 Headlight", "price": 195.0, "oem": "8R0941003", "category": "Lighting"},
+    ])
+    chat_store.register_browse_number(db, sid, lid3)
+
+    return db, sid, tracker
 
 
 # ---------------------------------------------------------------------------
@@ -250,6 +284,250 @@ class TestSearchPrecision:
     def test_brand_only_falls_back_to_or(self, parts_db):
         result = _search_and_first(parts_db, ["audi"])
         assert len(result) > 0
+
+
+# ---------------------------------------------------------------------------
+# Deterministic selection resolver — the core fix from today's later session.
+# Covers numeric, category-name, superlative, and quantifier strategies.
+# ---------------------------------------------------------------------------
+
+class TestDeterministicResolverNumeric:
+    def test_single_list_option(self, browsed_session):
+        db, sid, tracker = browsed_session
+        result, invalid = selection_resolver.resolve(db, sid, tracker, "list 2 option 1")
+        assert result is not None and len(result) == 1
+        assert result[0]["name"] == "DQ381 DSG Gearbox"
+        assert invalid == 0
+
+    def test_reversed_order_option_from_list(self, browsed_session):
+        """Regression test: 'option 2 from list 3' (option-then-list ordering)
+        was silently dropped by an earlier version of the parser."""
+        db, sid, tracker = browsed_session
+        result, invalid = selection_resolver.resolve(db, sid, tracker, "option 2 from list 3")
+        assert result is not None and result[0]["name"] == "Audi A4 B8 Headlight"
+
+    def test_multi_item_single_message(self, browsed_session):
+        """Regression test: the original production bug — 3 items across 3
+        lists in one message used to produce wrong/duplicate/hallucinated
+        results. Now resolved fully deterministically, all at once."""
+        db, sid, tracker = browsed_session
+        result, invalid = selection_resolver.resolve(
+            db, sid, tracker, "list 1 option 1 and list 2 option 1 and list 3 option 2"
+        )
+        names = {r["name"] for r in result}
+        assert names == {"Audi A4 B9 Engine 2.0 TDI", "DQ381 DSG Gearbox", "Audi A4 B8 Headlight"}
+
+    def test_out_of_range_reported_as_invalid_not_silently_dropped(self, browsed_session):
+        db, sid, tracker = browsed_session
+        result, invalid = selection_resolver.resolve(db, sid, tracker, "list 1 option 2")  # engine list has only 1 item
+        assert result is None
+        assert invalid == 1
+
+    def test_typo_list_variant_recognized(self, browsed_session):
+        """Regression test: 'lst' (missing the 'i') used to be invisible to
+        the parser entirely."""
+        db, sid, tracker = browsed_session
+        result, invalid = selection_resolver.resolve(db, sid, tracker, "lst 2 option 1")
+        assert result is not None and result[0]["name"] == "DQ381 DSG Gearbox"
+
+
+class TestDeterministicResolverCategory:
+    def test_number_from_category(self, browsed_session):
+        db, sid, tracker = browsed_session
+        result, invalid = selection_resolver.resolve(db, sid, tracker, "2 from gearboxes")
+        assert result is not None and result[0]["name"] == "DQ250 DSG Gearbox"
+
+    def test_category_then_number(self, browsed_session):
+        db, sid, tracker = browsed_session
+        result, invalid = selection_resolver.resolve(db, sid, tracker, "engine 1")
+        assert result is not None and result[0]["name"] == "Audi A4 B9 Engine 2.0 TDI"
+
+    def test_pluralization_edge_case(self, browsed_session):
+        """Regression test: naive pluralization made 'gearbox' + 's' =
+        'gearboxs' instead of the real word 'gearboxes', breaking this exact
+        phrase."""
+        db, sid, tracker = browsed_session
+        result, invalid = selection_resolver.resolve(db, sid, tracker, "add both gearboxes")
+        assert result is not None and len(result) == 2
+
+
+class TestDeterministicResolverSuperlatives:
+    def test_cheapest_in_category(self, browsed_session):
+        db, sid, tracker = browsed_session
+        result, invalid = selection_resolver.resolve(db, sid, tracker, "cheapest gearbox")
+        assert result is not None and result[0]["name"] == "DQ250 DSG Gearbox"  # 850 < 950
+
+    def test_most_expensive(self, browsed_session):
+        db, sid, tracker = browsed_session
+        result, invalid = selection_resolver.resolve(db, sid, tracker, "most expensive headlight")
+        assert result is not None and result[0]["name"] == "Audi A6 C7 Headlight"  # 200 is highest
+
+
+class TestDeterministicResolverQuantifiers:
+    def test_every_matches_only_correct_subset(self, browsed_session):
+        """Regression test: 'every A4 headlight' used to match ALL 5 headlights
+        instead of just the 2 that are actually A4, due to a backwards
+        containment check."""
+        db, sid, tracker = browsed_session
+        result, invalid = selection_resolver.resolve(db, sid, tracker, "give me every A4 headlight")
+        names = {r["name"] for r in result}
+        assert names == {"Audi A4 B8 Headlight", "Audi A4 B9 Headlight"}
+
+
+class TestDeterministicResolverNamedAndAffirmative:
+    def test_named_reference_unambiguous(self, browsed_session):
+        db, sid, tracker = browsed_session
+        result, invalid = selection_resolver.resolve(db, sid, tracker, "give me the a3 headlight")
+        assert result is not None and result[0]["name"] == "Audi A3 Headlight"
+
+    def test_bare_yes_ambiguous_declines(self, browsed_session):
+        """'Yes' right after a 5-item list is genuinely ambiguous — the
+        resolver should decline rather than guess."""
+        db, sid, tracker = browsed_session
+        result, invalid = selection_resolver.resolve(db, sid, tracker, "yes")
+        assert result is None
+
+    def test_bare_yes_unambiguous_resolves(self, db):
+        """'Yes' right after a SINGLE-item list is unambiguous and should resolve."""
+        sid = "single-item-session"
+        tracker = chat_store.SessionListTracker(db, sid)
+        lid = tracker.register_list("engine", [
+            {"name": "Audi A4 B9 Engine 2.0 TDI", "price": 1450.0, "oem": "04L103351", "category": "Engine"}
+        ])
+        chat_store.register_browse_number(db, sid, lid)
+        result, invalid = selection_resolver.resolve(db, sid, tracker, "yes")
+        assert result is not None and result[0]["name"] == "Audi A4 B9 Engine 2.0 TDI"
+
+    def test_brand_word_alone_does_not_false_positive(self, browsed_session):
+        """Regression test: 'audi' alone used to match against item names via
+        an overly loose containment check, causing brand-new browse requests
+        to be wrongly treated as ambiguous selections."""
+        db, sid, tracker = browsed_session
+        result, invalid = selection_resolver.resolve(db, sid, tracker, "can you add audi lighting to the enquiry")
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+# Contact info parser — deterministic extraction of name/phone/email
+# ---------------------------------------------------------------------------
+
+class TestContactParser:
+    def test_all_fields_one_message_space_separated(self):
+        r = contact_parser.extract_contact_info("zaki 096458384 zabdi4549@gmail.com")
+        assert r["name"] == "Zaki"
+        assert r["phone"] == "096458384"
+        assert r["email"] == "zabdi4549@gmail.com"
+        assert r["phone_valid"] is True
+
+    def test_natural_language_sentence(self):
+        r = contact_parser.extract_contact_info(
+            "My name is Zaki. My number is 096458384. Email is zabdi4549@gmail.com"
+        )
+        assert r["name"] == "Zaki"
+        assert r["phone"] == "096458384"
+        assert r["email"] == "zabdi4549@gmail.com"
+
+    def test_comma_separated(self):
+        r = contact_parser.extract_contact_info("I'm Zaki, 096458384, zabdi4549@gmail.com")
+        assert r["name"] == "Zaki"
+        assert r["phone"] == "096458384"
+
+    def test_international_phone_formats(self):
+        for phone in ["0871234567", "+353871234567", "07123456789"]:
+            r = contact_parser.extract_contact_info(f"zaki {phone} zabdi4549@gmail.com")
+            assert r["phone_valid"] is True, f"Failed for {phone!r}"
+
+    def test_invalid_short_phone_flagged_not_dropped(self):
+        """Regression test: a too-short phone attempt used to be silently
+        absorbed into the name field instead of being flagged as invalid."""
+        r = contact_parser.extract_contact_info("My name is Zaki, phone is 12345")
+        assert r["name"] == "Zaki"  # name stays clean
+        assert r["phone_raw"] == "12345"
+        assert r["phone_valid"] is False  # flagged, not silently dropped
+
+    def test_no_phone_at_all_gives_none_not_false(self):
+        """phone_valid should be None (nothing found) vs False (found but
+        invalid) — these mean different things to the caller."""
+        r = contact_parser.extract_contact_info("zaki zabdi4549@gmail.com")
+        assert r["phone_raw"] is None
+        assert r["phone_valid"] is None
+
+
+class TestContactProgressAccumulation:
+    def test_accumulates_across_messages_without_losing_valid_fields(self, db):
+        sid = "contact-test"
+        # Turn 1: name + invalid phone
+        e1 = contact_parser.extract_contact_info("My name is Zaki, phone is 12345")
+        p1 = chat_store.update_contact_progress(db, sid, name=e1["name"], phone=e1["phone"], email=e1["email"])
+        assert p1["name"] == "Zaki" and p1["phone"] is None
+
+        # Turn 2: email only
+        e2 = contact_parser.extract_contact_info("zabdi4549@gmail.com")
+        p2 = chat_store.update_contact_progress(db, sid, name=e2["name"], phone=e2["phone"], email=e2["email"])
+        assert p2["name"] == "Zaki" and p2["email"] == "zabdi4549@gmail.com"  # name preserved
+
+        # Turn 3: valid phone finally arrives
+        e3 = contact_parser.extract_contact_info("096458384")
+        p3 = chat_store.update_contact_progress(db, sid, name=e3["name"], phone=e3["phone"], email=e3["email"])
+        assert p3["name"] == "Zaki" and p3["phone"] == "096458384" and p3["email"] == "zabdi4549@gmail.com"
+
+
+# ---------------------------------------------------------------------------
+# Enquiries store — persistence is the whole point (was previously an
+# in-memory mock that lost everything on every restart)
+# ---------------------------------------------------------------------------
+
+class TestEnquiriesStorePersistence:
+    def test_enquiry_survives_fresh_connection(self, tmp_path):
+        """Regression test for the biggest bug found today: enquiries used to
+        live only in a Python list in memory, wiped on every restart. This
+        simulates a 'restart' by opening a completely fresh connection to
+        the same file."""
+        import enquiries_store
+        db_path = str(tmp_path / "test_enquiries.db")
+        enquiries_store.DATABASE = db_path
+        enquiries_store._init_table()
+        store = enquiries_store.EnquiryStore()
+
+        eid = store.add_enquiry({
+            "name": "Zakaria", "phone": "07123456789", "email": "z@x.com",
+            "vehicle": "Audi A4", "part": "Engine"
+        })
+        assert eid is not None
+
+        # Simulate a restart: brand new store instance, same file
+        store2 = enquiries_store.EnquiryStore()
+        results = store2.get_all_enquiries(status_filter="All")
+        assert len(results) == 1
+        assert results[0]["name"] == "Zakaria"
+
+    def test_counts_use_total_key_matching_template(self, tmp_path):
+        """Regression test: get_counts() originally used key 'All' but the
+        actual admin template expects 'Total' — this would have silently
+        shown 0 forever instead of crashing."""
+        import enquiries_store
+        db_path = str(tmp_path / "test_counts.db")
+        enquiries_store.DATABASE = db_path
+        enquiries_store._init_table()
+        store = enquiries_store.EnquiryStore()
+        store.add_enquiry({"name": "A", "phone": "1", "email": "a@x.com", "vehicle": "", "part": ""})
+        counts = store.get_counts()
+        assert "Total" in counts
+        assert counts["Total"] == 1
+
+    def test_created_at_is_human_readable_string(self, tmp_path):
+        """Regression test: created_at used to be a raw Unix timestamp float,
+        displayed as an ugly number since the template has no formatting
+        logic of its own."""
+        import enquiries_store
+        db_path = str(tmp_path / "test_date.db")
+        enquiries_store.DATABASE = db_path
+        enquiries_store._init_table()
+        store = enquiries_store.EnquiryStore()
+        store.add_enquiry({"name": "A", "phone": "1", "email": "a@x.com", "vehicle": "", "part": ""})
+        result = store.get_all_enquiries(status_filter="All")[0]
+        assert isinstance(result["created_at"], str)
+        assert not result["created_at"].replace(".", "").isdigit()  # not a raw float
 
 
 if __name__ == "__main__":
