@@ -26,6 +26,7 @@ Also adds capabilities the mock never had, needed for GDPR compliance:
 import os
 import sqlite3
 import time
+from datetime import datetime
 
 if os.getenv('RENDER'):
     DATABASE = os.path.join('/data', 'inventory.db')
@@ -122,7 +123,10 @@ class EnquiryStore:
 
     def get_all_enquiries(self, status_filter: str = 'All'):
         """Used by /admin/enquiries. status_filter='All' returns everything;
-        any other value filters to an exact status match."""
+        any other value filters to an exact status match. Formats created_at
+        as a readable date string here (rather than storing it that way),
+        since the template displays it directly with no formatting of its
+        own — but purge_old() still compares against the raw stored float."""
         conn = _get_conn()
         try:
             if status_filter and status_filter != 'All':
@@ -132,21 +136,27 @@ class EnquiryStore:
                 ).fetchall()
             else:
                 rows = conn.execute("SELECT * FROM enquiries ORDER BY created_at DESC").fetchall()
-            return [dict(r) for r in rows]
+            results = []
+            for r in rows:
+                d = dict(r)
+                d["created_at"] = datetime.fromtimestamp(d["created_at"]).strftime("%d %b %Y, %H:%M")
+                results.append(d)
+            return results
         finally:
             conn.close()
 
     def get_counts(self):
         """Used by /admin/enquiries for the status tab counts. Always includes
         New/Contacted/Closed (even at zero) so the template never hits a
-        missing key, plus 'All' for the total."""
+        missing key, plus 'Total' for the overall count — matching the exact
+        key name enquiries_list.html expects (NOT 'All')."""
         conn = _get_conn()
         try:
             rows = conn.execute(
                 "SELECT status, COUNT(*) as c FROM enquiries GROUP BY status"
             ).fetchall()
             counts = {r['status']: r['c'] for r in rows}
-            counts['All'] = sum(counts.values())
+            counts['Total'] = sum(counts.values())
             for s in ('New', 'Contacted', 'Closed'):
                 counts.setdefault(s, 0)
             return counts
