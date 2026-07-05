@@ -869,6 +869,22 @@ def is_selection_message(user_message: str) -> bool:
     return False
 
 
+_EMAIL_PATTERN = re.compile(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+')
+_PHONE_PATTERN = re.compile(r'\b\d{7,}\b')
+
+
+def looks_like_contact_info(message: str) -> bool:
+    """True if the message contains an email address or a phone-number-like
+    digit sequence — used to skip running a fresh parts search on a turn
+    where the customer is just giving their name/phone/email, not asking
+    about a part. Without this, a message like "zaaki 07123456789 z@x.com"
+    got keyword-searched against the parts table, found nothing, fell back
+    to showing a random selection of parts, and confused the model into
+    thinking it was still searching for a part rather than recognizing
+    contact details had just been provided."""
+    return bool(_EMAIL_PATTERN.search(message)) or bool(_PHONE_PATTERN.search(message))
+
+
 FRICTION_ESCALATION_THRESHOLD = 3  # consecutive unhelpful turns before offering a human
 
 
@@ -958,6 +974,14 @@ def proxy_chat():
         # model to resolve it against the existing reference table via a [SELECT] tag.
         is_selection_turn = is_selection_message(user_message) or _message_references_known_item(db, session_id, user_message)
 
+        # Separate from is_selection_turn on purpose: this ALSO covers contact-info turns
+        # ("zaaki 07123456789 z@x.com"), used only to decide whether to skip the fresh
+        # parts search below. is_selection_turn itself stays unchanged for the later
+        # tag-verification check, since an [ENQUIRY_COMPLETE] reply has no [SELECT] tag
+        # either — folding contact-info detection into is_selection_turn would have
+        # caused that safety net to wrongly block genuine enquiry-completion replies.
+        skip_search = is_selection_turn or looks_like_contact_info(user_message)
+
         tracker = chat_store.SessionListTracker(db, session_id)
 
         # Manual reset — mainly for testing, but harmless for real customers too. Typing
@@ -1045,7 +1069,7 @@ def proxy_chat():
                     keywords.append(w)
 
             parts_rows = []
-            if not is_selection_turn:
+            if not skip_search:
                 if keywords:
                     like_clauses = []
                     params = []
@@ -1085,11 +1109,11 @@ def proxy_chat():
                     ).fetchall()
 
             current_list_id = None
-            if is_selection_turn:
-                # Don't run a fresh search or register a new list — this turn is the customer
-                # picking from lists already shown, and re-registering here is exactly what
-                # was pushing older (still-needed) lists out of the model's reference window.
-                inventory_context = "(No new parts search this turn — the customer is selecting from a list already shown below.)"
+            if skip_search:
+                # Don't run a fresh search or register a new list — this turn is either a
+                # selection from a list already shown, or the customer providing contact
+                # details, neither of which should trigger a new (possibly spurious) search.
+                inventory_context = "(No new parts search this turn — the customer is selecting from a list already shown below, or providing contact details.)"
             else:
                 parts_list = "\n".join([
                     f"{i+1}. {p['part_name']} | {p['make']} {p['model']} | £{p['price']:.2f} | OEM: {p['oem_number'] or 'N/A'} | {p['category']}"
