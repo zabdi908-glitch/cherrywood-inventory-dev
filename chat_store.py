@@ -77,6 +77,15 @@ def init_chat_tables(db):
             PRIMARY KEY (session_id, browse_number)
         )
     """)
+
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS chat_contact_info (
+            session_id TEXT PRIMARY KEY,
+            name TEXT,
+            phone TEXT,
+            email TEXT
+        )
+    """)
     db.commit()
 
 
@@ -110,6 +119,47 @@ def get_browse_sequence_map(db, session_id: str) -> dict:
         (session_id,)
     ).fetchall()
     return {r["browse_number"]: r["list_id"] for r in rows}
+
+
+# ---------------------------------------------------------------------------
+# Contact info progress — accumulates name/phone/email across multiple
+# messages, so a customer who gives their name+phone in one message and
+# email in the next doesn't have to repeat anything already captured, and an
+# invalid field doesn't wipe out fields that were already valid.
+# ---------------------------------------------------------------------------
+
+def get_contact_progress(db, session_id: str) -> dict:
+    row = db.execute(
+        "SELECT name, phone, email FROM chat_contact_info WHERE session_id = ?",
+        (session_id,)
+    ).fetchone()
+    if row:
+        return {"name": row["name"], "phone": row["phone"], "email": row["email"]}
+    return {"name": None, "phone": None, "email": None}
+
+
+def update_contact_progress(db, session_id: str, name=None, phone=None, email=None) -> dict:
+    """Merges newly-provided fields with whatever was already captured.
+    Passing None for a field leaves the existing value untouched — this is
+    what lets an invalid phone number be reported without losing an
+    already-valid name/email from the same or an earlier message."""
+    existing = get_contact_progress(db, session_id)
+    merged = {
+        "name": name or existing["name"],
+        "phone": phone or existing["phone"],
+        "email": email or existing["email"],
+    }
+    db.execute("""
+        INSERT INTO chat_contact_info (session_id, name, phone, email) VALUES (?, ?, ?, ?)
+        ON CONFLICT(session_id) DO UPDATE SET name=excluded.name, phone=excluded.phone, email=excluded.email
+    """, (session_id, merged["name"], merged["phone"], merged["email"]))
+    db.commit()
+    return merged
+
+
+def clear_contact_progress(db, session_id: str):
+    db.execute("DELETE FROM chat_contact_info WHERE session_id = ?", (session_id,))
+    db.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -227,6 +277,7 @@ def clear_session(db, session_id: str):
     db.execute("DELETE FROM chat_friction WHERE session_id = ?", (session_id,))
     db.execute("DELETE FROM chat_confirmed_selections WHERE session_id = ?", (session_id,))
     db.execute("DELETE FROM chat_browse_sequence WHERE session_id = ?", (session_id,))
+    db.execute("DELETE FROM chat_contact_info WHERE session_id = ?", (session_id,))
     db.commit()
 
 
