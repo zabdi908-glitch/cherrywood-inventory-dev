@@ -19,9 +19,9 @@ empty list and the template falls back to customer_data['part'] as a
 single line — still styled, just not itemized.
 """
 
+import settings_store
+
 COMPANY_NAME = "Cherrywood Auto Parts"
-COMPANY_PHONE = "Your business phone here"
-COMPANY_WHATSAPP_LINK = "https://wa.me/44XXXXXXXXXX"  # replace with your real WhatsApp link
 COMPANY_EMAIL = "cherryvagparts@gmail.com"
 COMPANY_ADDRESS = "Bordesley Green, Birmingham"
 BRAND_COLOR = "#EA580C"  # orange, matching your site's accent colour
@@ -30,6 +30,10 @@ BRAND_COLOR = "#EA580C"  # orange, matching your site's accent colour
 def build_confirmation_email(customer_data: dict, resolved_items: list[dict] | None = None):
     name = customer_data.get("name", "there")
     resolved_items = resolved_items or []
+    # Pulled fresh on every call so an admin editing these in /admin/settings
+    # takes effect immediately, with no deploy needed.
+    company_phone = settings_store.get_setting("company_phone")
+    whatsapp_link = settings_store.get_setting("whatsapp_link")
 
     if resolved_items:
         subject = f"Your enquiry: {', '.join(it['name'] for it in resolved_items)} - {COMPANY_NAME}"
@@ -96,7 +100,7 @@ def build_confirmation_email(customer_data: dict, resolved_items: list[dict] | N
               <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:24px;">
                 <tr>
                   <td style="border-radius:6px; background:{BRAND_COLOR};">
-                    <a href="{COMPANY_WHATSAPP_LINK}" style="display:inline-block; padding:12px 24px; color:#ffffff; text-decoration:none; font-weight:600; font-size:14px;">
+                    <a href="{whatsapp_link}" style="display:inline-block; padding:12px 24px; color:#ffffff; text-decoration:none; font-weight:600; font-size:14px;">
                       Message us on WhatsApp
                     </a>
                   </td>
@@ -109,7 +113,7 @@ def build_confirmation_email(customer_data: dict, resolved_items: list[dict] | N
             <td style="padding:20px 32px; background:#fafafa; border-top:1px solid #eee;">
               <p style="margin:0; color:#888; font-size:13px; line-height:1.6;">
                 {COMPANY_NAME} · {COMPANY_ADDRESS}<br>
-                {COMPANY_PHONE} · {COMPANY_EMAIL}
+                {company_phone} · {COMPANY_EMAIL}
               </p>
             </td>
           </tr>
@@ -133,12 +137,12 @@ We've received your request and confirmed the following part(s) are available:
 A member of our team will call or email you within 2 hours to confirm availability,
 arrange delivery or collection, and take payment.
 
-WhatsApp us: {COMPANY_WHATSAPP_LINK}
+WhatsApp us: {whatsapp_link}
 
 --
 {COMPANY_NAME}
 {COMPANY_ADDRESS}
-{COMPANY_PHONE} · {COMPANY_EMAIL}
+{company_phone} · {COMPANY_EMAIL}
 """
 
     return subject, html_body, text_body
