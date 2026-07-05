@@ -3,6 +3,7 @@ from email_reply_agent import handle_enquiry_auto_reply
 from list_tracker import SessionListTracker
 from email_templates import build_confirmation_email
 from email_templates import COMPANY_WHATSAPP_LINK, COMPANY_PHONE
+from enquiries_store import enquiries_store
 import sqlite3
 import os
 import json
@@ -836,34 +837,6 @@ The Cherrywood Auto Parts Team
             
     except Exception as e:
         print(f"❌ Failed to send emails: {e}", flush=True)
-# ============================================
-# TEMPORARY ENQUIRY STORE (Replace with real DB later)
-# ============================================
-class MockEnquiryStore:
-    def __init__(self):
-        self.enquiries = []
-        self.counter = 0
-
-    def add_enquiry(self, data):
-        self.counter += 1
-        record = {**data, 'id': self.counter, 'status': 'Pending'}
-        self.enquiries.append(record)
-        print(f"💾 Mock Enquiry #{self.counter} saved", flush=True)
-        return self.counter
-
-    def update_status(self, enquiry_id, status, notes=None):
-        for e in self.enquiries:
-            if e['id'] == enquiry_id:
-                e['status'] = status
-                if notes:
-                    e['notes'] = notes
-                print(f"✅ Mock Enquiry #{enquiry_id} updated to {status}", flush=True)
-                return True
-        return False
-
-enquiries_store = MockEnquiryStore()
-
-
 
 
 # Matches things like "option 2", "list 3", "2nd item" — the NUMBERED reference case.
