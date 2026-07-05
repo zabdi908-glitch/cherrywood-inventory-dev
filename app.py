@@ -32,6 +32,7 @@ import selection_resolver
 import backup
 import contact_parser
 import analytics
+import settings_store
 
 app = Flask(__name__)
 csrf = CSRFProtect(app)
@@ -420,6 +421,33 @@ def analytics_dashboard():
     finally:
         db.close()
     return render_template('analytics.html', summary=summary)
+
+# Add to app.py: import settings_store near your other imports.
+# Add this route alongside your other /admin routes.
+
+@app.route('/admin/settings', methods=['GET', 'POST'])
+@login_required
+def bot_settings_page():
+    if request.method == 'POST':
+        settings_store.update_settings({
+            'company_phone': request.form.get('company_phone', '').strip(),
+            'whatsapp_link': request.form.get('whatsapp_link', '').strip(),
+            'opening_hours': request.form.get('opening_hours', '').strip(),
+            'greeting_message': request.form.get('greeting_message', '').strip(),
+            'faq_text': request.form.get('faq_text', '').strip(),
+        })
+        flash('✅ Settings updated', 'success')
+        return redirect(url_for('bot_settings_page'))
+    current = settings_store.get_all_settings()
+    return render_template('settings.html', settings=current)
+
+
+# Optional but recommended: makes bot_settings available in EVERY template
+# (including base.html, where the chat widget's greeting lives) without
+# passing it manually from every single route.
+@app.context_processor
+def inject_bot_settings():
+    return {'bot_settings': settings_store.get_all_settings()}
 
 # ============================================
 # INFO PAGES
@@ -1452,7 +1480,8 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
         if friction_count >= FRICTION_ESCALATION_THRESHOLD:
             reply += (
                 f"\n\nI want to make sure you get sorted quickly — would you like me to connect you with "
-                f"a staff member directly? WhatsApp us here: {COMPANY_WHATSAPP_LINK}, or call {COMPANY_PHONE}."
+                f"a staff member directly? WhatsApp us here: {settings_store.get_setting('whatsapp_link')}, "
+                f"or call {settings_store.get_setting('company_phone')}."
             )
             analytics.log_event(db, session_id, "escalation_offered")
             chat_store.reset_friction(db, session_id)  # don't repeat the nudge every message after
