@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Analytics - Cherrywood Auto Parts{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+
+    <h1 class="text-2xl font-black text-white mb-6">Chatbot Analytics</h1>
+
+    <!-- Top-line numbers -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-[#111827] border border-slate-800 rounded-lg p-4">
+            <div class="text-xs text-slate-400 uppercase font-bold mb-1">Conversations (all time)</div>
+            <div class="text-2xl font-black text-white">{{ summary.total_conversations }}</div>
+        </div>
+        <div class="bg-[#111827] border border-slate-800 rounded-lg p-4">
+            <div class="text-xs text-slate-400 uppercase font-bold mb-1">Conversations (30 days)</div>
+            <div class="text-2xl font-black text-white">{{ summary.conversations_30d }}</div>
+        </div>
+        <div class="bg-[#f97316]/10 border border-[#f97316]/30 rounded-lg p-4">
+            <div class="text-xs text-[#f97316] uppercase font-bold mb-1">Enquiries Generated</div>
+            <div class="text-2xl font-black text-[#f97316]">{{ summary.total_enquiries }}</div>
+        </div>
+        <div class="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+            <div class="text-xs text-green-400 uppercase font-bold mb-1">Conversion Rate</div>
+            <div class="text-2xl font-black text-green-400">{{ summary.conversion_rate }}%</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-[#111827] border border-slate-800 rounded-lg p-4">
+            <div class="text-xs text-slate-400 uppercase font-bold mb-1">Avg. Messages per Conversation</div>
+            <div class="text-xl font-black text-white">{{ summary.avg_conversation_length }}</div>
+        </div>
+        <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+            <div class="text-xs text-blue-400 uppercase font-bold mb-1">Human Handoffs Offered (30 days)</div>
+            <div class="text-xl font-black text-blue-400">{{ summary.escalations_30d }}</div>
+        </div>
+        <div class="bg-[#111827] border border-slate-800 rounded-lg p-4">
+            <div class="text-xs text-slate-400 uppercase font-bold mb-1">Selections Resolved Without AI</div>
+            <div class="text-xl font-black text-white">
+                {% if summary.resolution_rate.deterministic_pct is not none %}
+                    {{ summary.resolution_rate.deterministic_pct }}%
+                {% else %}
+                    —
+                {% endif %}
+            </div>
+            <div class="text-[10px] text-slate-500 mt-1">
+                {{ summary.resolution_rate.deterministic }} deterministic / {{ summary.resolution_rate.llm_fallback }} via AI
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Most searched parts -->
+        <div class="bg-[#111827] border border-slate-800 rounded-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-800">
+                <h2 class="text-sm font-black text-white uppercase tracking-wide">Most Searched Parts</h2>
+            </div>
+            {% if summary.most_searched_parts|length == 0 %}
+            <div class="p-6 text-center text-slate-500 text-sm">No search data yet.</div>
+            {% else %}
+            <table class="w-full text-sm">
+                <tbody>
+                    {% for item in summary.most_searched_parts %}
+                    <tr class="border-b border-slate-800/60 last:border-0">
+                        <td class="px-4 py-2 text-slate-300">{{ item.name }}</td>
+                        <td class="px-4 py-2 text-right text-white font-bold">{{ item.count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+
+        <!-- Failed searches -->
+        <div class="bg-[#111827] border border-slate-800 rounded-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-800">
+                <h2 class="text-sm font-black text-white uppercase tracking-wide">Searches That Found Nothing Specific</h2>
+            </div>
+            {% if summary.failed_searches|length == 0 %}
+            <div class="p-6 text-center text-slate-500 text-sm">No failed searches recorded yet.</div>
+            {% else %}
+            <table class="w-full text-sm">
+                <tbody>
+                    {% for item in summary.failed_searches %}
+                    <tr class="border-b border-slate-800/60 last:border-0">
+                        <td class="px-4 py-2 text-slate-300">{{ item.query }}</td>
+                        <td class="px-4 py-2 text-right text-white font-bold">{{ item.count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Conversations per day -->
+    <div class="bg-[#111827] border border-slate-800 rounded-lg overflow-hidden mt-6">
+        <div class="px-4 py-3 border-b border-slate-800">
+            <h2 class="text-sm font-black text-white uppercase tracking-wide">Conversations Per Day (Last 14 Days)</h2>
+        </div>
+        {% if summary.conversations_per_day|length == 0 %}
+        <div class="p-6 text-center text-slate-500 text-sm">No recent conversation data.</div>
+        {% else %}
+        <table class="w-full text-sm">
+            <tbody>
+                {% for row in summary.conversations_per_day %}
+                <tr class="border-b border-slate-800/60 last:border-0">
+                    <td class="px-4 py-2 text-slate-300">{{ row.day }}</td>
+                    <td class="px-4 py-2 text-right text-white font-bold">{{ row.count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
