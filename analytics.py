@@ -109,6 +109,18 @@ def get_average_conversation_length(db) -> float:
     return round(sum(r["msg_count"] for r in rows) / len(rows), 1)
 
 
+def count_recent_events(db, event_type: str, minutes: int = 60) -> int:
+    """Counts events of a given type in the last N minutes — used to detect
+    spikes (e.g. a sudden surge in failed searches, which could mean a real
+    inventory gap or a search-logic regression worth investigating)."""
+    cutoff = time.time() - (minutes * 60)
+    row = db.execute(
+        "SELECT COUNT(*) as c FROM analytics_events WHERE event_type = ? AND created_at >= ?",
+        (event_type, cutoff)
+    ).fetchone()
+    return row["c"] if row else 0
+
+
 def get_deterministic_resolution_rate(db, days: int = 30) -> dict:
     """What fraction of resolved selections avoided the LLM entirely —
     a direct measure of how much the deterministic resolver is actually
