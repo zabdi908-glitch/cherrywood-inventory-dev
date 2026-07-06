@@ -203,6 +203,30 @@ def get_confirmed_selections(db, session_id: str) -> list[dict]:
     return deduped
 
 
+def remove_confirmed_selection(db, session_id: str, oem: str) -> bool:
+    """Removes a single item from the basket by OEM (its stable unique
+    identity, same as used for dedup). Rows in chat_confirmed_selections are
+    append-only, so 'removing' means deleting the row(s) matching that OEM —
+    if the same item was somehow added twice, this removes all copies.
+    Returns True if anything was actually removed."""
+    rows = db.execute(
+        "SELECT id, item_json FROM chat_confirmed_selections WHERE session_id = ?",
+        (session_id,)
+    ).fetchall()
+    ids_to_delete = []
+    for row in rows:
+        item = json.loads(row["item_json"])
+        item_oem = item.get("oem")
+        if item_oem == oem:
+            ids_to_delete.append(row["id"])
+    if not ids_to_delete:
+        return False
+    placeholders = ",".join("?" * len(ids_to_delete))
+    db.execute(f"DELETE FROM chat_confirmed_selections WHERE id IN ({placeholders})", ids_to_delete)
+    db.commit()
+    return True
+
+
 def build_basket_summary(db, session_id: str) -> tuple:
     """Returns (summary_text, total_price) for everything confirmed so far
     this session — used to show a running basket rather than just the last
