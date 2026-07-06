@@ -344,19 +344,7 @@ def backup_now():
     except Exception as e:
         flash(f'❌ Backup failed: {e}', 'error')
         return redirect(url_for('index'))
-        
-# Replace restore_vehicles() AND restore_confirm() with these two versions.
-# The only real change: instead of stuffing the entire backup JSON into the
-# session cookie (which silently fails once it's over ~4KB), we store just
-# the backup FILENAME (a few bytes) and re-read the actual file from disk
-# during the confirm step.
-
-# Replace restore_vehicles() AND restore_confirm() with these two versions.
-# The only real change: instead of stuffing the entire backup JSON into the
-# session cookie (which silently fails once it's over ~4KB), we store just
-# the backup FILENAME (a few bytes) and re-read the actual file from disk
-# during the confirm step.
-
+ 
 @app.route('/admin/restore', methods=['POST'])
 @login_required
 def restore_vehicles():
@@ -376,51 +364,10 @@ def restore_vehicles():
         vehicles = data.get('vehicles', [])
         parts = data.get('parts', [])
 
-        db = get_db()
-        current_vehicle_count = db.execute('SELECT COUNT(*) as c FROM vehicle').fetchone()['c']
-        current_parts_count = db.execute('SELECT COUNT(*) as c FROM parts').fetchone()['c']
-        db.close()
-
-        if len(vehicles) < current_vehicle_count or len(parts) < current_parts_count:
-            flash(
-                f'⚠️ WARNING: This backup has FEWER records than you currently have live '
-                f'({len(vehicles)} vs {current_vehicle_count} vehicles, {len(parts)} vs {current_parts_count} parts). '
-                f'Restoring will DELETE your current data and replace it with this smaller backup. '
-                f'Only continue if you are certain.',
-                'error'
-            )
-
-        flash(f'⚠️ This will REPLACE all current data with backup from {data["timestamp"]}', 'warning')
-        flash(f'📊 Backup contains — Vehicles: {len(vehicles)} | Parts: {len(parts)}', 'info')
-        flash('👉 Click "Restore" again to confirm, or "Cancel" to abort.', 'info')
-
-        # Store just the FILENAME, not the data itself — the whole backup JSON
-        # was blowing past Flask's ~4KB session cookie limit and getting
-        # silently dropped by the browser, which is why "confirm" was doing
-        # nothing.
-        session['pending_restore_file'] = latest_backup
-        return redirect(url_for('index'))
-    except Exception as e:
-        flash(f'❌ Error: {e}', 'error')
-        return redirect(url_for('index'))
-
-
-@app.route('/admin/restore-confirm', methods=['POST'])
-@login_required
-def restore_confirm():
-    try:
-        backup_path = session.pop('pending_restore_file', None)
-        if not backup_path or not os.path.exists(backup_path):
-            flash('❌ No restore pending — please click "Restore Backup" again first.', 'error')
-            return redirect(url_for('index'))
-
-        with open(backup_path, 'r') as f:
-            data = json.load(f)
-
         conn = sqlite3.connect(DATABASE)
         conn.execute('DELETE FROM vehicle')
         conn.execute('DELETE FROM parts')
-        for v in data.get('vehicles', []):
+        for v in vehicles:
             conn.execute('''INSERT INTO vehicle 
                 (title, make, model, year, reg, engine, fuel, transmission, 
                  mileage, status, image_url, parts_available, description) 
@@ -428,7 +375,7 @@ def restore_confirm():
                 (v['title'], v['make'], v['model'], v['year'], v['reg'],
                  v['engine'], v['fuel'], v['transmission'], v['mileage'],
                  v['status'], v['image_url'], v['parts_available'], v['description']))
-        for p in data.get('parts', []):
+        for p in parts:
             conn.execute('''INSERT INTO parts 
                 (stock_id, part_name, category, part_type, make, model, generation, 
                  oem_number, engine_code, condition, price, stock_status, location, notes, slug)
@@ -441,12 +388,16 @@ def restore_confirm():
                  p.get('notes', ''), p.get('slug', '')))
         conn.commit()
         conn.close()
-        flash(f'✅ Restored {len(data["vehicles"])} vehicles and {len(data["parts"])} parts successfully!', 'success')
+
+        flash(f'✅ Restored {len(vehicles)} vehicles and {len(parts)} parts from backup dated {data["timestamp"]}', 'success')
         return redirect(url_for('index'))
     except Exception as e:
         flash(f'❌ Restore failed: {e}', 'error')
         return redirect(url_for('index'))
-        
+
+
+# restore_confirm() can be deleted entirely — it's no longer used.
+
 @app.route('/admin/enquiries')
 @login_required
 def enquiries_list():
