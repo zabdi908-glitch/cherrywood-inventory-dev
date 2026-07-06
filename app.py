@@ -970,6 +970,46 @@ def finalize_enquiry(db, session_id: str, tracker, customer_data: dict) -> str:
     return "✅ Your enquiry has been sent! We will call or email you back within 2 hours."
 
 
+def fuzzy_correct_keywords(db, keywords: list) -> list:
+    """Corrects likely spelling mistakes by matching each keyword against the
+    real vocabulary of words actually appearing in the inventory (part
+    names, categories, makes, models), using difflib's built-in fuzzy string
+    matching — no new dependency, no pip install risk on deploy.
+
+    This deliberately does NOT try to handle plurals or partial-name
+    matching (e.g. "pads" vs "pad") — the existing substring LIKE search
+    already covers that fine. This tier exists specifically for typos that
+    substring matching can never catch regardless of phrasing."""
+    import difflib
+
+    rows = db.execute(
+        "SELECT DISTINCT part_name, category, make, model FROM parts WHERE stock_status = 'Available'"
+    ).fetchall()
+    vocabulary = set()
+    for r in rows:
+        for field in (r["part_name"], r["category"], r["make"], r["model"]):
+            if field:
+                vocabulary.update(re.findall(r'[a-zA-Z0-9]+', field.lower()))
+
+    if not vocabulary:
+        return []
+
+    corrected = []
+    any_correction_made = False
+    for kw in keywords:
+        if kw in vocabulary:
+            corrected.append(kw)  # already a real word, no correction needed
+            continue
+        matches = difflib.get_close_matches(kw, vocabulary, n=1, cutoff=0.72)
+        if matches:
+            corrected.append(matches[0])
+            any_correction_made = True
+        else:
+            corrected.append(kw)  # no confident correction — keep original, harmless either way
+
+    return corrected if any_correction_made else []
+
+
 FRICTION_ESCALATION_THRESHOLD = 3  # consecutive unhelpful turns before offering a human
 
 
@@ -1231,9 +1271,48 @@ def proxy_chat():
                                      LIMIT 8"""
                         parts_rows = db.execute(sql_or, params).fetchall()
 
+                    if not parts_rows:
+                        # Neither exact substring search found anything — try correcting for
+                        # spelling mistakes (e.g. "brake padd", "gerabox") before giving up.
+                        # Plurals/partial names are already handled fine by the substring
+                        # LIKE search above; this tier specifically targets typos, which
+                        # substring matching can never catch no matter how it's phrased.
+                        corrected = fuzzy_correct_keywords(db, keywords)
+                        if corrected:
+                            print(f"✏️ [AI] Fuzzy-corrected keywords — session={session_id}, "
+                                  f"original={keywords}, corrected={corrected}", flush=True)
+                            analytics.log_event(db, session_id, "fuzzy_correction_used",
+                                                 detail=f"{keywords} -> {corrected}")
+                            fuzzy_like_clauses, fuzzy_params = [], []
+                            for kw in corrected[:8]:
+                                term = f'%{kw}%'
+                                fuzzy_like_clauses.append(
+                                    "(part_name LIKE ? OR make LIKE ? OR model LIKE ? OR category LIKE ? OR oem_number LIKE ? OR engine_code LIKE ?)"
+                                )
+                                fuzzy_params.extend([term, term, term, term, term, term])
+                            fuzzy_sql = f"""SELECT part_name, make, model, category, price, stock_status, oem_number
+                                            FROM parts
+                                            WHERE stock_status = 'Available' AND ({" OR ".join(fuzzy_like_clauses)})
+                                            LIMIT 8"""
+                            parts_rows = db.execute(fuzzy_sql, fuzzy_params).fetchall()
+
                 if not parts_rows:
                     print(f"🔍 [AI] No keyword match — session={session_id}, message={user_message!r}", flush=True)
                     analytics.log_event(db, session_id, "search_failed", detail=user_message[:200])
+
+                    # Spike detection: a sudden surge in failed searches could mean a
+                    # genuine inventory gap worth stocking, or a search-logic regression.
+                    # Either way it's worth a human looking at it, but only once per
+                    # cooldown window so an ongoing spike doesn't spam the inbox.
+                    recent_failures = analytics.count_recent_events(db, "search_failed", minutes=60)
+                    if recent_failures >= 15 and monitoring.should_send_alert(db, "search_failure_spike"):
+                        mailer.alert_staff(
+                            "Spike in failed searches",
+                            f"{recent_failures} searches found no specific match in the last hour. "
+                            f"Check /admin/analytics for the most common failed queries — this could mean "
+                            f"customers are looking for stock you don't currently have, or a search issue."
+                        )
+
                     parts_rows = db.execute(
                         "SELECT part_name, make, model, category, price, stock_status, oem_number "
                         "FROM parts WHERE stock_status = 'Available' "
@@ -1484,6 +1563,18 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
                 f"or call {settings_store.get_setting('company_phone')}."
             )
             analytics.log_event(db, session_id, "escalation_offered")
+
+            # A high rate of human-handoff offers in a short window suggests the bot is
+            # struggling more than usual — worth a look, but only alerted once per cooldown.
+            recent_escalations = analytics.count_recent_events(db, "escalation_offered", minutes=60)
+            if recent_escalations >= 8 and monitoring.should_send_alert(db, "high_escalation_rate"):
+                mailer.alert_staff(
+                    "High rate of chatbot escalations",
+                    f"{recent_escalations} conversations were offered a human handoff in the last hour "
+                    f"(the bot couldn't resolve them after repeated attempts). Worth checking recent "
+                    f"conversations or /admin/analytics for patterns."
+                )
+
             chat_store.reset_friction(db, session_id)  # don't repeat the nudge every message after
 
         chat_store.append_message(db, session_id, "assistant", reply, keep=10)
