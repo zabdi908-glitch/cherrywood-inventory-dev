@@ -1132,6 +1132,29 @@ def proxy_chat():
         chat_store.append_message(db, session_id, "user", user_message, keep=10)
         history = chat_store.get_history(db, session_id, limit=10)
 
+        # 1a-2. BASKET REMOVAL — "remove the gearbox" etc. Checked before selection
+        # resolution since it's a distinct action (removing something already confirmed,
+        # not adding something new). Entirely deterministic, no LLM involved.
+        current_basket = chat_store.get_confirmed_selections(db, session_id)
+        if current_basket:
+            removed_item, ambiguous_count = selection_resolver.try_remove_from_basket(current_basket, user_message)
+            if removed_item:
+                chat_store.remove_confirmed_selection(db, session_id, removed_item["oem"])
+                basket_summary, basket_total = chat_store.build_basket_summary(db, session_id)
+                reply = f"Removed {removed_item['name']} (£{float(removed_item['price']):.2f})."
+                if basket_summary:
+                    reply += f"\n\nYour current selection:\n{basket_summary}\nTotal: £{basket_total:.2f}"
+                else:
+                    reply += " Your basket is now empty."
+                chat_store.append_message(db, session_id, "assistant", reply, keep=10)
+                return jsonify({"reply": reply})
+            elif ambiguous_count > 0:
+                item_list = "\n".join(f"- {it['name']}" for it in current_basket)
+                reply = (f"I want to make sure I remove the right thing — could you be more specific? "
+                         f"Your current selection:\n{item_list}")
+                chat_store.append_message(db, session_id, "assistant", reply, keep=10)
+                return jsonify({"reply": reply})
+
         # 1b. DETERMINISTIC RESOLUTION — attempt to resolve this as a selection entirely in
         # Python, with zero LLM involvement, before doing anything else. This is the fix for
         # today's recurring bug class: the model repeatedly proved unreliable at correctly
@@ -1597,7 +1620,7 @@ Do NOT write any friendly confirmation message yourself. Do NOT say "I've noted 
     finally:
         if db:
             db.close()
- 
+
 # ============================================
 # RUN THE APP
 # ============================================
