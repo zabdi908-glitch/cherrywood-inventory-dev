@@ -351,6 +351,12 @@ def backup_now():
 # the backup FILENAME (a few bytes) and re-read the actual file from disk
 # during the confirm step.
 
+# Replace restore_vehicles() AND restore_confirm() with these two versions.
+# The only real change: instead of stuffing the entire backup JSON into the
+# session cookie (which silently fails once it's over ~4KB), we store just
+# the backup FILENAME (a few bytes) and re-read the actual file from disk
+# during the confirm step.
+
 @app.route('/admin/restore', methods=['POST'])
 @login_required
 def restore_vehicles():
@@ -440,7 +446,7 @@ def restore_confirm():
     except Exception as e:
         flash(f'❌ Restore failed: {e}', 'error')
         return redirect(url_for('index'))
-
+        
 @app.route('/admin/enquiries')
 @login_required
 def enquiries_list():
