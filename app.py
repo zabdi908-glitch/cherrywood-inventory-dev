@@ -329,7 +329,7 @@ def backup_now():
         backup_dir = '/data/backups/'
         os.makedirs(backup_dir, exist_ok=True)  # create the folder if it doesn't exist yet
 
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+       timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         backup_data = {
             'timestamp': timestamp,
             'vehicles': vehicles,
