@@ -307,25 +307,44 @@ def delete_vehicle(id):
         flash(f'❌ Delete failed: {e}', 'error')
     return redirect(url_for('index'))
 
+# Replace your existing backup_now() route in app.py with this version.
+# This is the ONLY function that needs to change — restore_vehicles() and
+# restore_confirm() can stay exactly as they are, since the real problem
+# was that nothing was ever writing a file in the format/location they expect.
+
+  # add this import near the top of app.py if not already present
+
 @app.route('/admin/backup-now', methods=['POST'])
 @login_required
 def backup_now():
     try:
         db = get_db()
-        rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
+        vehicle_rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
+        parts_rows = db.execute('SELECT * FROM parts ORDER BY id DESC').fetchall()
         db.close()
-        vehicles = []
-        for row in rows:
-            vehicles.append(dict(row))
-        backup_file = os.path.join('/data', 'vehicles_backup.json')
+
+        vehicles = [dict(row) for row in vehicle_rows]
+        parts = [dict(row) for row in parts_rows]
+
+        backup_dir = '/data/backups/'
+        os.makedirs(backup_dir, exist_ok=True)  # create the folder if it doesn't exist yet
+
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_data = {
+            'timestamp': timestamp,
+            'vehicles': vehicles,
+            'parts': parts,
+        }
+        backup_file = os.path.join(backup_dir, f'full_backup_{timestamp}.json')
         with open(backup_file, 'w') as f:
-            json.dump(vehicles, f, indent=2)
-        flash(f'✅ Backup created with {len(vehicles)} vehicles!', 'success')
+            json.dump(backup_data, f, indent=2)
+
+        flash(f'✅ Backup created: {len(vehicles)} vehicles, {len(parts)} parts', 'success')
         return redirect(url_for('index'))
     except Exception as e:
         flash(f'❌ Backup failed: {e}', 'error')
         return redirect(url_for('index'))
-
+        
 @app.route('/admin/restore', methods=['POST'])
 @login_required
 def restore_vehicles():
@@ -341,11 +360,28 @@ def restore_vehicles():
         latest_backup = os.path.join(backup_dir, files[0])
         with open(latest_backup, 'r') as f:
             data = json.load(f)
+
         vehicles = data.get('vehicles', [])
         parts = data.get('parts', [])
+
+        db = get_db()
+        current_vehicle_count = db.execute('SELECT COUNT(*) as c FROM vehicle').fetchone()['c']
+        current_parts_count = db.execute('SELECT COUNT(*) as c FROM parts').fetchone()['c']
+        db.close()
+
+        if len(vehicles) < current_vehicle_count or len(parts) < current_parts_count:
+            flash(
+                f'⚠️ WARNING: This backup has FEWER records than you currently have live '
+                f'({len(vehicles)} vs {current_vehicle_count} vehicles, {len(parts)} vs {current_parts_count} parts). '
+                f'Restoring will DELETE your current data and replace it with this smaller backup. '
+                f'Only continue if you are certain.',
+                'error'
+            )
+
         flash(f'⚠️ This will REPLACE all current data with backup from {data["timestamp"]}', 'warning')
-        flash(f'📊 Vehicles: {len(vehicles)} | Parts: {len(parts)}', 'info')
+        flash(f'📊 Backup contains — Vehicles: {len(vehicles)} | Parts: {len(parts)}', 'info')
         flash('👉 Click "Restore" again to confirm, or "Cancel" to abort.', 'info')
+
         session['pending_restore'] = data
         return redirect(url_for('index'))
     except Exception as e:
