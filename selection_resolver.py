@@ -46,6 +46,76 @@ _LIST_ALIASES = {"list", "lst", "liist"}
 
 AFFIRMATIVE_ONLY = {"yes", "yeah", "yep", "yup", "sure", "ok", "okay", "please", "correct", "confirm", "confirmed"}
 
+_REMOVE_INTENT_PATTERN = re.compile(
+    r"\b(remove|delete|take off|cancel|drop|don'?t want|scrap)\b", re.IGNORECASE
+)
+
+
+def try_remove_from_basket(basket_items: list, user_message: str):
+    """Detects 'remove the gearbox' / 'cancel the headlight' style requests
+    and resolves which basket item is meant.
+
+    Baskets are small (typically 1-5 items), so matching is deliberately
+    looser than the browse-list disambiguation logic: a customer naturally
+    says "remove the gearbox," not "remove the DQ381 DSG gearbox" — so
+    category-level matching is tried first. Only falls back to full
+    distinctive-name-token matching if multiple basket items share a
+    category and the category alone can't tell them apart.
+
+    Returns (removed_item_or_None, ambiguous_count). ambiguous_count > 0
+    means the request was clearly a removal intent but matched 0 or 2+
+    basket items, so the caller should ask for clarification rather than
+    guess or silently do nothing.
+    """
+    if not _REMOVE_INTENT_PATTERN.search(user_message):
+        return None, 0
+
+    msg_lower = user_message.lower()
+
+    # Strategy 1: category-level match (the natural, common case)
+    category_matches = []
+    for item in basket_items:
+        cat = (item.get("category") or "").strip().lower()
+        if not cat:
+            continue
+        cat_singular = cat[:-1] if cat.endswith("s") and not cat.endswith("ss") else cat
+        if cat_singular and (cat_singular in msg_lower or cat in msg_lower):
+            category_matches.append(item)
+
+    if len(category_matches) == 1:
+        return category_matches[0], 0
+
+    # Strategy 2: category alone was ambiguous (2+ items share it) or matched
+    # nothing — disambiguate using tokens that actually DISTINGUISH between
+    # the candidates, rather than requiring every token in each item's full
+    # name (a customer saying "remove the DQ250 gearbox" won't also mention
+    # "DSG," so requiring the full token set would fail here).
+    search_pool = category_matches if category_matches else basket_items
+    if len(search_pool) >= 2:
+        token_sets = [set(_distinctive_tokens(it.get("name", ""))) for it in search_pool]
+        matches = []
+        for idx, item in enumerate(search_pool):
+            other_tokens = set()
+            for j, other_set in enumerate(token_sets):
+                if j != idx:
+                    other_tokens |= other_set
+            unique_tokens = token_sets[idx] - other_tokens
+            if unique_tokens and any(t in msg_lower for t in unique_tokens):
+                matches.append(item)
+        if len(matches) == 1:
+            return matches[0], 0
+        return None, len(matches) if len(matches) not in (0, 1) else len(search_pool)
+
+    # Only one candidate to check against (search_pool has exactly 1 — the
+    # "matched nothing at category level" case) — try full-name matching.
+    for item in search_pool:
+        distinctive = _distinctive_tokens(item.get("name", ""))
+        if distinctive and all(t in msg_lower for t in distinctive):
+            return item, 0
+
+    return None, len(category_matches)
+
+
 _SUPERLATIVE_PATTERN = re.compile(
     r'\b(?:(first|second|third|fourth|fifth)\s+)?(cheapest|most expensive|priciest|dearest)\b',
     re.IGNORECASE
