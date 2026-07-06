@@ -307,13 +307,6 @@ def delete_vehicle(id):
         flash(f'❌ Delete failed: {e}', 'error')
     return redirect(url_for('index'))
 
-# Replace your existing backup_now() route in app.py with this version.
-# This is the ONLY function that needs to change — restore_vehicles() and
-# restore_confirm() can stay exactly as they are, since the real problem
-# was that nothing was ever writing a file in the format/location they expect.
-
-  # add this import near the top of app.py if not already present
-
 @app.route('/admin/backup-now', methods=['POST'])
 @login_required
 def backup_now():
@@ -327,9 +320,9 @@ def backup_now():
         parts = [dict(row) for row in parts_rows]
 
         backup_dir = '/data/backups/'
-        os.makedirs(backup_dir, exist_ok=True)  # create the folder if it doesn't exist yet
+        os.makedirs(backup_dir, exist_ok=True)
 
-       timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         backup_data = {
             'timestamp': timestamp,
             'vehicles': vehicles,
