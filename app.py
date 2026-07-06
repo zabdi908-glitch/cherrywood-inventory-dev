@@ -345,6 +345,12 @@ def backup_now():
         flash(f'❌ Backup failed: {e}', 'error')
         return redirect(url_for('index'))
         
+# Replace restore_vehicles() AND restore_confirm() with these two versions.
+# The only real change: instead of stuffing the entire backup JSON into the
+# session cookie (which silently fails once it's over ~4KB), we store just
+# the backup FILENAME (a few bytes) and re-read the actual file from disk
+# during the confirm step.
+
 @app.route('/admin/restore', methods=['POST'])
 @login_required
 def restore_vehicles():
@@ -382,20 +388,29 @@ def restore_vehicles():
         flash(f'📊 Backup contains — Vehicles: {len(vehicles)} | Parts: {len(parts)}', 'info')
         flash('👉 Click "Restore" again to confirm, or "Cancel" to abort.', 'info')
 
-        session['pending_restore'] = data
+        # Store just the FILENAME, not the data itself — the whole backup JSON
+        # was blowing past Flask's ~4KB session cookie limit and getting
+        # silently dropped by the browser, which is why "confirm" was doing
+        # nothing.
+        session['pending_restore_file'] = latest_backup
         return redirect(url_for('index'))
     except Exception as e:
         flash(f'❌ Error: {e}', 'error')
         return redirect(url_for('index'))
 
+
 @app.route('/admin/restore-confirm', methods=['POST'])
 @login_required
 def restore_confirm():
     try:
-        data = session.pop('pending_restore', None)
-        if not data:
-            flash('❌ No restore pending', 'error')
+        backup_path = session.pop('pending_restore_file', None)
+        if not backup_path or not os.path.exists(backup_path):
+            flash('❌ No restore pending — please click "Restore Backup" again first.', 'error')
             return redirect(url_for('index'))
+
+        with open(backup_path, 'r') as f:
+            data = json.load(f)
+
         conn = sqlite3.connect(DATABASE)
         conn.execute('DELETE FROM vehicle')
         conn.execute('DELETE FROM parts')
