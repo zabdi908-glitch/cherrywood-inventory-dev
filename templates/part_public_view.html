@@ -90,7 +90,25 @@
             {% set photos = parts_agent.get_photos(part.id) | selectattr('photo_order', 'lt', 100) | list %}
             <div class="h-96 bg-slate-900 relative">
                 {% if photos %}
-                    <img id="main-part-photo" src="{{ photos[0].photo_url }}" alt="{{ part.part_name }}" class="w-full h-full object-contain">
+                    <img id="main-part-photo" src="{{ photos[0].photo_url }}" alt="{{ part.part_name }}"
+                         class="w-full h-full object-contain cursor-zoom-in"
+                         onclick="openLightbox(currentPhotoIndex)">
+
+                    {% if photos|length > 1 %}
+                    <button onclick="prevPhoto()" aria-label="Previous photo"
+                            class="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white w-10 h-10 rounded-full flex items-center justify-center transition">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <button onclick="nextPhoto()" aria-label="Next photo"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white w-10 h-10 rounded-full flex items-center justify-center transition">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                    {% endif %}
+
+                    <button onclick="openLightbox(currentPhotoIndex)" aria-label="View fullscreen"
+                            class="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70 text-white w-9 h-9 rounded-full flex items-center justify-center transition">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
                 {% else %}
                     <div class="w-full h-full flex items-center justify-center bg-slate-800">
                         <div class="text-center">
@@ -112,9 +130,9 @@
             <div class="flex gap-2 p-4 bg-[#0b0f19] overflow-x-auto">
                 {% for photo in photos %}
                 <img src="{{ photo.photo_url }}"
-                     onclick="document.getElementById('main-part-photo').src = this.src;
-                              document.querySelectorAll('.part-thumb').forEach(t => t.classList.remove('border-[#f97316]'));
-                              this.classList.add('border-[#f97316]');"
+                     loading="lazy"
+                     onclick="showPhoto({{ loop.index0 }})"
+                     data-index="{{ loop.index0 }}"
                      class="part-thumb w-16 h-16 object-cover rounded-lg border-2 {{ 'border-[#f97316]' if loop.first else 'border-slate-700' }} cursor-pointer hover:border-[#f97316] transition flex-shrink-0"
                      alt="{{ part.part_name }} photo {{ loop.index }}">
                 {% endfor %}
@@ -185,6 +203,34 @@
         </div>
     </main>
 
+    <!-- ===== LIGHTBOX (fullscreen viewer) ===== -->
+    <div id="lightbox" class="hidden fixed inset-0 bg-black/95 z-[100] items-center justify-center"
+         onclick="if (event.target === this) closeLightbox();">
+        <button onclick="closeLightbox()" aria-label="Close"
+                class="absolute top-4 right-4 text-white text-2xl w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-full transition z-10">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <div id="lightbox-counter" class="absolute top-4 left-4 text-white text-sm font-bold bg-black/50 px-3 py-1.5 rounded-full z-10"></div>
+
+        {% if photos|length > 1 %}
+        <button onclick="lightboxPrev()" aria-label="Previous photo"
+                class="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 text-white w-11 h-11 md:w-12 md:h-12 flex items-center justify-center bg-black/50 hover:bg-black/70 rounded-full transition text-lg z-10">
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <button onclick="lightboxNext()" aria-label="Next photo"
+                class="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 text-white w-11 h-11 md:w-12 md:h-12 flex items-center justify-center bg-black/50 hover:bg-black/70 rounded-full transition text-lg z-10">
+            <i class="fa-solid fa-chevron-right"></i>
+        </button>
+        {% endif %}
+
+        <img id="lightbox-img" src="" alt="{{ part.part_name }}"
+             class="max-w-[90vw] max-h-[85vh] object-contain cursor-zoom-in"
+             style="transition: transform 0.1s ease-out;"
+             onmousemove="handleZoomMove(event)" onmouseleave="resetZoom()">
+
+        <p class="absolute bottom-4 text-white/50 text-xs hidden md:block">Hover image to zoom · Arrow keys to navigate · Esc to close</p>
+    </div>
+
     <!-- ===== FOOTER ===== -->
     <footer class="bg-[#0b0f19] border-t border-slate-900 py-8 text-slate-500 text-xs font-semibold w-full">
         <div class="max-w-7xl mx-auto px-4 text-center">
@@ -198,6 +244,106 @@
         document.getElementById('mobile-menu-btn').addEventListener('click', function() {
             document.getElementById('mobile-menu').classList.toggle('hidden');
         });
+
+        // ===== GALLERY STATE =====
+        const galleryPhotos = {{ photos | map(attribute='photo_url') | list | tojson }};
+        let currentPhotoIndex = 0;
+
+        function showPhoto(index) {
+            if (galleryPhotos.length === 0) return;
+            currentPhotoIndex = ((index % galleryPhotos.length) + galleryPhotos.length) % galleryPhotos.length;
+            const url = galleryPhotos[currentPhotoIndex];
+
+            const mainImg = document.getElementById('main-part-photo');
+            if (mainImg) mainImg.src = url;
+
+            document.querySelectorAll('.part-thumb').forEach((thumb) => {
+                const isActive = parseInt(thumb.dataset.index, 10) === currentPhotoIndex;
+                thumb.classList.toggle('border-[#f97316]', isActive);
+                thumb.classList.toggle('border-slate-700', !isActive);
+            });
+
+            const lightbox = document.getElementById('lightbox');
+            if (lightbox && !lightbox.classList.contains('hidden')) {
+                updateLightboxImage();
+            }
+        }
+
+        function nextPhoto() { showPhoto(currentPhotoIndex + 1); }
+        function prevPhoto() { showPhoto(currentPhotoIndex - 1); }
+        function lightboxNext() { showPhoto(currentPhotoIndex + 1); }
+        function lightboxPrev() { showPhoto(currentPhotoIndex - 1); }
+
+        // ===== LIGHTBOX =====
+        function openLightbox(index) {
+            if (galleryPhotos.length === 0) return;
+            currentPhotoIndex = index;
+            updateLightboxImage();
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.remove('hidden');
+            lightbox.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.add('hidden');
+            lightbox.classList.remove('flex');
+            document.body.style.overflow = '';
+            resetZoom();
+        }
+
+        function updateLightboxImage() {
+            const img = document.getElementById('lightbox-img');
+            img.src = galleryPhotos[currentPhotoIndex];
+            const counter = document.getElementById('lightbox-counter');
+            if (counter) counter.textContent = (currentPhotoIndex + 1) + ' / ' + galleryPhotos.length;
+            resetZoom();
+        }
+
+        // ===== DESKTOP HOVER ZOOM =====
+        function handleZoomMove(e) {
+            const img = document.getElementById('lightbox-img');
+            const rect = img.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * 100;
+            const y = ((e.clientY - rect.top) / rect.height) * 100;
+            img.style.transformOrigin = x + '% ' + y + '%';
+            img.style.transform = 'scale(2)';
+        }
+
+        function resetZoom() {
+            const img = document.getElementById('lightbox-img');
+            if (!img) return;
+            img.style.transform = 'scale(1)';
+            img.style.transformOrigin = 'center center';
+        }
+
+        // ===== KEYBOARD NAVIGATION =====
+        document.addEventListener('keydown', function(e) {
+            const lightbox = document.getElementById('lightbox');
+            if (lightbox.classList.contains('hidden')) return;
+            if (e.key === 'Escape') closeLightbox();
+            if (e.key === 'ArrowRight') lightboxNext();
+            if (e.key === 'ArrowLeft') lightboxPrev();
+        });
+
+        // ===== SWIPE GESTURES (mobile) =====
+        function attachSwipe(el, onSwipeLeft, onSwipeRight) {
+            if (!el) return;
+            let touchStartX = 0;
+            el.addEventListener('touchstart', function(e) {
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+            el.addEventListener('touchend', function(e) {
+                const touchEndX = e.changedTouches[0].screenX;
+                const diff = touchEndX - touchStartX;
+                if (Math.abs(diff) > 50) {
+                    if (diff < 0) onSwipeLeft(); else onSwipeRight();
+                }
+            }, { passive: true });
+        }
+        attachSwipe(document.getElementById('main-part-photo'), nextPhoto, prevPhoto);
+        attachSwipe(document.getElementById('lightbox-img'), lightboxNext, lightboxPrev);
     </script>
 
 </body>
