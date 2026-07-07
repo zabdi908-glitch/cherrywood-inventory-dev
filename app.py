@@ -36,6 +36,19 @@ import settings_store
 app = Flask(__name__)
 csrf = CSRFProtect(app)
 
+
+if os.getenv('RENDER'):
+    UPLOAD_DIR = '/data/uploads/parts'
+else:
+    UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads', 'parts')
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+ 
+ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp'}
+MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024  # 5MB per photo
+ 
+ 
+def _allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 # ============================================
 # CACHE-BUSTING
 # ============================================
@@ -710,7 +723,135 @@ def parts_bulk_delete():
     else:
         flash('❌ No parts selected.', 'error')
     return redirect(url_for('parts_index'))
-    
+
+@app.route('/parts/upload-photo/<int:part_id>', methods=['POST'])
+@login_required
+def upload_part_photo(part_id):
+    file = request.files.get('photo')
+    if not file or file.filename == '':
+        flash('❌ No file selected', 'error')
+        return redirect(url_for('parts_edit', id=part_id))
+ 
+    if not _allowed_file(file.filename):
+        flash('❌ Only JPG, PNG, and WebP images are allowed', 'error')
+        return redirect(url_for('parts_edit', id=part_id))
+ 
+    file.seek(0, os.SEEK_END)
+    size = file.tell()
+    file.seek(0)
+    if size > MAX_PHOTO_SIZE_BYTES:
+        flash('❌ Photo too large — max 5MB', 'error')
+        return redirect(url_for('parts_edit', id=part_id))
+ 
+    # Verify this is actually a genuine image, not just a file with a
+    # misleading extension — accept="image/*" on the frontend is trivially
+    # bypassed, so this check has to happen server-side to mean anything.
+    try:
+        img = Image.open(file)
+        img.verify()
+        file.seek(0)  # verify() consumes the file object, so reset before using it again
+    except Exception:
+        flash('❌ That file doesn\'t look like a valid image', 'error')
+        return redirect(url_for('parts_edit', id=part_id))
+ 
+    ext = file.filename.rsplit('.', 1)[1].lower()
+    filename = f"part_{part_id}_{uuid.uuid4().hex}.{ext}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    file.save(filepath)
+ 
+    # NOTE: parts_agent.add_photo() is intentionally NOT used here. It calls
+    # compress_image()/create_thumbnail() on whatever path it's given, then
+    # stores that SAME path as the web-facing photo_url — which only works
+    # if the filesystem path and the URL happen to match (true for the old
+    # static/uploads/ setup, not true here, since /data/... isn't a URL
+    # anything can fetch). Inserting directly avoids storing a broken path.
+    # Compression can be wired back in later once compress_images.py is
+    # confirmed working — for now photos save uncompressed, which is fully
+    # functional, just slightly larger files.
+    web_url = f'/uploads/parts/{filename}'
+    db = get_db()
+    max_order = db.execute(
+        'SELECT MAX(photo_order) FROM part_photos WHERE part_id = ? AND photo_order < 100',
+        (part_id,)
+    ).fetchone()[0] or 0
+    db.execute(
+        'INSERT INTO part_photos (part_id, photo_url, photo_order) VALUES (?, ?, ?)',
+        (part_id, web_url, max_order + 1)
+    )
+    db.commit()
+    db.close()
+ 
+    flash('✅ Photo uploaded successfully', 'success')
+    return redirect(url_for('parts_edit', id=part_id))
+ 
+ 
+@app.route('/uploads/parts/<path:filename>')
+def serve_part_photo(filename):
+    """Files in UPLOAD_DIR live outside static/, so Flask doesn't serve
+    them automatically — this route does it explicitly."""
+    return send_from_directory(UPLOAD_DIR, filename)
+ 
+ 
+@app.route('/parts/delete-photo/<int:photo_id>', methods=['POST'])
+@login_required
+def delete_part_photo(photo_id):
+    db = get_db()
+    row = db.execute('SELECT photo_url FROM part_photos WHERE id = ?', (photo_id,)).fetchone()
+    db.close()
+ 
+    # Uses your existing parts_agent.delete_photo() for the DB row — safe,
+    # no path-type ambiguity since it's a straightforward delete-by-id.
+    parts_agent.delete_photo(photo_id)
+ 
+    # Also remove the actual file — parts_agent.delete_photo() only removes
+    # the database row, so without this, deleted photos sit on disk forever.
+    if row:
+        filename = row['photo_url'].rsplit('/', 1)[-1]
+        filepath = os.path.join(UPLOAD_DIR, filename)
+        try:
+            if os.path.exists(filepath):
+                os.remove(filepath)
+        except Exception as e:
+            print(f"⚠️ Could not remove photo file {filepath}: {e}", flush=True)
+ 
+    flash('✅ Photo deleted', 'success')
+    return redirect(request.referrer or url_for('index'))
+ 
+ 
+@app.route('/parts/reorder-photo/<int:photo_id>/<direction>', methods=['POST'])
+@login_required
+def reorder_part_photo(photo_id, direction):
+    """direction is 'up' or 'down' — swaps this photo's order with its
+    neighbor, restricted to non-thumbnail entries (order < 100)."""
+    if direction not in ('up', 'down'):
+        flash('❌ Invalid direction', 'error')
+        return redirect(request.referrer or url_for('index'))
+ 
+    db = get_db()
+    photo = db.execute('SELECT * FROM part_photos WHERE id = ?', (photo_id,)).fetchone()
+    if not photo:
+        db.close()
+        flash('❌ Photo not found', 'error')
+        return redirect(request.referrer or url_for('index'))
+ 
+    if direction == 'up':
+        neighbor = db.execute(
+            'SELECT * FROM part_photos WHERE part_id = ? AND photo_order < ? AND photo_order < 100 ORDER BY photo_order DESC LIMIT 1',
+            (photo['part_id'], photo['photo_order'])
+        ).fetchone()
+    else:
+        neighbor = db.execute(
+            'SELECT * FROM part_photos WHERE part_id = ? AND photo_order > ? AND photo_order < 100 ORDER BY photo_order ASC LIMIT 1',
+            (photo['part_id'], photo['photo_order'])
+        ).fetchone()
+ 
+    if neighbor:
+        db.execute('UPDATE part_photos SET photo_order = ? WHERE id = ?', (neighbor['photo_order'], photo['id']))
+        db.execute('UPDATE part_photos SET photo_order = ? WHERE id = ?', (photo['photo_order'], neighbor['id']))
+        db.commit()
+ 
+    db.close()
+    return redirect(request.referrer or url_for('index'))
 # ============================================
 # SITEMAP & ROBOTS
 # ============================================
