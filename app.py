@@ -41,7 +41,6 @@ register_heif_opener()
 app = Flask(__name__)
 csrf = CSRFProtect(app)
 
-
 if os.getenv('RENDER'):
     UPLOAD_DIR = '/data/uploads/parts'
 else:
@@ -61,6 +60,13 @@ def _allowed_file(filename):
  
  
 MAX_PHOTOS_PER_UPLOAD = 10  # sane technical cap per batch, not a business rule
+MAX_PHOTO_DIMENSION = 1600  # resize anything larger than this — phone photos
+                             # are often 3000-4000px wide, far bigger than any
+                             # website needs, and processing/saving that much
+                             # data for every photo is what was slow enough
+                             # to trigger the gunicorn worker timeout
+ 
+
 # ============================================
 # CACHE-BUSTING
 # ============================================
@@ -781,12 +787,19 @@ def upload_part_photo(part_id):
         try:
             img = Image.open(file)
             img.load()
-        except Exception:
+        except Exception as e:
+            print(f"⚠️ Failed to decode '{file.filename}': {type(e).__name__}: {e}", flush=True)
             skipped.append((file.filename, 'not a valid image'))
             continue
  
         if img.mode != 'RGB':
             img = img.convert('RGB')
+ 
+        # Resize down if larger than the max — this is the real fix for the
+        # slow-upload timeout, not just a band-aid: smaller images decode,
+        # process, and save dramatically faster, especially for HEIC.
+        if img.width > MAX_PHOTO_DIMENSION or img.height > MAX_PHOTO_DIMENSION:
+            img.thumbnail((MAX_PHOTO_DIMENSION, MAX_PHOTO_DIMENSION), Image.LANCZOS)
  
         filename = f"part_{part_id}_{uuid.uuid4().hex}.jpg"
         filepath = os.path.join(UPLOAD_DIR, filename)
