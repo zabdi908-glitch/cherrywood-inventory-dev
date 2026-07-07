@@ -32,6 +32,10 @@ import backup
 import contact_parser
 import analytics
 import settings_store
+import uuid 
+from flask import send_from_directory
+from PIL import Image  # Pillow — used to genuinely verify uploads are real images
+from pillow_heif import register_heif_opener   
 
 app = Flask(__name__)
 csrf = CSRFProtect(app)
@@ -43,12 +47,19 @@ else:
     UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads', 'parts')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
  
-ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp'}
+# Accepted INPUT formats — note HEIC/HEIF (iPhone default) is included here.
+# Every upload gets converted to a plain JPG on save regardless of which of
+# these it started as, so storage stays simple and predictable: every photo
+# file on disk always ends in .jpg, no exceptions to think about later.
+ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'}
 MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024  # 5MB per photo
  
  
 def _allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+ 
+ 
+MAX_PHOTOS_PER_UPLOAD = 10  # sane technical cap per batch, not a business rule
 # ============================================
 # CACHE-BUSTING
 # ============================================
@@ -723,65 +734,75 @@ def parts_bulk_delete():
     else:
         flash('❌ No parts selected.', 'error')
     return redirect(url_for('parts_index'))
-
 @app.route('/parts/upload-photo/<int:part_id>', methods=['POST'])
 @login_required
 def upload_part_photo(part_id):
-    file = request.files.get('photo')
-    if not file or file.filename == '':
-        flash('❌ No file selected', 'error')
+    files = request.files.getlist('photos')
+    files = [f for f in files if f and f.filename]  # drop empty file inputs
+ 
+    if not files:
+        flash('❌ No files selected', 'error')
         return redirect(url_for('parts_edit', id=part_id))
  
-    if not _allowed_file(file.filename):
-        flash('❌ Only JPG, PNG, and WebP images are allowed', 'error')
+    if len(files) > MAX_PHOTOS_PER_UPLOAD:
+        flash(f'❌ Too many photos at once — max {MAX_PHOTOS_PER_UPLOAD} per upload', 'error')
         return redirect(url_for('parts_edit', id=part_id))
  
-    file.seek(0, os.SEEK_END)
-    size = file.tell()
-    file.seek(0)
-    if size > MAX_PHOTO_SIZE_BYTES:
-        flash('❌ Photo too large — max 5MB', 'error')
-        return redirect(url_for('parts_edit', id=part_id))
- 
-    # Verify this is actually a genuine image, not just a file with a
-    # misleading extension — accept="image/*" on the frontend is trivially
-    # bypassed, so this check has to happen server-side to mean anything.
-    try:
-        img = Image.open(file)
-        img.verify()
-        file.seek(0)  # verify() consumes the file object, so reset before using it again
-    except Exception:
-        flash('❌ That file doesn\'t look like a valid image', 'error')
-        return redirect(url_for('parts_edit', id=part_id))
- 
-    ext = file.filename.rsplit('.', 1)[1].lower()
-    filename = f"part_{part_id}_{uuid.uuid4().hex}.{ext}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
-    file.save(filepath)
- 
-    # NOTE: parts_agent.add_photo() is intentionally NOT used here. It calls
-    # compress_image()/create_thumbnail() on whatever path it's given, then
-    # stores that SAME path as the web-facing photo_url — which only works
-    # if the filesystem path and the URL happen to match (true for the old
-    # static/uploads/ setup, not true here, since /data/... isn't a URL
-    # anything can fetch). Inserting directly avoids storing a broken path.
-    # Compression can be wired back in later once compress_images.py is
-    # confirmed working — for now photos save uncompressed, which is fully
-    # functional, just slightly larger files.
-    web_url = f'/uploads/parts/{filename}'
     db = get_db()
     max_order = db.execute(
         'SELECT MAX(photo_order) FROM part_photos WHERE part_id = ? AND photo_order < 100',
         (part_id,)
     ).fetchone()[0] or 0
-    db.execute(
-        'INSERT INTO part_photos (part_id, photo_url, photo_order) VALUES (?, ?, ?)',
-        (part_id, web_url, max_order + 1)
-    )
+ 
+    uploaded_count = 0
+    skipped = []  # (filename, reason) — so the flash message can explain what got skipped and why
+ 
+    for file in files:
+        if not _allowed_file(file.filename):
+            skipped.append((file.filename, 'unsupported file type'))
+            continue
+ 
+        file.seek(0, os.SEEK_END)
+        size = file.tell()
+        file.seek(0)
+        if size > MAX_PHOTO_SIZE_BYTES:
+            skipped.append((file.filename, 'over 5MB'))
+            continue
+ 
+        try:
+            img = Image.open(file)
+            img.load()
+        except Exception:
+            skipped.append((file.filename, 'not a valid image'))
+            continue
+ 
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+ 
+        filename = f"part_{part_id}_{uuid.uuid4().hex}.jpg"
+        filepath = os.path.join(UPLOAD_DIR, filename)
+        img.save(filepath, format='JPEG', quality=85)
+ 
+        max_order += 1
+        web_url = f'/uploads/parts/{filename}'
+        db.execute(
+            'INSERT INTO part_photos (part_id, photo_url, photo_order) VALUES (?, ?, ?)',
+            (part_id, web_url, max_order)
+        )
+        uploaded_count += 1
+ 
     db.commit()
     db.close()
  
-    flash('✅ Photo uploaded successfully', 'success')
+    # Give an honest, specific summary rather than a generic "done" message —
+    # especially important if some files were silently skipped, so that
+    # doesn't get missed.
+    if uploaded_count:
+        flash(f'✅ {uploaded_count} photo{"s" if uploaded_count != 1 else ""} uploaded successfully', 'success')
+    if skipped:
+        skipped_summary = ", ".join(f'{name} ({reason})' for name, reason in skipped)
+        flash(f'⚠️ Skipped {len(skipped)} file(s): {skipped_summary}', 'warning')
+ 
     return redirect(url_for('parts_edit', id=part_id))
  
  
@@ -852,6 +873,7 @@ def reorder_part_photo(photo_id, direction):
  
     db.close()
     return redirect(request.referrer or url_for('index'))
+
 # ============================================
 # SITEMAP & ROBOTS
 # ============================================
