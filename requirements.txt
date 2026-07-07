@@ -6,3 +6,4 @@ Pillow==12.0.0
 openai==1.51.0
 httpx
 requests
+pillow-heif
