@@ -542,6 +542,7 @@ def delivery():
 # ============================================
 # PARTS INVENTORY ROUTES - FIXED MASTER ROUTE
 # ============================================
+
 @app.route('/parts-public')
 def parts_public():
     page = request.args.get('page', 1, type=int)
@@ -563,7 +564,7 @@ def parts_public():
     total = result['total']
     pages = (total + per_page - 1) // per_page
 
-    # Attach each part's first photo (if any) — this is one extra small
+    # Attach each part's first photo and total photo count — one extra small
     # query per part, which is fine at 20 parts per page. Deliberately not
     # touched parts_agent.get_parts()'s SQL directly, since that query
     # already handles pagination/filtering/sorting correctly and modifying
@@ -574,6 +575,7 @@ def parts_public():
         # convention used on the admin edit page
         real_photos = [p for p in photos if p['photo_order'] < 100]
         part['photo_url'] = real_photos[0]['photo_url'] if real_photos else None
+        part['photo_count'] = len(real_photos)
 
     filter_args = request.args.copy()
     filter_args.pop('page', None)
