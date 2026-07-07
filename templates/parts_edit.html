@@ -166,10 +166,10 @@
             <form action="/parts/upload-photo/{{ part.id }}" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="flex gap-2">
-                    <input type="file" name="photo" accept="image/*" class="bg-slate-800 text-slate-300 p-2 rounded border border-slate-700">
+                    <input type="file" name="photos" multiple accept="image/*,.heic,.heif" class="bg-slate-800 text-slate-300 p-2 rounded border border-slate-700">
                     <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Upload</button>
                 </div>
-                <p class="text-xs text-slate-500 mt-1">JPG, PNG, or WebP — max 5MB, one at a time</p>
+                <p class="text-xs text-slate-500 mt-1">JPG, PNG, WebP, or HEIC (iPhone) — max 5MB each, up to 10 at once</p>
             </form>
         </div>
 
