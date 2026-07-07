@@ -143,15 +143,42 @@
                 <div class="flex justify-between items-start">
                     <div>
                         <h1 class="text-3xl font-black text-white">{{ part.part_name }}</h1>
-                        <p class="text-sm text-slate-400 mt-1">OEM: {{ part.oem_number or 'N/A' }}</p>
-                        <p class="text-sm text-slate-400">{{ part.make }} {{ part.model }} {{ part.generation or '' }}</p>
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                            <span class="text-sm text-slate-400 flex items-center gap-1.5">
+                                OEM: {{ part.oem_number or 'N/A' }}
+                                {% if part.oem_number %}
+                                <button onclick="copyText('{{ part.oem_number }}', this)" aria-label="Copy OEM number"
+                                        class="text-slate-500 hover:text-[#f97316] transition">
+                                    <i class="fa-regular fa-copy text-xs"></i>
+                                </button>
+                                {% endif %}
+                            </span>
+                            <span class="text-sm text-slate-400 flex items-center gap-1.5">
+                                Stock ID: {{ part.stock_id }}
+                                <button onclick="copyText('{{ part.stock_id }}', this)" aria-label="Copy Stock ID"
+                                        class="text-slate-500 hover:text-[#f97316] transition">
+                                    <i class="fa-regular fa-copy text-xs"></i>
+                                </button>
+                            </span>
+                        </div>
+                        <p class="text-sm text-slate-400 mt-1">{{ part.make }} {{ part.model }} {{ part.generation or '' }}</p>
                     </div>
-                    <span class="px-4 py-2 rounded-full text-sm font-bold 
-                        {% if part.stock_status == 'Available' %}bg-green-600 text-white{% endif %}
-                        {% if part.stock_status == 'Reserved' %}bg-yellow-600 text-black{% endif %}
-                        {% if part.stock_status == 'Sold' %}bg-red-600 text-white{% endif %}">
-                        {{ part.stock_status }}
-                    </span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="toggleSave('{{ part.id }}', this)" id="save-btn" aria-label="Save part"
+                                class="w-10 h-10 rounded-full bg-[#0f172a] border border-slate-700 hover:border-[#f97316] flex items-center justify-center transition flex-shrink-0">
+                            <i class="fa-regular fa-heart text-slate-300"></i>
+                        </button>
+                        <button onclick="sharePart()" aria-label="Share this part"
+                                class="w-10 h-10 rounded-full bg-[#0f172a] border border-slate-700 hover:border-[#f97316] flex items-center justify-center transition flex-shrink-0">
+                            <i class="fa-solid fa-share-nodes text-slate-300"></i>
+                        </button>
+                        <span class="px-4 py-2 rounded-full text-sm font-bold flex-shrink-0
+                            {% if part.stock_status == 'Available' %}bg-green-600 text-white{% endif %}
+                            {% if part.stock_status == 'Reserved' %}bg-yellow-600 text-black{% endif %}
+                            {% if part.stock_status == 'Sold' %}bg-red-600 text-white{% endif %}">
+                            {{ part.stock_status }}
+                        </span>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 p-4 bg-[#0f172a] rounded-xl">
@@ -173,15 +200,55 @@
                     </div>
                 </div>
 
-                <div class="mt-6 flex items-center justify-between">
-                    <span class="text-3xl font-black text-[#f97316]">£{{ "%.2f"|format(part.price) }}</span>
-                    <div class="flex gap-3">
-                        <a href="https://wa.me/447440369576?text={{ 'Hi%2C%20I%27m%20interested%20in%20part%20' }}{{ part.id }}" target="_blank" class="px-6 py-3 bg-[#22c55e] text-white font-black rounded-lg hover:bg-green-600 transition flex items-center gap-2">
-                            <i class="fa-brands fa-whatsapp text-xl"></i> WhatsApp
+                {% set whatsapp_message = "Hi, I'm interested in " ~ part.part_name ~ " (Stock ID: " ~ part.stock_id ~ ", OEM: " ~ (part.oem_number or "N/A") ~ "). Price: £" ~ "%.2f"|format(part.price) ~ ". " ~ request.url %}
+                {% set delivery_message = "Hi, could I get a delivery quote for " ~ part.part_name ~ " (Stock ID: " ~ part.stock_id ~ ")? " ~ request.url %}
+
+                <div class="mt-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-3xl font-black text-[#f97316]">£{{ "%.2f"|format(part.price) }}</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <a href="{{ bot_settings.whatsapp_link }}?text={{ whatsapp_message | urlencode }}" target="_blank"
+                           class="px-6 py-3.5 bg-[#22c55e] text-white font-black rounded-lg hover:bg-green-600 transition flex items-center justify-center gap-2">
+                            <i class="fa-brands fa-whatsapp text-xl"></i> WhatsApp Enquiry
                         </a>
-                        <a href="/parts-public" class="px-6 py-3 bg-slate-700 text-white font-black rounded-lg hover:bg-slate-600 transition">
-                            Back to Parts
+                        <a href="tel:{{ bot_settings.company_phone }}"
+                           class="px-6 py-3.5 bg-slate-700 text-white font-black rounded-lg hover:bg-slate-600 transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-phone"></i> Call Now
                         </a>
+                        <a href="{{ bot_settings.whatsapp_link }}?text={{ delivery_message | urlencode }}" target="_blank"
+                           class="px-6 py-3 bg-[#0f172a] border border-slate-700 hover:border-[#f97316] text-white font-bold rounded-lg transition flex items-center justify-center gap-2 text-sm">
+                            <i class="fa-solid fa-truck-fast"></i> Request Delivery Quote
+                        </a>
+                        <a href="/parts-public"
+                           class="px-6 py-3 bg-[#0f172a] border border-slate-700 hover:border-[#f97316] text-white font-bold rounded-lg transition flex items-center justify-center gap-2 text-sm">
+                            <i class="fa-solid fa-arrow-left"></i> Back to Parts
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Trust signals -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6 pt-6 border-t border-slate-800">
+                    <a href="/warranty" class="flex items-center gap-3 p-3 rounded-lg hover:bg-[#0f172a] transition">
+                        <i class="fa-solid fa-shield-halved text-[#f97316] text-xl"></i>
+                        <div>
+                            <p class="text-sm font-bold text-white">90-Day Warranty</p>
+                            <p class="text-xs text-slate-500">On all mechanical parts</p>
+                        </div>
+                    </a>
+                    <a href="/delivery" class="flex items-center gap-3 p-3 rounded-lg hover:bg-[#0f172a] transition">
+                        <i class="fa-solid fa-truck-fast text-[#f97316] text-xl"></i>
+                        <div>
+                            <p class="text-sm font-bold text-white">Nationwide Delivery</p>
+                            <p class="text-xs text-slate-500">UK-wide shipping available</p>
+                        </div>
+                    </a>
+                    <div class="flex items-center gap-3 p-3">
+                        <i class="fa-solid fa-certificate text-[#f97316] text-xl"></i>
+                        <div>
+                            <p class="text-sm font-bold text-white">Licensed Recycler</p>
+                            <p class="text-xs text-slate-500">EA Licence: 102422</p>
+                        </div>
                     </div>
                 </div>
 
@@ -199,6 +266,8 @@
                     </a>
                 </div>
                 {% endif %}
+
+                <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 text-white text-sm font-bold px-4 py-2.5 rounded-full shadow-xl z-50"></div>
             </div>
         </div>
     </main>
@@ -344,6 +413,86 @@
         }
         attachSwipe(document.getElementById('main-part-photo'), nextPhoto, prevPhoto);
         attachSwipe(document.getElementById('lightbox-img'), lightboxNext, lightboxPrev);
+
+        // ===== TOAST (small confirmation message) =====
+        let toastTimer = null;
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.remove('hidden');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.add('hidden'), 2000);
+        }
+
+        // ===== COPY TO CLIPBOARD =====
+        function copyText(text, buttonEl) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Copied: ' + text);
+                if (buttonEl) {
+                    const icon = buttonEl.querySelector('i');
+                    const originalClass = icon.className;
+                    icon.className = 'fa-solid fa-check text-xs text-green-400';
+                    setTimeout(() => { icon.className = originalClass; }, 1200);
+                }
+            }).catch(() => {
+                showToast('Could not copy — try selecting the text manually');
+            });
+        }
+
+        // ===== SAVE / FAVOURITE (browser-only, no account needed) =====
+        const SAVED_PARTS_KEY = 'cherrywood_saved_parts';
+
+        function getSavedParts() {
+            try {
+                return JSON.parse(localStorage.getItem(SAVED_PARTS_KEY)) || [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function toggleSave(partId, buttonEl) {
+            let saved = getSavedParts();
+            const icon = buttonEl.querySelector('i');
+            if (saved.includes(partId)) {
+                saved = saved.filter(id => id !== partId);
+                icon.className = 'fa-regular fa-heart text-slate-300';
+                showToast('Removed from saved parts');
+            } else {
+                saved.push(partId);
+                icon.className = 'fa-solid fa-heart text-[#f97316]';
+                showToast('Saved — find it again anytime from this browser');
+            }
+            localStorage.setItem(SAVED_PARTS_KEY, JSON.stringify(saved));
+        }
+
+        // Reflect saved state on page load
+        (function initSaveButton() {
+            const partId = "{{ part.id }}";
+            const btn = document.getElementById('save-btn');
+            if (!btn) return;
+            const saved = getSavedParts();
+            if (saved.includes(partId)) {
+                btn.querySelector('i').className = 'fa-solid fa-heart text-[#f97316]';
+            }
+        })();
+
+        // ===== SHARE =====
+        function sharePart() {
+            const shareData = {
+                title: "{{ part.part_name }}",
+                text: "Check out this part at Cherrywood Auto Parts: {{ part.part_name }}",
+                url: window.location.href
+            };
+            if (navigator.share) {
+                navigator.share(shareData).catch(() => {}); // user cancelled — no error needed
+            } else {
+                navigator.clipboard.writeText(window.location.href).then(() => {
+                    showToast('Link copied to clipboard');
+                }).catch(() => {
+                    showToast('Could not copy link');
+                });
+            }
+        }
     </script>
 
 </body>
