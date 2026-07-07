@@ -540,37 +540,45 @@ def delivery():
 def parts_public():
     page = request.args.get('page', 1, type=int)
     per_page = 20
-    
-    # Get filter parameters
+
     category = request.args.get('category', None)
     price_range = request.args.get('price', None)
     status = request.args.get('status', None)
     sort = request.args.get('sort', 'newest')
     search_query = request.args.get('q', '').strip()
 
-    # Call the NEW fast database method
     result = parts_agent.get_parts(
         page=page, per_page=per_page,
         category=category, price_range=price_range,
         status=status, sort=sort, search_query=search_query
     )
-    
+
     parts = result['parts']
     total = result['total']
     pages = (total + per_page - 1) // per_page
 
-    # Preserve current filters for pagination links
+    # Attach each part's first photo (if any) — this is one extra small
+    # query per part, which is fine at 20 parts per page. Deliberately not
+    # touched parts_agent.get_parts()'s SQL directly, since that query
+    # already handles pagination/filtering/sorting correctly and modifying
+    # it carries more risk than doing this simple post-processing step here.
+    for part in parts:
+        photos = parts_agent.get_photos(part['id'])
+        # photo_order < 100 excludes auto-generated thumbnails, same
+        # convention used on the admin edit page
+        real_photos = [p for p in photos if p['photo_order'] < 100]
+        part['photo_url'] = real_photos[0]['photo_url'] if real_photos else None
+
     filter_args = request.args.copy()
     filter_args.pop('page', None)
 
-    return render_template('parts_public.html', 
-                           parts=parts, 
-                           page=page, 
-                           pages=pages, 
+    return render_template('parts_public.html',
+                           parts=parts,
+                           page=page,
+                           pages=pages,
                            selected_category=category,
                            search_query=search_query,
                            filter_args=filter_args)
-
 @app.route('/parts')
 def parts_index():
     try:
