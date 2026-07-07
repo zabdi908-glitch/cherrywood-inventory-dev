@@ -35,7 +35,8 @@ import settings_store
 import uuid 
 from flask import send_from_directory
 from PIL import Image  # Pillow — used to genuinely verify uploads are real images
-from pillow_heif import register_heif_opener   
+from pillow_heif import register_heif_opener
+register_heif_opener()   
 
 app = Flask(__name__)
 csrf = CSRFProtect(app)
