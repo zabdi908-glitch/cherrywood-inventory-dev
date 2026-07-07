@@ -10,7 +10,7 @@
         </h1>
         <p class="text-slate-400 text-sm mb-6">Update the details for <span class="text-white font-bold">{{ part.part_name }}</span></p>
 
-        <form method="POST" enctype="multipart/form-data" class="space-y-4">
+        <form method="POST" class="space-y-4">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -120,21 +120,59 @@
                 <textarea name="notes" rows="2" class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">{{ part.notes or '' }}</textarea>
             </div>
 
-            <!-- Photo Upload -->
-            <div>
-                <label class="block text-xs font-black uppercase text-slate-400 mb-1">
-                    <i class="fa-solid fa-camera text-[#f97316] mr-1"></i> Upload Photos
-                    <span class="text-slate-500 font-normal lowercase">(optional — add more photos)</span>
-                </label>
-                <input type="file" name="photos" multiple accept="image/*"
-                       class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#f97316] file:text-black file:font-bold hover:file:bg-orange-500">
-                <p class="text-xs text-slate-500 mt-1">You can upload multiple photos. Max 5MB each.</p>
-            </div>
-
             <button type="submit" class="w-full p-4 bg-[#f97316] text-black font-black uppercase rounded-xl hover:bg-orange-500 transition">
                 Update Part
             </button>
         </form>
+
+        <!-- ===== PHOTO MANAGEMENT ===== -->
+        <!-- Deliberately OUTSIDE the main edit form above — this section has
+             its own forms (upload, delete, reorder), and nesting them inside
+             the main form would cause the same broken-submission bug fixed
+             earlier on the Parts Inventory bulk-delete page. -->
+        <div class="mt-6 border-t border-slate-700 pt-6">
+            <h4 class="text-lg font-bold text-white mb-4">Photos</h4>
+
+            <!-- Existing photos — filtered to photo_order < 100, since anything
+                 at 100+ is an auto-generated thumbnail, not something managed
+                 directly here. -->
+            <div class="flex flex-wrap gap-4 mb-4">
+                {% for photo in part.photos if photo.photo_order < 100 %}
+                <div class="relative group">
+                    <img src="{{ photo.photo_url }}" class="w-24 h-24 object-cover rounded border border-slate-700">
+
+                    <form action="/parts/delete-photo/{{ photo.id }}" method="POST" class="absolute top-1 right-1"
+                          onsubmit="return confirm('Delete this photo?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700">✕</button>
+                    </form>
+
+                    <div class="absolute bottom-1 left-1 flex gap-1">
+                        <form action="/parts/reorder-photo/{{ photo.id }}/up" method="POST" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="bg-slate-800/90 text-white text-xs w-6 h-6 rounded hover:bg-slate-700" aria-label="Move photo earlier">↑</button>
+                        </form>
+                        <form action="/parts/reorder-photo/{{ photo.id }}/down" method="POST" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="bg-slate-800/90 text-white text-xs w-6 h-6 rounded hover:bg-slate-700" aria-label="Move photo later">↓</button>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-slate-500 text-sm">No photos yet — add one below.</p>
+                {% endfor %}
+            </div>
+
+            <form action="/parts/upload-photo/{{ part.id }}" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="flex gap-2">
+                    <input type="file" name="photo" accept="image/*" class="bg-slate-800 text-slate-300 p-2 rounded border border-slate-700">
+                    <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Upload</button>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">JPG, PNG, or WebP — max 5MB, one at a time</p>
+            </form>
+        </div>
+
     </div>
 </div>
 {% endblock %}
