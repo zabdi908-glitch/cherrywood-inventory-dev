@@ -120,6 +120,91 @@
                 <textarea name="notes" rows="2" class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">{{ part.notes or '' }}</textarea>
             </div>
 
+            <!-- ===== VEHICLE SPECIFICATIONS ===== -->
+            <div class="pt-4 mt-2 border-t border-slate-700">
+                <h3 class="text-sm font-black uppercase text-[#f97316] tracking-wider mb-4">Donor Vehicle Details</h3>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Registration</label>
+                    <input type="text" name="registration" value="{{ part.registration or '' }}"
+                           class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none uppercase">
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">
+                        VIN <span class="text-slate-500 font-normal lowercase">(shown masked to public)</span>
+                    </label>
+                    <input type="text" name="vin" value="{{ part.vin or '' }}"
+                           class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none uppercase">
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Year</label>
+                    <input type="number" name="year" value="{{ part.year or '' }}" min="1980" max="2030"
+                           class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Mileage</label>
+                    <input type="number" name="mileage" value="{{ part.mileage or '' }}" min="0"
+                           class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Fuel Type</label>
+                    <select name="fuel_type" class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
+                        <option value="">-- Not specified --</option>
+                        <option value="Petrol" {% if part.fuel_type == 'Petrol' %}selected{% endif %}>Petrol</option>
+                        <option value="Diesel" {% if part.fuel_type == 'Diesel' %}selected{% endif %}>Diesel</option>
+                        <option value="Hybrid" {% if part.fuel_type == 'Hybrid' %}selected{% endif %}>Hybrid</option>
+                        <option value="Electric" {% if part.fuel_type == 'Electric' %}selected{% endif %}>Electric</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Transmission</label>
+                    <select name="transmission" class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
+                        <option value="">-- Not specified --</option>
+                        <option value="Manual" {% if part.transmission == 'Manual' %}selected{% endif %}>Manual</option>
+                        <option value="Automatic" {% if part.transmission == 'Automatic' %}selected{% endif %}>Automatic</option>
+                        <option value="DSG" {% if part.transmission == 'DSG' %}selected{% endif %}>DSG</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Engine Size</label>
+                    <input type="text" name="engine_size" value="{{ part.engine_size or '' }}" placeholder="e.g. 2.0"
+                           class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">Colour</label>
+                    <input type="text" name="colour" value="{{ part.colour or '' }}"
+                           class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">
+                        Side <span class="text-slate-500 font-normal lowercase">(if applicable)</span>
+                    </label>
+                    <select name="side" class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
+                        <option value="">-- N/A --</option>
+                        <option value="Left (N/S)" {% if part.side == 'Left (N/S)' %}selected{% endif %}>Left (N/S)</option>
+                        <option value="Right (O/S)" {% if part.side == 'Right (O/S)' %}selected{% endif %}>Right (O/S)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-1">
+                        Position <span class="text-slate-500 font-normal lowercase">(if applicable)</span>
+                    </label>
+                    <select name="position" class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none">
+                        <option value="">-- N/A --</option>
+                        <option value="Front" {% if part.position == 'Front' %}selected{% endif %}>Front</option>
+                        <option value="Rear" {% if part.position == 'Rear' %}selected{% endif %}>Rear</option>
+                    </select>
+                </div>
+            </div>
+
             <button type="submit" class="w-full p-4 bg-[#f97316] text-black font-black uppercase rounded-xl hover:bg-orange-500 transition">
                 Update Part
             </button>
