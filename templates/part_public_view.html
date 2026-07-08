@@ -31,6 +31,9 @@
     <style>
         body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
         .orange-gradient { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+        @media (max-width: 767px) {
+            body { padding-bottom: 76px; }
+        }
     </style>
     <script type="application/ld+json">
 {
@@ -516,6 +519,28 @@ Thank you.
              onmousemove="handleZoomMove(event)" onmouseleave="resetZoom()">
 
         <p class="absolute bottom-4 text-white/50 text-xs hidden md:block">Hover image to zoom · Arrow keys to navigate · Esc to close</p>
+    </div>
+
+    <!-- ===== STICKY MOBILE PRICE + ENQUIRY BAR ===== -->
+    <!-- Mobile only (hidden md:up) — the page has grown long with specs,
+         related parts, and recently viewed sections, so on a phone the
+         price/enquiry buttons in the main content can end up scrolled well
+         out of view. This keeps them reachable at all times. -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#111827] border-t border-slate-800 shadow-2xl">
+        <div class="flex items-center gap-3 px-4 py-3">
+            <div class="flex-shrink-0">
+                <p class="text-[10px] text-slate-400 uppercase font-bold leading-none">Price</p>
+                <p class="text-lg font-black text-[#f97316] leading-tight">£{{ "%.2f"|format(part.price) }}</p>
+            </div>
+            <a href="{{ bot_settings.whatsapp_link }}?text={{ whatsapp_message.strip() | urlencode }}" target="_blank"
+               class="flex-1 bg-[#22c55e] text-white font-black py-3 rounded-lg text-center text-sm flex items-center justify-center gap-2">
+                <i class="fa-brands fa-whatsapp text-lg"></i> WhatsApp Enquiry
+            </a>
+            <a href="tel:{{ bot_settings.company_phone }}" aria-label="Call us"
+               class="flex-shrink-0 w-12 h-12 bg-slate-700 text-white rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-phone"></i>
+            </a>
+        </div>
     </div>
 
     <!-- ===== FOOTER ===== -->
