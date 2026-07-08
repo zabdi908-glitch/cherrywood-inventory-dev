@@ -689,7 +689,8 @@ def parts_delete(id):
     return redirect(url_for('parts_index'))
 
 @app.route('/parts/view/<int:id>')
-def parts_view(id):
+   @login_required
+   def parts_view(id):
     part = parts_agent.get_part(id)
     if not part:
         flash('Part not found', 'error')
