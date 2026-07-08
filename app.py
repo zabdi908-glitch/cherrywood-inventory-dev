@@ -724,7 +724,7 @@ def parts_bulk_import():
         if file and file.filename.endswith('.csv'):
             import csv
             import io
-            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+            stream = io.StringIO(file.stream.read().decode("utf-8-sig"), newline=None)
             result = parts_agent.bulk_import(stream.read())
             if result['success']:
                 flash(f'✅ Added {result["added"]} parts successfully!', 'success')
