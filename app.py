@@ -664,7 +664,19 @@ def parts_edit(id):
             'price': form.price.data or 0,
             'stock_status': form.stock_status.data or 'Available',
             'location': form.location.data or '',
-            'notes': form.notes.data or ''
+            'notes': form.notes.data or '',
+            # New vehicle-spec fields — read directly from the raw submitted
+            # form data, since PartForm doesn't declare these fields itself.
+            'registration': request.form.get('registration', '').strip(),
+            'vin': request.form.get('vin', '').strip(),
+            'mileage': request.form.get('mileage', '').strip(),
+            'year': request.form.get('year', '').strip(),
+            'fuel_type': request.form.get('fuel_type', '').strip(),
+            'transmission': request.form.get('transmission', '').strip(),
+            'engine_size': request.form.get('engine_size', '').strip(),
+            'colour': request.form.get('colour', '').strip(),
+            'side': request.form.get('side', '').strip(),
+            'position': request.form.get('position', '').strip(),
         }
         result = parts_agent.update_part(id, data)
         if result['success']:
@@ -677,6 +689,7 @@ def parts_edit(id):
             for error in errors:
                 flash(f'❌ {field.replace("_", " ").title()}: {error}', 'error')
     return render_template('parts_edit.html', form=form, part=part)
+ 
 
 @app.route('/parts/delete/<int:id>', methods=['POST'])
 @login_required
