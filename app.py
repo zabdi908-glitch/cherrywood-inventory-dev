@@ -690,7 +690,7 @@ def parts_delete(id):
 
 @app.route('/parts/view/<int:id>')
 @login_required
-   def parts_view(id):
+def parts_view(id):
     part = parts_agent.get_part(id)
     if not part:
         flash('Part not found', 'error')
