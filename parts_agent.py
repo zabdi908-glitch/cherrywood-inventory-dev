@@ -43,6 +43,25 @@ class PartsAgent:
                 conn.execute('ALTER TABLE parts ADD COLUMN slug TEXT')
             except:
                 pass
+            # New vehicle-spec fields — each wrapped individually so this is
+            # safe to run on every startup, same pattern as slug above.
+            # Existing parts simply get NULL/blank for these until edited.
+            for column_def in [
+                'registration TEXT',
+                'vin TEXT',
+                'mileage INTEGER',
+                'year INTEGER',
+                'fuel_type TEXT',
+                'transmission TEXT',
+                'engine_size TEXT',
+                'colour TEXT',
+                'side TEXT',
+                'position TEXT',
+            ]:
+                try:
+                    conn.execute(f'ALTER TABLE parts ADD COLUMN {column_def}')
+                except:
+                    pass
             conn.execute('''CREATE TABLE IF NOT EXISTS part_photos (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 part_id INTEGER,
@@ -93,13 +112,20 @@ class PartsAgent:
             conn = self.get_db()
             cursor = conn.execute('''INSERT INTO parts 
                 (stock_id, part_name, category, part_type, make, model, generation, 
-                 oem_number, engine_code, condition, price, stock_status, location, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                 oem_number, engine_code, condition, price, stock_status, location, notes,
+                 registration, vin, mileage, year, fuel_type, transmission, engine_size,
+                 colour, side, position)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                 (data.get('stock_id'), data.get('part_name'), data.get('category'),
                  data.get('part_type'), data.get('make'), data.get('model'),
                  data.get('generation'), data.get('oem_number'), data.get('engine_code'),
                  data.get('condition'), data.get('price'), data.get('stock_status', 'Available'),
-                 data.get('location'), data.get('notes')))
+                 data.get('location'), data.get('notes'),
+                 data.get('registration'), data.get('vin'),
+                 int(data['mileage']) if data.get('mileage') not in (None, '') else None,
+                 int(data['year']) if data.get('year') not in (None, '') else None,
+                 data.get('fuel_type'), data.get('transmission'), data.get('engine_size'),
+                 data.get('colour'), data.get('side'), data.get('position')))
             part_id = cursor.lastrowid
             slug = self.generate_slug(data.get('part_name', ''), part_id)
             conn.execute('UPDATE parts SET slug = ? WHERE id = ?', (slug, part_id))
@@ -118,7 +144,6 @@ class PartsAgent:
         except Exception as e:
             return None
 
-    # === KEEP THIS for admin panel ===
     def get_all_parts(self):
         try:
             conn = self.get_db()
@@ -128,7 +153,6 @@ class PartsAgent:
         except Exception as e:
             return []
 
-    # === NEW FAST METHOD FOR PUBLIC PAGE (Handles Pagination, Sorting, Filters all in SQL) ===
     def get_parts(self, page=1, per_page=20, category=None, price_range=None, status=None, sort='newest', search_query=None):
         try:
             conn = self.get_db()
@@ -154,11 +178,9 @@ class PartsAgent:
             if where_clauses:
                 where_sql = "WHERE " + " AND ".join(where_clauses)
 
-            # Count total
             count_sql = f"SELECT COUNT(*) as total FROM parts {where_sql}"
             total = conn.execute(count_sql, params).fetchone()['total']
 
-            # Build Order By
             order_sql = "ORDER BY created_at DESC"
             if sort == 'price_asc':
                 order_sql = "ORDER BY price ASC"
@@ -167,7 +189,6 @@ class PartsAgent:
             elif sort == 'name':
                 order_sql = "ORDER BY part_name ASC"
 
-            # Main query with limit/offset
             offset = (page - 1) * per_page
             sql = f"SELECT * FROM parts {where_sql} {order_sql} LIMIT ? OFFSET ?"
             params.extend([per_page, offset])
@@ -204,14 +225,22 @@ class PartsAgent:
             conn.execute('''UPDATE parts SET 
                 stock_id=?, part_name=?, category=?, part_type=?, 
                 make=?, model=?, generation=?, oem_number=?, engine_code=?, 
-                condition=?, price=?, stock_status=?, location=?, notes=?, 
+                condition=?, price=?, stock_status=?, location=?, notes=?,
+                registration=?, vin=?, mileage=?, year=?, fuel_type=?,
+                transmission=?, engine_size=?, colour=?, side=?, position=?,
                 updated_at=CURRENT_TIMESTAMP
                 WHERE id=?''',
                 (data.get('stock_id'), data.get('part_name'), data.get('category'),
                  data.get('part_type'), data.get('make'), data.get('model'),
                  data.get('generation'), data.get('oem_number'), data.get('engine_code'),
                  data.get('condition'), data.get('price'), data.get('stock_status', 'Available'),
-                 data.get('location'), data.get('notes'), part_id))
+                 data.get('location'), data.get('notes'),
+                 data.get('registration'), data.get('vin'),
+                 int(data['mileage']) if data.get('mileage') not in (None, '') else None,
+                 int(data['year']) if data.get('year') not in (None, '') else None,
+                 data.get('fuel_type'), data.get('transmission'), data.get('engine_size'),
+                 data.get('colour'), data.get('side'), data.get('position'),
+                 part_id))
             slug = self.generate_slug(data.get('part_name', ''), part_id)
             conn.execute('UPDATE parts SET slug = ? WHERE id = ?', (slug, part_id))
             conn.commit()
@@ -231,7 +260,7 @@ class PartsAgent:
             return {'success': False, 'error': str(e)}
 
     # ============================================
-    # PHOTO FUNCTIONS & BULK IMPORT (Kept exactly as you had them)
+    # PHOTO FUNCTIONS & BULK IMPORT
     # ============================================
 
     def add_photo(self, part_id, photo_url, order=0):
@@ -293,7 +322,17 @@ class PartsAgent:
                         'price': float(row.get('price', 0)) if row.get('price') else 0,
                         'stock_status': row.get('stock_status', 'Available').strip(),
                         'location': row.get('location', '').strip(),
-                        'notes': row.get('notes', '').strip()
+                        'notes': row.get('notes', '').strip(),
+                        'registration': row.get('registration', '').strip(),
+                        'vin': row.get('vin', '').strip(),
+                        'mileage': row.get('mileage', '').strip(),
+                        'year': row.get('year', '').strip(),
+                        'fuel_type': row.get('fuel_type', '').strip(),
+                        'transmission': row.get('transmission', '').strip(),
+                        'engine_size': row.get('engine_size', '').strip(),
+                        'colour': row.get('colour', '').strip(),
+                        'side': row.get('side', '').strip(),
+                        'position': row.get('position', '').strip(),
                     }
                     if not data['stock_id']:
                         errors.append(f"Row {line}: Missing stock_id")
