@@ -977,12 +977,12 @@ def parts_bulk_update():
                 sql = f"UPDATE parts SET {', '.join(updates)} WHERE stock_id = ?"
                 params.append(stock_id)
                 
-                try:
-                    db.execute(sql, params)
-                    updated += 1
-                except Exception as e:
-                    errors.append(f"Row {line}: {str(e)}")
-            
+               try:
+                   db.execute(sql, params)
+                   updated += 1
+              except Exception as e:
+                  errors.append(...)
+                     
             db.commit()
             db.close()
             flash(f'✅ Updated {updated} parts successfully!', 'success')
