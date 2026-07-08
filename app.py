@@ -712,16 +712,29 @@ def parts_view(id):
 
 @app.route('/part/<slug>')
 def part_public_view(slug):
-    # We now fetch the part using the slug, not the ID
     part = parts_agent.get_part_by_slug(slug)
     if not part:
         flash('Part not found', 'error')
         return redirect(url_for('parts_public'))
-    
-    meta_description = f"{part['part_name']} - OEM: {part['oem_number'] or 'N/A'}. Price: £{part['price']}. Available from Cherrywood Auto Parts."
-    return render_template('part_public_view.html', part=part, parts_agent=parts_agent, meta_description=meta_description, request=request)
 
-# (Note: The old /parts-public/price, /status, /sort routes are no longer needed since we handle them in the master route above)
+    vehicle_fit = f"{part['make']} {part['model']}"
+    if part.get('generation'):
+        vehicle_fit += f" {part['generation']}"
+
+    meta_description = (
+        f"{part['part_name']} for {vehicle_fit}. "
+        f"OEM: {part['oem_number'] or 'N/A'}. £{part['price']:.2f} — {part['stock_status']}. "
+        f"UK-wide delivery from Cherrywood Auto Parts."
+    )
+
+    similar_parts = parts_agent.get_similar_parts(part['id'], part['category'])
+    same_vehicle_parts = parts_agent.get_same_vehicle_parts(
+        part['id'], part.get('registration'), part.get('make'), part.get('model'), part.get('year')
+    )
+
+    return render_template('part_public_view.html', part=part, parts_agent=parts_agent,
+                           meta_description=meta_description, request=request,
+                           similar_parts=similar_parts, same_vehicle_parts=same_vehicle_parts)
 
 @app.route('/parts/bulk-import', methods=['GET', 'POST'])
 @login_required
@@ -911,6 +924,44 @@ def reorder_part_photo(photo_id, direction):
  
     db.close()
     return redirect(request.referrer or url_for('index'))
+
+# Add this NEW route to app.py, anywhere alongside your other routes.
+# No changes to any existing route needed for this one.
+
+@app.route('/api/parts-by-ids', methods=['POST'])
+def api_parts_by_ids():
+    """Used by the 'Recently Viewed' section on the part page — the browser
+    sends the list of part IDs it has stored locally, and this returns just
+    enough detail to render small preview cards for them."""
+    data = request.get_json(silent=True) or {}
+    ids = data.get('ids', [])
+
+    # Basic sanity limits — a customer's browser shouldn't realistically
+    # ever send more than a handful of IDs, but cap it defensively anyway
+    if not isinstance(ids, list) or len(ids) > 20:
+        return jsonify({'parts': []})
+
+    try:
+        clean_ids = [int(i) for i in ids]
+    except (ValueError, TypeError):
+        return jsonify({'parts': []})
+
+    parts = parts_agent.get_parts_by_ids(clean_ids)
+
+    result = []
+    for part in parts:
+        photos = parts_agent.get_photos(part['id'])
+        real_photos = [p for p in photos if p['photo_order'] < 100]
+        result.append({
+            'id': part['id'],
+            'slug': part.get('slug') or part['id'],
+            'part_name': part['part_name'],
+            'price': part['price'],
+            'stock_status': part['stock_status'],
+            'photo_url': real_photos[0]['photo_url'] if real_photos else None,
+        })
+
+    return jsonify({'parts': result})
 
 # ============================================
 # SITEMAP & ROBOTS
