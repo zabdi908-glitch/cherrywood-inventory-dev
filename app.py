@@ -976,12 +976,14 @@ def parts_bulk_update():
                 # Run the update query directly against the stock_id
                 sql = f"UPDATE parts SET {', '.join(updates)} WHERE stock_id = ?"
                 params.append(stock_id)
-                
-               try:
-    db.execute(sql, params)
-    updated += 1
-except Exception as e:
-    errors.append(...)
+                try:
+                    cursor = db.execute(sql, params)
+                    if cursor.rowcount > 0:
+                        updated += 1
+                    else:
+                        errors.append(f"Row {line}: No part found with stock_id '{stock_id}'")
+                except Exception as e:
+                    errors.append(f"Row {line}: {str(e)}")
                      
             db.commit()
             db.close()
