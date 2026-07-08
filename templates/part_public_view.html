@@ -434,6 +434,60 @@ Thank you.
                 <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 text-white text-sm font-bold px-4 py-2.5 rounded-full shadow-xl z-50"></div>
             </div>
         </div>
+
+        <!-- ===== MORE FROM THIS VEHICLE ===== -->
+        {% if same_vehicle_parts %}
+        <div class="mt-10">
+            <h2 class="text-xl font-black text-white mb-4">More From This Vehicle</h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {% for p in same_vehicle_parts %}
+                <a href="/part/{{ p.slug or p.id }}" class="bg-[#111827] border border-slate-800 rounded-xl overflow-hidden hover:border-[#f97316] transition block">
+                    <div class="h-32 bg-slate-900">
+                        {% if p.photo_url %}
+                        <img src="{{ p.photo_url }}" class="w-full h-full object-contain" loading="lazy" alt="{{ p.part_name }}">
+                        {% else %}
+                        <div class="w-full h-full flex items-center justify-center"><i class="fa-solid fa-image text-2xl text-slate-700"></i></div>
+                        {% endif %}
+                    </div>
+                    <div class="p-3">
+                        <p class="text-sm font-bold text-white truncate">{{ p.part_name }}</p>
+                        <p class="text-[#f97316] font-black text-sm mt-1">£{{ "%.2f"|format(p.price) }}</p>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ===== SIMILAR PARTS ===== -->
+        {% if similar_parts %}
+        <div class="mt-10">
+            <h2 class="text-xl font-black text-white mb-4">You Might Also Like</h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {% for p in similar_parts %}
+                <a href="/part/{{ p.slug or p.id }}" class="bg-[#111827] border border-slate-800 rounded-xl overflow-hidden hover:border-[#f97316] transition block">
+                    <div class="h-32 bg-slate-900">
+                        {% if p.photo_url %}
+                        <img src="{{ p.photo_url }}" class="w-full h-full object-contain" loading="lazy" alt="{{ p.part_name }}">
+                        {% else %}
+                        <div class="w-full h-full flex items-center justify-center"><i class="fa-solid fa-image text-2xl text-slate-700"></i></div>
+                        {% endif %}
+                    </div>
+                    <div class="p-3">
+                        <p class="text-sm font-bold text-white truncate">{{ p.part_name }}</p>
+                        <p class="text-[#f97316] font-black text-sm mt-1">£{{ "%.2f"|format(p.price) }}</p>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ===== RECENTLY VIEWED (rendered client-side from the browser's own history) ===== -->
+        <div id="recently-viewed-section" class="mt-10 hidden">
+            <h2 class="text-xl font-black text-white mb-4">Recently Viewed</h2>
+            <div id="recently-viewed-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
+        </div>
     </main>
 
     <!-- ===== LIGHTBOX (fullscreen viewer) ===== -->
@@ -639,6 +693,72 @@ Thank you.
                 btn.querySelector('i').className = 'fa-solid fa-heart text-[#f97316]';
             }
         })();
+
+        // ===== RECENTLY VIEWED =====
+        const RECENTLY_VIEWED_KEY = 'cherrywood_recently_viewed';
+        const MAX_RECENTLY_VIEWED = 10;
+
+        function getRecentlyViewed() {
+            try {
+                return JSON.parse(localStorage.getItem(RECENTLY_VIEWED_KEY)) || [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function trackRecentlyViewed(partId) {
+            let recent = getRecentlyViewed();
+            recent = recent.filter(id => id !== partId);  // remove if already present, so it moves to the front
+            recent.unshift(partId);
+            recent = recent.slice(0, MAX_RECENTLY_VIEWED);
+            localStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(recent));
+            return recent;
+        }
+
+        function escapeHtmlText(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        async function renderRecentlyViewed() {
+            const currentPartId = "{{ part.id }}";
+            const recent = trackRecentlyViewed(currentPartId);
+            const idsToShow = recent.filter(id => id !== currentPartId).slice(0, 4);
+
+            if (idsToShow.length === 0) return;  // nothing else viewed yet — leave the section hidden
+
+            try {
+                const response = await fetch('/api/parts-by-ids', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: idsToShow }),
+                });
+                if (!response.ok) return;
+                const data = await response.json();
+                if (!data.parts || data.parts.length === 0) return;
+
+                const grid = document.getElementById('recently-viewed-grid');
+                grid.innerHTML = data.parts.map(p => {
+                    const imgHtml = p.photo_url
+                        ? `<img src="${escapeHtmlText(p.photo_url)}" class="w-full h-full object-contain" loading="lazy" alt="${escapeHtmlText(p.part_name)}">`
+                        : `<div class="w-full h-full flex items-center justify-center"><i class="fa-solid fa-image text-2xl text-slate-700"></i></div>`;
+                    return `<a href="/part/${escapeHtmlText(String(p.slug))}" class="bg-[#111827] border border-slate-800 rounded-xl overflow-hidden hover:border-[#f97316] transition block">
+                        <div class="h-32 bg-slate-900">${imgHtml}</div>
+                        <div class="p-3">
+                            <p class="text-sm font-bold text-white truncate">${escapeHtmlText(p.part_name)}</p>
+                            <p class="text-[#f97316] font-black text-sm mt-1">£${Number(p.price).toFixed(2)}</p>
+                        </div>
+                    </a>`;
+                }).join('');
+
+                document.getElementById('recently-viewed-section').classList.remove('hidden');
+            } catch (err) {
+                console.error('Could not load recently viewed parts:', err);
+                // fails silently — this is a nice-to-have section, not core functionality
+            }
+        }
+        renderRecentlyViewed();
 
         // ===== SHARE =====
         function sharePart() {
