@@ -978,10 +978,10 @@ def parts_bulk_update():
                 params.append(stock_id)
                 
                try:
-                   db.execute(sql, params)
-                   updated += 1
-              except Exception as e:
-                  errors.append(...)
+    db.execute(sql, params)
+    updated += 1
+except Exception as e:
+    errors.append(...)
                      
             db.commit()
             db.close()
