@@ -255,6 +255,75 @@
                     </div>
                 </div>
 
+                <!-- ===== DONOR VEHICLE SPECIFICATIONS ===== -->
+                {% if part.year or part.mileage or part.fuel_type or part.transmission or part.engine_size or part.colour or part.registration or part.vin or part.side or part.position %}
+                <div class="mt-4 p-4 bg-[#0f172a] rounded-xl">
+                    <h3 class="text-xs font-black uppercase text-slate-400 tracking-wider mb-3">Donor Vehicle Details</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {% if part.year %}
+                        <div>
+                            <p class="text-xs text-slate-500">Year</p>
+                            <p class="font-bold text-white">{{ part.year }}</p>
+                        </div>
+                        {% endif %}
+                        {% if part.mileage %}
+                        <div>
+                            <p class="text-xs text-slate-500">Mileage</p>
+                            <p class="font-bold text-white">{{ '{:,}'.format(part.mileage) }} mi</p>
+                        </div>
+                        {% endif %}
+                        {% if part.fuel_type %}
+                        <div>
+                            <p class="text-xs text-slate-500">Fuel Type</p>
+                            <p class="font-bold text-white">{{ part.fuel_type }}</p>
+                        </div>
+                        {% endif %}
+                        {% if part.transmission %}
+                        <div>
+                            <p class="text-xs text-slate-500">Transmission</p>
+                            <p class="font-bold text-white">{{ part.transmission }}</p>
+                        </div>
+                        {% endif %}
+                        {% if part.engine_size %}
+                        <div>
+                            <p class="text-xs text-slate-500">Engine Size</p>
+                            <p class="font-bold text-white">{{ part.engine_size }}L</p>
+                        </div>
+                        {% endif %}
+                        {% if part.colour %}
+                        <div>
+                            <p class="text-xs text-slate-500">Colour</p>
+                            <p class="font-bold text-white">{{ part.colour }}</p>
+                        </div>
+                        {% endif %}
+                        {% if part.side %}
+                        <div>
+                            <p class="text-xs text-slate-500">Side</p>
+                            <p class="font-bold text-white">{{ part.side }}</p>
+                        </div>
+                        {% endif %}
+                        {% if part.position %}
+                        <div>
+                            <p class="text-xs text-slate-500">Position</p>
+                            <p class="font-bold text-white">{{ part.position }}</p>
+                        </div>
+                        {% endif %}
+                        {% if part.registration %}
+                        <div>
+                            <p class="text-xs text-slate-500">Ex-Registration</p>
+                            <p class="font-bold text-yellow-400">{{ part.registration }}</p>
+                        </div>
+                        {% endif %}
+                        {% if part.vin %}
+                        <div>
+                            <p class="text-xs text-slate-500">VIN</p>
+                            <p class="font-bold text-white font-mono text-sm">{{ ('*' * (part.vin|length - 4) + part.vin[-4:]) if part.vin|length >= 5 else part.vin }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
                 {%- set whatsapp_message -%}
 Hi Cherrywood Auto Parts,
 
