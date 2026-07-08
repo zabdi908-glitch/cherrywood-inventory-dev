@@ -144,6 +144,71 @@ class PartsAgent:
         except Exception as e:
             return None
 
+    def get_similar_parts(self, part_id, category, limit=4):
+        """Other available parts in the same category, excluding this one."""
+        try:
+            conn = self.get_db()
+            rows = conn.execute(
+                '''SELECT * FROM parts 
+                   WHERE category = ? AND id != ? AND stock_status = 'Available'
+                   ORDER BY created_at DESC LIMIT ?''',
+                (category, part_id, limit)
+            ).fetchall()
+            conn.close()
+            return [dict(r) for r in rows]
+        except Exception as e:
+            print(f"Error in get_similar_parts: {e}")
+            return []
+
+    def get_same_vehicle_parts(self, part_id, registration, make, model, year, limit=6):
+        """Other parts from the same donor vehicle. Matches on registration
+        when available (the most reliable signal, since two parts sharing a
+        reg definitely came from the same car) — falls back to make/model/
+        year if registration isn't set on this part."""
+        try:
+            conn = self.get_db()
+            if registration:
+                rows = conn.execute(
+                    '''SELECT * FROM parts 
+                       WHERE registration = ? AND id != ?
+                       ORDER BY created_at DESC LIMIT ?''',
+                    (registration, part_id, limit)
+                ).fetchall()
+            elif make and model and year:
+                rows = conn.execute(
+                    '''SELECT * FROM parts 
+                       WHERE make = ? AND model = ? AND year = ? AND id != ?
+                       ORDER BY created_at DESC LIMIT ?''',
+                    (make, model, year, part_id, limit)
+                ).fetchall()
+            else:
+                rows = []
+            conn.close()
+            return [dict(r) for r in rows]
+        except Exception as e:
+            print(f"Error in get_same_vehicle_parts: {e}")
+            return []
+
+    def get_parts_by_ids(self, part_ids):
+        """Batch lookup — used for rendering 'Recently Viewed' from a list
+        of IDs stored in the customer's browser."""
+        if not part_ids:
+            return []
+        try:
+            conn = self.get_db()
+            placeholders = ','.join('?' * len(part_ids))
+            rows = conn.execute(
+                f'SELECT * FROM parts WHERE id IN ({placeholders})', part_ids
+            ).fetchall()
+            conn.close()
+            parts_by_id = {r['id']: dict(r) for r in rows}
+            # Preserve the original order (most-recently-viewed first),
+            # since SQL's IN clause doesn't guarantee any particular order
+            return [parts_by_id[pid] for pid in part_ids if pid in parts_by_id]
+        except Exception as e:
+            print(f"Error in get_parts_by_ids: {e}")
+            return []
+
     def get_all_parts(self):
         try:
             conn = self.get_db()
