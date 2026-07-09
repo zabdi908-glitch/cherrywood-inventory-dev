@@ -732,6 +732,7 @@ def delete_vehicle_photo(photo_id):
     else:
         flash('❌ Photo not found', 'error')
         return redirect(url_for('index'))
+
 # ============================================
 # INFO PAGES
 # ============================================
