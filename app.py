@@ -140,6 +140,13 @@ def init_db():
                 engine TEXT, fuel TEXT, transmission TEXT, mileage TEXT, 
                 status TEXT, image_url TEXT, parts_available TEXT, description TEXT
             )''')
+            conn.execute('''CREATE TABLE IF NOT EXISTS vehicle_photos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                vehicle_id INTEGER,
+                photo_url TEXT,
+                photo_order INTEGER DEFAULT 0,
+                FOREIGN KEY (vehicle_id) REFERENCES vehicle(id) ON DELETE CASCADE
+            )''')
             conn.commit()
             print("Database initialized")
     except Exception as e:
@@ -304,6 +311,12 @@ def add_vehicle():
         flash(f'❌ Error: {e}', 'error')
     return redirect(url_for('index'))
 
+# Replace your existing edit_vehicle() route with this version.
+# The only functional change: photos are now loaded and attached before
+# rendering — this is the exact same bug we found and fixed on the parts
+# side (the photo section silently shows nothing if this line is missing,
+# with no visible error), so it's included here from the start this time.
+
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_vehicle(id):
@@ -321,7 +334,7 @@ def edit_vehicle(id):
                 (request.form['title'], request.form['make'], request.form['model'],
                  request.form['year'], request.form['reg'], request.form['engine'],
                  request.form['fuel'], request.form['transmission'], request.form['mileage'],
-                 request.form['status'], request.form['image_url'],
+                 request.form['status'], request.form.get('image_url', ''),
                  request.form['parts_available'], request.form['description'], id))
             db.commit()
             db.close()
@@ -332,6 +345,10 @@ def edit_vehicle(id):
             flash(f'❌ Error: {e}', 'error')
             db.close()
             return render_template('edit.html', vehicle=dict(vehicle))
+    vehicle = dict(vehicle)
+    vehicle['photos'] = db.execute(
+        'SELECT * FROM vehicle_photos WHERE vehicle_id = ? ORDER BY photo_order', (id,)
+    ).fetchall()
     db.close()
     return render_template('edit.html', vehicle=vehicle)
 
@@ -535,85 +552,120 @@ def run_opportunistic_maintenance():
             db.close()
 
 
+# Add these routes to app.py, alongside your existing parts photo routes.
+# Also add near your other path constants (alongside UPLOAD_DIR for parts):
+if os.getenv('RENDER'):
+    VEHICLE_UPLOAD_DIR = '/data/uploads/vehicles'
+else:
+    VEHICLE_UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads', 'vehicles')
+os.makedirs(VEHICLE_UPLOAD_DIR, exist_ok=True)
+
+# Reuses the same constants already defined for parts photos:
+# ALLOWED_EXTENSIONS, MAX_PHOTO_SIZE_BYTES, MAX_PHOTOS_PER_UPLOAD, MAX_PHOTO_DIMENSION
+# — no need to redefine these, they apply equally well here.
+
+
 @app.route('/vehicle/upload-photo/<int:vehicle_id>', methods=['POST'])
 @login_required
 def upload_vehicle_photo(vehicle_id):
-    db = get_db()
-    vehicle = db.execute('SELECT id FROM vehicle WHERE id = ?', (vehicle_id,)).fetchone()
-    if not vehicle:
-        db.close()
-        flash('Vehicle not found', 'error')
-        return redirect(url_for('index'))
+    files = request.files.getlist('photos')
+    files = [f for f in files if f and f.filename]
 
-    files = request.files.getlist('photos')[:MAX_VEHICLE_PHOTOS_PER_UPLOAD]
-    if not files or files[0].filename == '':
-        db.close()
-        flash('No photos selected', 'error')
+    if not files:
+        flash('❌ No files selected', 'error')
         return redirect(url_for('edit_vehicle', id=vehicle_id))
 
-    existing_photos = vehicle_photos.get_photos(db, vehicle_id)
-    next_order = max([p['photo_order'] for p in existing_photos], default=-1) + 1
+    if len(files) > MAX_PHOTOS_PER_UPLOAD:
+        flash(f'❌ Too many photos at once — max {MAX_PHOTOS_PER_UPLOAD} per upload', 'error')
+        return redirect(url_for('edit_vehicle', id=vehicle_id))
+
+    db = get_db()
+    max_order = db.execute(
+        'SELECT MAX(photo_order) FROM vehicle_photos WHERE vehicle_id = ? AND photo_order < 100',
+        (vehicle_id,)
+    ).fetchone()[0] or 0
 
     uploaded_count = 0
+    skipped = []
+
     for file in files:
-        ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
-        if ext not in ALLOWED_VEHICLE_PHOTO_EXTENSIONS:
+        if not _allowed_file(file.filename):
+            skipped.append((file.filename, 'unsupported file type'))
             continue
+
+        file.seek(0, os.SEEK_END)
+        size = file.tell()
+        file.seek(0)
+        if size > MAX_PHOTO_SIZE_BYTES:
+            skipped.append((file.filename, 'over 5MB'))
+            continue
+
         try:
-            img = Image.open(file.stream)
+            img = Image.open(file)
             img.load()
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
-            if img.width > MAX_VEHICLE_PHOTO_DIMENSION or img.height > MAX_VEHICLE_PHOTO_DIMENSION:
-                img.thumbnail((MAX_VEHICLE_PHOTO_DIMENSION, MAX_VEHICLE_PHOTO_DIMENSION), Image.LANCZOS)
-
-            filename = f"vehicle_{vehicle_id}_{uuid.uuid4().hex}.jpg"
-            filepath = os.path.join(VEHICLE_UPLOAD_DIR, filename)
-            img.save(filepath, format='JPEG', quality=85)
-
-            web_url = f"/uploads/vehicles/{filename}"
-            vehicle_photos.add_photo(db, vehicle_id, web_url, next_order)
-            next_order += 1
-            uploaded_count += 1
         except Exception as e:
-            print(f"❌ [VEHICLE PHOTO] Failed to process {file.filename}: {e}", flush=True)
+            print(f"⚠️ Failed to decode '{file.filename}': {type(e).__name__}: {e}", flush=True)
+            skipped.append((file.filename, 'not a valid image'))
             continue
 
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+
+        if img.width > MAX_PHOTO_DIMENSION or img.height > MAX_PHOTO_DIMENSION:
+            img.thumbnail((MAX_PHOTO_DIMENSION, MAX_PHOTO_DIMENSION), Image.LANCZOS)
+
+        filename = f"vehicle_{vehicle_id}_{uuid.uuid4().hex}.jpg"
+        filepath = os.path.join(VEHICLE_UPLOAD_DIR, filename)
+        img.save(filepath, format='JPEG', quality=85)
+
+        max_order += 1
+        web_url = f'/uploads/vehicles/{filename}'
+        db.execute(
+            'INSERT INTO vehicle_photos (vehicle_id, photo_url, photo_order) VALUES (?, ?, ?)',
+            (vehicle_id, web_url, max_order)
+        )
+        uploaded_count += 1
+
+    db.commit()
     db.close()
+
     if uploaded_count:
-        flash(f'✅ Uploaded {uploaded_count} photo(s)', 'success')
-    else:
-        flash('❌ No photos were uploaded — check the file types and try again', 'error')
+        flash(f'✅ {uploaded_count} photo{"s" if uploaded_count != 1 else ""} uploaded successfully', 'success')
+    if skipped:
+        skipped_summary = ", ".join(f'{name} ({reason})' for name, reason in skipped)
+        flash(f'⚠️ Skipped {len(skipped)} file(s): {skipped_summary}', 'warning')
+
     return redirect(url_for('edit_vehicle', id=vehicle_id))
+
+
+@app.route('/uploads/vehicles/<path:filename>')
+def serve_vehicle_photo(filename):
+    return send_from_directory(VEHICLE_UPLOAD_DIR, filename)
 
 
 @app.route('/vehicle/delete-photo/<int:photo_id>', methods=['POST'])
 @login_required
 def delete_vehicle_photo(photo_id):
     db = get_db()
-    vehicle_id = request.form.get('vehicle_id', type=int)
-    photo_url = vehicle_photos.delete_photo(db, photo_id)
+    row = db.execute('SELECT photo_url, vehicle_id FROM vehicle_photos WHERE id = ?', (photo_id,)).fetchone()
+    if row:
+        db.execute('DELETE FROM vehicle_photos WHERE id = ?', (photo_id,))
+        db.commit()
     db.close()
 
-    if photo_url:
-        filepath = os.path.join(VEHICLE_UPLOAD_DIR, os.path.basename(photo_url))
-        if os.path.exists(filepath):
-            try:
+    if row:
+        filename = row['photo_url'].rsplit('/', 1)[-1]
+        filepath = os.path.join(VEHICLE_UPLOAD_DIR, filename)
+        try:
+            if os.path.exists(filepath):
                 os.remove(filepath)
-            except Exception as e:
-                print(f"❌ [VEHICLE PHOTO] Could not remove file {filepath}: {e}", flush=True)
+        except Exception as e:
+            print(f"⚠️ Could not remove photo file {filepath}: {e}", flush=True)
         flash('✅ Photo deleted', 'success')
+        return redirect(url_for('edit_vehicle', id=row['vehicle_id']))
     else:
         flash('❌ Photo not found', 'error')
-
-    if vehicle_id:
-        return redirect(url_for('edit_vehicle', id=vehicle_id))
-    return redirect(url_for('index'))
-
-
-@app.route('/uploads/vehicles/<path:filename>')
-def serve_vehicle_photo(filename):
-    return send_from_directory(VEHICLE_UPLOAD_DIR, filename)
+        return redirect(url_for('index'))
 # ============================================
 # INFO PAGES
 # ============================================
