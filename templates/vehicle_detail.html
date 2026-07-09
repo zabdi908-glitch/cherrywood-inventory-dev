@@ -13,9 +13,18 @@
         <div class="bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden">
             <!-- Image -->
             <div class="h-96 bg-slate-900">
-                <img src="{{ vehicle.image_url or 'https://via.placeholder.com/800x400/1a1a2e/ffffff?text=No+Image' }}" 
-                     alt="{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} - breaking for {{ vehicle.fuel }} parts, engine {{ vehicle.engine }}" 
+                {% if vehicle.image_url %}
+                <img src="{{ vehicle.image_url }}"
+                     alt="{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} - breaking for {{ vehicle.fuel }} parts, engine {{ vehicle.engine }}"
                      class="w-full h-full object-contain">
+                {% else %}
+                <div class="w-full h-full flex items-center justify-center">
+                    <div class="text-center">
+                        <i class="fa-solid fa-car-side text-6xl text-slate-700 mb-3 block"></i>
+                        <p class="text-slate-500 text-sm">No photo yet</p>
+                    </div>
+                </div>
+                {% endif %}
             </div>
 
             <!-- Details -->
@@ -85,9 +94,33 @@
                 </div>
                 {% endif %}
 
+                {%- set whatsapp_message -%}
+Hi Cherrywood Auto Parts,
+
+I'm interested in parts from the following vehicle:
+
+Vehicle: {{ vehicle.title }}
+Registration: {{ vehicle.reg or 'N/A' }}
+{%- if vehicle.engine %}
+Engine: {{ vehicle.engine }}
+{%- endif %}
+{%- if vehicle.fuel %}
+Fuel: {{ vehicle.fuel }}
+{%- endif %}
+{%- if vehicle.transmission %}
+Transmission: {{ vehicle.transmission }}
+{%- endif %}
+
+Vehicle link: {{ request.url }}
+
+Could you let me know what parts are available and pricing?
+
+Thank you.
+                {%- endset -%}
+
                 <!-- Action Buttons -->
                 <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-slate-800">
-                    <a href="https://wa.me/447440369576?text={{ ('Hi, I am interested in the ' ~ vehicle.title ~ ' (Reg: ' ~ (vehicle.reg or 'N/A') ~ '). Please let me know what parts are available.') | urlencode }}" 
+                    <a href="https://wa.me/447440369576?text={{ whatsapp_message.strip() | urlencode }}" 
                        target="_blank" 
                        rel="noopener"
                        class="flex-1 p-3.5 bg-[#22c55e] text-white font-black uppercase text-sm tracking-wider rounded-xl hover:bg-green-600 transition text-center flex items-center justify-center gap-2">
