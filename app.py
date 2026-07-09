@@ -289,33 +289,99 @@ def logout():
 # ============================================
 # VEHICLE ADMIN
 # ============================================
+
 @app.route('/add', methods=['POST'])
 @login_required
 @backup_after_change
 def add_vehicle():
     try:
         db = get_db()
-        db.execute('''INSERT INTO vehicle 
+
+        # Create the vehicle first (without an image) so we get its real ID
+        cursor = db.execute('''INSERT INTO vehicle 
             (title, make, model, year, reg, engine, fuel, 
              transmission, mileage, status, image_url, parts_available, description) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
             (request.form['title'], request.form['make'], request.form['model'],
              request.form['year'], request.form['reg'], request.form['engine'],
              request.form['fuel'], request.form['transmission'], request.form['mileage'],
-             request.form['status'], request.form['image_url'],
+             request.form['status'], '',
              request.form['parts_available'], request.form['description']))
+        vehicle_id = cursor.lastrowid
         db.commit()
+
+        # Now process any uploaded photos, same validated logic as the
+        # dedicated upload route — reused here rather than duplicated
+        files = request.files.getlist('photos')
+        files = [f for f in files if f and f.filename]
+
+        first_photo_url = None
+        uploaded_count = 0
+        skipped = []
+
+        if files:
+            if len(files) > MAX_PHOTOS_PER_UPLOAD:
+                flash(f'⚠️ Only the first {MAX_PHOTOS_PER_UPLOAD} photos were used — max per upload', 'warning')
+                files = files[:MAX_PHOTOS_PER_UPLOAD]
+
+            photo_order = 0
+            for file in files:
+                if not _allowed_file(file.filename):
+                    skipped.append((file.filename, 'unsupported file type'))
+                    continue
+
+                file.seek(0, os.SEEK_END)
+                size = file.tell()
+                file.seek(0)
+                if size > MAX_PHOTO_SIZE_BYTES:
+                    skipped.append((file.filename, 'over 5MB'))
+                    continue
+
+                try:
+                    img = Image.open(file)
+                    img.load()
+                except Exception as e:
+                    print(f"⚠️ Failed to decode '{file.filename}': {type(e).__name__}: {e}", flush=True)
+                    skipped.append((file.filename, 'not a valid image'))
+                    continue
+
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+
+                if img.width > MAX_PHOTO_DIMENSION or img.height > MAX_PHOTO_DIMENSION:
+                    img.thumbnail((MAX_PHOTO_DIMENSION, MAX_PHOTO_DIMENSION), Image.LANCZOS)
+
+                filename = f"vehicle_{vehicle_id}_{uuid.uuid4().hex}.jpg"
+                filepath = os.path.join(VEHICLE_UPLOAD_DIR, filename)
+                img.save(filepath, format='JPEG', quality=85)
+
+                photo_order += 1
+                web_url = f'/uploads/vehicles/{filename}'
+                db.execute(
+                    'INSERT INTO vehicle_photos (vehicle_id, photo_url, photo_order) VALUES (?, ?, ?)',
+                    (vehicle_id, web_url, photo_order)
+                )
+                uploaded_count += 1
+                if first_photo_url is None:
+                    first_photo_url = web_url
+
+            if first_photo_url:
+                db.execute('UPDATE vehicle SET image_url = ? WHERE id = ?', (first_photo_url, vehicle_id))
+
+            db.commit()
+
         db.close()
+
         flash('✅ Vehicle added successfully!', 'success')
+        if uploaded_count:
+            flash(f'✅ {uploaded_count} photo{"s" if uploaded_count != 1 else ""} uploaded', 'success')
+        if skipped:
+            skipped_summary = ", ".join(f'{name} ({reason})' for name, reason in skipped)
+            flash(f'⚠️ Skipped {len(skipped)} file(s): {skipped_summary}', 'warning')
+
     except Exception as e:
         flash(f'❌ Error: {e}', 'error')
     return redirect(url_for('index'))
-
-# Replace your existing edit_vehicle() route with this version.
-# The only functional change: photos are now loaded and attached before
-# rendering — this is the exact same bug we found and fixed on the parts
-# side (the photo section silently shows nothing if this line is missing,
-# with no visible error), so it's included here from the start this time.
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
