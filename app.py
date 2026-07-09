@@ -497,6 +497,31 @@ def bot_settings_page():
 def inject_bot_settings():
     return {'bot_settings': settings_store.get_all_settings()}
 
+@app.before_request
+def run_opportunistic_maintenance():
+    """Runs on every request. Both underlying functions are cheap no-ops
+    almost every time they're called (backup checks a timestamp and bails
+    unless a day has passed; retention purge only actually does anything
+    on ~2% of requests) — so this adds negligible overhead. Each task is
+    wrapped separately so a failure in one can never block the other, and
+    the whole thing is wrapped so a bug here can NEVER break an actual
+    page load for a customer."""
+    db = None
+    try:
+        db = get_db()
+        try:
+            backup.maybe_backup(db, DATABASE)
+        except Exception as e:
+            print(f"❌ [MAINTENANCE] Backup check failed: {e}", flush=True)
+        try:
+            data_retention.maybe_purge(db)
+        except Exception as e:
+            print(f"❌ [MAINTENANCE] Retention purge check failed: {e}", flush=True)
+    except Exception as e:
+        print(f"❌ [MAINTENANCE] before_request setup failed: {e}", flush=True)
+    finally:
+        if db:
+            db.close()
 # ============================================
 # INFO PAGES
 # ============================================
