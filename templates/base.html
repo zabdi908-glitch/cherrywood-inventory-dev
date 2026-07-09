@@ -208,9 +208,11 @@
     </script>
 
 <style>
+  /* Parts Assistant widget hidden — no longer needed now that Parts has
+     been removed from the site. Markup/JS/backend left intact, just not
+     displayed, so it's easy to bring back or repurpose later if wanted. */
   #bap-widget {
-    position: fixed; bottom: 24px; right: 24px; z-index: 99999;
-    font-family: 'Segoe UI', Arial, sans-serif; display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
+    display: none !important;
   }
   #bap-trigger {
     background: #C62828; color: white; padding: 13px 20px; border-radius: 50px; cursor: pointer;
