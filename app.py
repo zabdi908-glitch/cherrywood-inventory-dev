@@ -750,6 +750,10 @@ def delete_vehicle_photo(photo_id):
         flash('❌ Photo not found', 'error')
         return redirect(url_for('index'))
 
+@app.route('/uploads/vehicles/<path:filename>')
+def serve_vehicle_photo(filename):
+    return send_from_directory(VEHICLE_UPLOAD_DIR, filename)
+
 # ============================================
 # INFO PAGES
 # ============================================
