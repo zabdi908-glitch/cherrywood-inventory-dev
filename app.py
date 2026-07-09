@@ -754,6 +754,10 @@ def delete_vehicle_photo(photo_id):
 def serve_vehicle_photo(filename):
     return send_from_directory(VEHICLE_UPLOAD_DIR, filename)
 
+@app.route('/vehicle/delete-photo/<int:photo_id>', methods=['POST'])
+@login_required
+def delete_vehicle_photo(photo_id):
+
 # ============================================
 # INFO PAGES
 # ============================================
