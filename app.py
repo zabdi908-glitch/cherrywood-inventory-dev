@@ -338,6 +338,7 @@ def delete_vehicle(id):
         flash(f'❌ Delete failed: {e}', 'error')
     return redirect(url_for('index'))
 
+
 @app.route('/admin/backup-now', methods=['POST'])
 @login_required
 def backup_now():
@@ -345,10 +346,12 @@ def backup_now():
         db = get_db()
         vehicle_rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
         parts_rows = db.execute('SELECT * FROM parts ORDER BY id DESC').fetchall()
+        photo_rows = db.execute('SELECT * FROM part_photos ORDER BY id').fetchall()
         db.close()
 
         vehicles = [dict(row) for row in vehicle_rows]
         parts = [dict(row) for row in parts_rows]
+        photos = [dict(row) for row in photo_rows]  # NEW — was missing entirely before
 
         backup_dir = '/data/backups/'
         os.makedirs(backup_dir, exist_ok=True)
@@ -358,17 +361,19 @@ def backup_now():
             'timestamp': timestamp,
             'vehicles': vehicles,
             'parts': parts,
+            'part_photos': photos,  # NEW
         }
         backup_file = os.path.join(backup_dir, f'full_backup_{timestamp}.json')
         with open(backup_file, 'w') as f:
             json.dump(backup_data, f, indent=2)
 
-        flash(f'✅ Backup created: {len(vehicles)} vehicles, {len(parts)} parts', 'success')
+        flash(f'✅ Backup created: {len(vehicles)} vehicles, {len(parts)} parts, {len(photos)} photo records', 'success')
         return redirect(url_for('index'))
     except Exception as e:
         flash(f'❌ Backup failed: {e}', 'error')
         return redirect(url_for('index'))
- 
+
+
 @app.route('/admin/restore', methods=['POST'])
 @login_required
 def restore_vehicles():
@@ -387,10 +392,13 @@ def restore_vehicles():
 
         vehicles = data.get('vehicles', [])
         parts = data.get('parts', [])
+        photos = data.get('part_photos', [])  # will be empty on OLD backups taken before this fix — that's fine, handled below
 
         conn = sqlite3.connect(DATABASE)
+        conn.execute('DELETE FROM part_photos')  # NEW — clear old photo rows before restoring
         conn.execute('DELETE FROM vehicle')
         conn.execute('DELETE FROM parts')
+
         for v in vehicles:
             conn.execute('''INSERT INTO vehicle 
                 (title, make, model, year, reg, engine, fuel, transmission, 
@@ -399,29 +407,38 @@ def restore_vehicles():
                 (v['title'], v['make'], v['model'], v['year'], v['reg'],
                  v['engine'], v['fuel'], v['transmission'], v['mileage'],
                  v['status'], v['image_url'], v['parts_available'], v['description']))
+
         for p in parts:
+            # THE KEY FIX: explicitly preserve the original part ID instead of
+            # letting SQLite assign a new one — this is what photo records
+            # link to, so without this, photos always end up orphaned after
+            # any restore, even from a backup that DOES contain photo data.
             conn.execute('''INSERT INTO parts 
-                (stock_id, part_name, category, part_type, make, model, generation, 
+                (id, stock_id, part_name, category, part_type, make, model, generation, 
                  oem_number, engine_code, condition, price, stock_status, location, notes, slug)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                (p['stock_id'], p['part_name'], p['category'], p.get('part_type', ''),
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (p['id'], p['stock_id'], p['part_name'], p['category'], p.get('part_type', ''),
                  p.get('make', ''), p.get('model', ''), p.get('generation', ''),
                  p.get('oem_number', ''), p.get('engine_code', ''),
                  p.get('condition', 'Good'), p.get('price', 0),
                  p.get('stock_status', 'Available'), p.get('location', ''),
                  p.get('notes', ''), p.get('slug', '')))
+
+        for photo in photos:
+            conn.execute('''INSERT INTO part_photos (part_id, photo_url, photo_order)
+                VALUES (?, ?, ?)''',
+                (photo['part_id'], photo['photo_url'], photo.get('photo_order', 0)))
+
         conn.commit()
         conn.close()
 
-        flash(f'✅ Restored {len(vehicles)} vehicles and {len(parts)} parts from backup dated {data["timestamp"]}', 'success')
+        photo_note = f", {len(photos)} photo records" if photos else " (no photo data in this backup — it was likely taken before photos existed on the site)"
+        flash(f'✅ Restored {len(vehicles)} vehicles and {len(parts)} parts{photo_note} from backup dated {data["timestamp"]}', 'success')
         return redirect(url_for('index'))
     except Exception as e:
         flash(f'❌ Restore failed: {e}', 'error')
         return redirect(url_for('index'))
-
-
-# restore_confirm() can be deleted entirely — it's no longer used.
-
+        
 @app.route('/admin/enquiries')
 @login_required
 def enquiries_list():
