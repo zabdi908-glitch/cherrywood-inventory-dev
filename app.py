@@ -562,48 +562,7 @@ def delivery():
 
 @app.route('/parts-public')
 def parts_public():
-    page = request.args.get('page', 1, type=int)
-    per_page = 20
-
-    category = request.args.get('category', None)
-    price_range = request.args.get('price', None)
-    status = request.args.get('status', None)
-    sort = request.args.get('sort', 'newest')
-    search_query = request.args.get('q', '').strip()
-
-    result = parts_agent.get_parts(
-        page=page, per_page=per_page,
-        category=category, price_range=price_range,
-        status=status, sort=sort, search_query=search_query
-    )
-
-    parts = result['parts']
-    total = result['total']
-    pages = (total + per_page - 1) // per_page
-
-    # Attach each part's first photo and total photo count — one extra small
-    # query per part, which is fine at 20 parts per page. Deliberately not
-    # touched parts_agent.get_parts()'s SQL directly, since that query
-    # already handles pagination/filtering/sorting correctly and modifying
-    # it carries more risk than doing this simple post-processing step here.
-    for part in parts:
-        photos = parts_agent.get_photos(part['id'])
-        # photo_order < 100 excludes auto-generated thumbnails, same
-        # convention used on the admin edit page
-        real_photos = [p for p in photos if p['photo_order'] < 100]
-        part['photo_url'] = real_photos[0]['photo_url'] if real_photos else None
-        part['photo_count'] = len(real_photos)
-
-    filter_args = request.args.copy()
-    filter_args.pop('page', None)
-
-    return render_template('parts_public.html',
-                           parts=parts,
-                           page=page,
-                           pages=pages,
-                           selected_category=category,
-                           search_query=search_query,
-                           filter_args=filter_args)
+    return redirect('/gallery', code=301)
 @app.route('/parts')
 def parts_index():
     try:
@@ -732,29 +691,7 @@ def parts_view(id):
 
 @app.route('/part/<slug>')
 def part_public_view(slug):
-    part = parts_agent.get_part_by_slug(slug)
-    if not part:
-        flash('Part not found', 'error')
-        return redirect(url_for('parts_public'))
-
-    vehicle_fit = f"{part['make']} {part['model']}"
-    if part.get('generation'):
-        vehicle_fit += f" {part['generation']}"
-
-    meta_description = (
-        f"{part['part_name']} for {vehicle_fit}. "
-        f"OEM: {part['oem_number'] or 'N/A'}. £{part['price']:.2f} — {part['stock_status']}. "
-        f"UK-wide delivery from Cherrywood Auto Parts."
-    )
-
-    similar_parts = parts_agent.get_similar_parts(part['id'], part['category'])
-    same_vehicle_parts = parts_agent.get_same_vehicle_parts(
-        part['id'], part.get('registration'), part.get('make'), part.get('model'), part.get('year')
-    )
-
-    return render_template('part_public_view.html', part=part, parts_agent=parts_agent,
-                           meta_description=meta_description, request=request,
-                           similar_parts=similar_parts, same_vehicle_parts=same_vehicle_parts)
+    return redirect('/gallery', code=301)
 
 @app.route('/parts/bulk-import', methods=['GET', 'POST'])
 @login_required
