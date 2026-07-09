@@ -65,6 +65,17 @@ MAX_PHOTO_DIMENSION = 1600  # resize anything larger than this — phone photos
                              # website needs, and processing/saving that much
                              # data for every photo is what was slow enough
                              # to trigger the gunicorn worker timeout
+
+MAX_VEHICLE_PHOTOS_PER_UPLOAD = 10
+MAX_VEHICLE_PHOTO_DIMENSION = 1600  # same resize ceiling used for parts photos
+ 
+if os.getenv('RENDER'):
+    VEHICLE_UPLOAD_DIR = '/data/uploads/vehicles'
+else:
+    VEHICLE_UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads', 'vehicles')
+os.makedirs(VEHICLE_UPLOAD_DIR, exist_ok=True)
+ 
+ALLOWED_VEHICLE_PHOTO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'}
  
 
 # ============================================
@@ -522,6 +533,87 @@ def run_opportunistic_maintenance():
     finally:
         if db:
             db.close()
+
+
+@app.route('/vehicle/upload-photo/<int:vehicle_id>', methods=['POST'])
+@login_required
+def upload_vehicle_photo(vehicle_id):
+    db = get_db()
+    vehicle = db.execute('SELECT id FROM vehicle WHERE id = ?', (vehicle_id,)).fetchone()
+    if not vehicle:
+        db.close()
+        flash('Vehicle not found', 'error')
+        return redirect(url_for('index'))
+
+    files = request.files.getlist('photos')[:MAX_VEHICLE_PHOTOS_PER_UPLOAD]
+    if not files or files[0].filename == '':
+        db.close()
+        flash('No photos selected', 'error')
+        return redirect(url_for('edit_vehicle', id=vehicle_id))
+
+    existing_photos = vehicle_photos.get_photos(db, vehicle_id)
+    next_order = max([p['photo_order'] for p in existing_photos], default=-1) + 1
+
+    uploaded_count = 0
+    for file in files:
+        ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+        if ext not in ALLOWED_VEHICLE_PHOTO_EXTENSIONS:
+            continue
+        try:
+            img = Image.open(file.stream)
+            img.load()
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            if img.width > MAX_VEHICLE_PHOTO_DIMENSION or img.height > MAX_VEHICLE_PHOTO_DIMENSION:
+                img.thumbnail((MAX_VEHICLE_PHOTO_DIMENSION, MAX_VEHICLE_PHOTO_DIMENSION), Image.LANCZOS)
+
+            filename = f"vehicle_{vehicle_id}_{uuid.uuid4().hex}.jpg"
+            filepath = os.path.join(VEHICLE_UPLOAD_DIR, filename)
+            img.save(filepath, format='JPEG', quality=85)
+
+            web_url = f"/uploads/vehicles/{filename}"
+            vehicle_photos.add_photo(db, vehicle_id, web_url, next_order)
+            next_order += 1
+            uploaded_count += 1
+        except Exception as e:
+            print(f"❌ [VEHICLE PHOTO] Failed to process {file.filename}: {e}", flush=True)
+            continue
+
+    db.close()
+    if uploaded_count:
+        flash(f'✅ Uploaded {uploaded_count} photo(s)', 'success')
+    else:
+        flash('❌ No photos were uploaded — check the file types and try again', 'error')
+    return redirect(url_for('edit_vehicle', id=vehicle_id))
+
+
+@app.route('/vehicle/delete-photo/<int:photo_id>', methods=['POST'])
+@login_required
+def delete_vehicle_photo(photo_id):
+    db = get_db()
+    vehicle_id = request.form.get('vehicle_id', type=int)
+    photo_url = vehicle_photos.delete_photo(db, photo_id)
+    db.close()
+
+    if photo_url:
+        filepath = os.path.join(VEHICLE_UPLOAD_DIR, os.path.basename(photo_url))
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except Exception as e:
+                print(f"❌ [VEHICLE PHOTO] Could not remove file {filepath}: {e}", flush=True)
+        flash('✅ Photo deleted', 'success')
+    else:
+        flash('❌ Photo not found', 'error')
+
+    if vehicle_id:
+        return redirect(url_for('edit_vehicle', id=vehicle_id))
+    return redirect(url_for('index'))
+
+
+@app.route('/uploads/vehicles/<path:filename>')
+def serve_vehicle_photo(filename):
+    return send_from_directory(VEHICLE_UPLOAD_DIR, filename)
 # ============================================
 # INFO PAGES
 # ============================================
