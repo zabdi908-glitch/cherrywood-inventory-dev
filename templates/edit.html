@@ -104,7 +104,7 @@
 
                 <div>
                     <label class="block text-xs font-black uppercase text-slate-400 mb-1.5 tracking-wider">
-                        <i class="fa-solid fa-image text-[#f97316] mr-1"></i> Image URL
+                        <i class="fa-solid fa-image text-[#f97316] mr-1"></i> Image URL <span class="text-slate-500 font-normal lowercase">(legacy fallback — use Photos below instead)</span>
                     </label>
                     <input type="url" name="image_url" value="{{ vehicle.image_url or '' }}"
                            placeholder="https://postimages.org/...image.jpg"
@@ -138,6 +138,42 @@
                         <i class="fa-solid fa-times"></i> Cancel
                     </a>
                 </div>
+            </form>
+        </div>
+
+        <!-- ===== PHOTO MANAGEMENT (outside the main form — separate upload mechanism) ===== -->
+        <div class="bg-[#111827] border border-slate-800 rounded-2xl p-6 md:p-8 shadow-xl mt-6">
+            <h3 class="text-lg font-black text-white mb-1">
+                <i class="fa-solid fa-images text-[#f97316] mr-2"></i> Photos
+            </h3>
+            <p class="text-sm text-slate-400 mb-6">Upload multiple photos of this vehicle. Supports iPhone HEIC photos — everything gets converted automatically.</p>
+
+            {% if vehicle.photos %}
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-6">
+                {% for photo in vehicle.photos %}
+                <div class="relative group">
+                    <img src="{{ photo.photo_url }}" class="w-full h-28 object-cover rounded-lg border border-slate-700" alt="Vehicle photo">
+                    <form action="/vehicle/delete-photo/{{ photo.id }}" method="POST" onsubmit="return confirm('Delete this photo?');" class="absolute top-1.5 right-1.5">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" aria-label="Delete photo"
+                                class="w-7 h-7 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center text-xs shadow-lg transition">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-slate-500 text-sm mb-6">No photos uploaded yet.</p>
+            {% endif %}
+
+            <form action="/vehicle/upload-photo/{{ vehicle.id }}" method="POST" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="file" name="photos" accept=".jpg,.jpeg,.png,.webp,.heic,.heif" multiple
+                       class="flex-1 w-full text-sm text-slate-300 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#f97316] file:text-black file:font-bold file:text-xs file:uppercase file:cursor-pointer hover:file:bg-orange-500">
+                <button type="submit" class="bg-[#f97316] text-black font-black uppercase text-xs tracking-wider px-5 py-2.5 rounded-lg hover:bg-orange-500 transition whitespace-nowrap">
+                    <i class="fa-solid fa-upload mr-1"></i> Upload
+                </button>
             </form>
         </div>
     </div>
