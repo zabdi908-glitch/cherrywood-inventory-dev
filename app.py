@@ -641,6 +641,10 @@ def parts_add():
                 flash(f'❌ {field.replace("_", " ").title()}: {error}', 'error')
     return render_template('parts_add.html', form=form)
 
+# In app.py, find your parts_edit() route (the same one updated earlier
+# today for vehicle specs). Add ONE line right after fetching the part,
+# so photos actually get attached before the template renders.
+
 @app.route('/parts/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def parts_edit(id):
@@ -648,6 +652,7 @@ def parts_edit(id):
     if not part:
         flash('Part not found', 'error')
         return redirect(url_for('parts_index'))
+    part['photos'] = parts_agent.get_photos(id)  # <-- THE FIX: this one line was missing
     form = PartForm(obj=part)
     if form.validate_on_submit():
         data = {
@@ -665,8 +670,6 @@ def parts_edit(id):
             'stock_status': form.stock_status.data or 'Available',
             'location': form.location.data or '',
             'notes': form.notes.data or '',
-            # New vehicle-spec fields — read directly from the raw submitted
-            # form data, since PartForm doesn't declare these fields itself.
             'registration': request.form.get('registration', '').strip(),
             'vin': request.form.get('vin', '').strip(),
             'mileage': request.form.get('mileage', '').strip(),
