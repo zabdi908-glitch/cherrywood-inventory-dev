@@ -206,9 +206,15 @@
             {% for vehicle in vehicles[:3] %}
             <div class="anim-reveal hover-lift hover:border-[#f97316] bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden flex flex-col" style="transition-delay: {{ (loop.index0 * 0.12) }}s;">
                 <div class="h-48 bg-slate-900 relative">
-                    <img src="{{ vehicle.image_url or 'https://via.placeholder.com/400x300/1a1a2e/ffffff?text=No+Image' }}" 
-                         alt="{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} - breaking for {{ vehicle.fuel }} parts, engine {{ vehicle.engine }}" 
+                    {% if vehicle.image_url %}
+                    <img src="{{ vehicle.image_url }}"
+                         alt="{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} - breaking for {{ vehicle.fuel }} parts, engine {{ vehicle.engine }}"
                          class="w-full h-full object-cover">
+                    {% else %}
+                    <div class="w-full h-full flex items-center justify-center">
+                        <i class="fa-solid fa-car-side text-4xl text-slate-700"></i>
+                    </div>
+                    {% endif %}
                     <span class="absolute top-3 right-3 bg-[#f97316] text-black font-black text-xs uppercase px-3 py-1 rounded-md">
                         {{ vehicle.status }}
                     </span>
@@ -332,7 +338,7 @@
                 </div>
             </div>
 
-            <form action="/add" method="POST" class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-bold text-slate-300">
+            <form action="/add" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-bold text-slate-300">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="sm:col-span-3">
                     <label class="block text-[10px] uppercase text-slate-400 mb-1">Listing Display Title</label>
@@ -375,8 +381,9 @@
                     <input type="text" name="status" value="Breaking" class="w-full p-2.5 bg-[#0f172a] rounded border border-slate-700 outline-none text-white font-medium" required>
                 </div>
                 <div class="sm:col-span-3">
-                    <label class="block text-[10px] uppercase text-slate-400 mb-1">Hosted Image URL (.jpg or .png link)</label>
-                    <input type="url" name="image_url" placeholder="https://postimages.org/...image.jpg" class="w-full p-2.5 bg-[#0f172a] rounded border border-slate-700 outline-none text-white font-medium">
+                    <label class="block text-[10px] uppercase text-slate-400 mb-1">Photos <span class="text-slate-500 normal-case">(optional — you can also add these after publishing)</span></label>
+                    <input type="file" name="photos" accept=".jpg,.jpeg,.png,.webp,.heic,.heif" multiple
+                           class="w-full p-2.5 bg-[#0f172a] rounded border border-slate-700 outline-none text-white font-medium text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-[#f97316] file:text-black file:font-bold file:text-xs file:uppercase file:cursor-pointer hover:file:bg-orange-500">
                 </div>
                 <div class="sm:col-span-3">
                     <label class="block text-[10px] uppercase text-slate-400 mb-1">Top Components Available (Separate with commas)</label>
