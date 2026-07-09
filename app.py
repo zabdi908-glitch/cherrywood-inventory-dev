@@ -626,11 +626,6 @@ else:
     VEHICLE_UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads', 'vehicles')
 os.makedirs(VEHICLE_UPLOAD_DIR, exist_ok=True)
 
-# Reuses the same constants already defined for parts photos:
-# ALLOWED_EXTENSIONS, MAX_PHOTO_SIZE_BYTES, MAX_PHOTOS_PER_UPLOAD, MAX_PHOTO_DIMENSION
-# — no need to redefine these, they apply equally well here.
-
-
 @app.route('/vehicle/upload-photo/<int:vehicle_id>', methods=['POST'])
 @login_required
 def upload_vehicle_photo(vehicle_id):
@@ -653,6 +648,7 @@ def upload_vehicle_photo(vehicle_id):
 
     uploaded_count = 0
     skipped = []
+    first_new_photo_url = None
 
     for file in files:
         if not _allowed_file(file.filename):
@@ -691,6 +687,16 @@ def upload_vehicle_photo(vehicle_id):
             (vehicle_id, web_url, max_order)
         )
         uploaded_count += 1
+        if first_new_photo_url is None:
+            first_new_photo_url = web_url
+
+    # THE FIX: if this vehicle currently has no working display image, use
+    # the first newly-uploaded photo as its image_url. If it already has
+    # one, leave it alone — we don't want to silently swap out a photo the
+    # person deliberately chose as the "main" one just because they added more.
+    current_image_url = db.execute('SELECT image_url FROM vehicle WHERE id = ?', (vehicle_id,)).fetchone()
+    if current_image_url and not current_image_url['image_url'] and first_new_photo_url:
+        db.execute('UPDATE vehicle SET image_url = ? WHERE id = ?', (first_new_photo_url, vehicle_id))
 
     db.commit()
     db.close()
@@ -704,11 +710,6 @@ def upload_vehicle_photo(vehicle_id):
     return redirect(url_for('edit_vehicle', id=vehicle_id))
 
 
-@app.route('/uploads/vehicles/<path:filename>')
-def serve_vehicle_photo(filename):
-    return send_from_directory(VEHICLE_UPLOAD_DIR, filename)
-
-
 @app.route('/vehicle/delete-photo/<int:photo_id>', methods=['POST'])
 @login_required
 def delete_vehicle_photo(photo_id):
@@ -717,6 +718,22 @@ def delete_vehicle_photo(photo_id):
     if row:
         db.execute('DELETE FROM vehicle_photos WHERE id = ?', (photo_id,))
         db.commit()
+
+        # THE FIX: if the photo just deleted was the one the vehicle is
+        # currently displaying, re-point image_url at another real photo
+        # if one exists, or clear it entirely (falls back to the icon
+        # placeholder) if that was the last one — rather than leaving it
+        # pointing at a file that no longer exists.
+        vehicle = db.execute('SELECT image_url FROM vehicle WHERE id = ?', (row['vehicle_id'],)).fetchone()
+        if vehicle and vehicle['image_url'] == row['photo_url']:
+            replacement = db.execute(
+                'SELECT photo_url FROM vehicle_photos WHERE vehicle_id = ? AND photo_order < 100 ORDER BY photo_order LIMIT 1',
+                (row['vehicle_id'],)
+            ).fetchone()
+            new_image_url = replacement['photo_url'] if replacement else ''
+            db.execute('UPDATE vehicle SET image_url = ? WHERE id = ?', (new_image_url, row['vehicle_id']))
+            db.commit()
+
     db.close()
 
     if row:
