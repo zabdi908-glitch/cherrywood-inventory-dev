@@ -100,6 +100,21 @@
                             <option value="Reserved" {% if vehicle.status == 'Reserved' %}selected{% endif %}>📌 Reserved</option>
                         </select>
                     </div>
+                    <div>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-1.5 tracking-wider">Engine Code <span class="text-slate-500 font-normal lowercase">(optional)</span></label>
+                        <input type="text" name="engine_code" value="{{ vehicle.engine_code or '' }}" placeholder="e.g. CAGA"
+                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white font-medium placeholder-slate-500 focus:border-[#f97316] outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-1.5 tracking-wider">Gearbox Code <span class="text-slate-500 font-normal lowercase">(optional)</span></label>
+                        <input type="text" name="gearbox_code" value="{{ vehicle.gearbox_code or '' }}" placeholder="e.g. JHM"
+                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white font-medium placeholder-slate-500 focus:border-[#f97316] outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-1.5 tracking-wider">Colour <span class="text-slate-500 font-normal lowercase">(optional)</span></label>
+                        <input type="text" name="colour" value="{{ vehicle.colour or '' }}" placeholder="e.g. Nardo Grey"
+                               class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white font-medium placeholder-slate-500 focus:border-[#f97316] outline-none transition">
+                    </div>
                 </div>
 
                 <div>

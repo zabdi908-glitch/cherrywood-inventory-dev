@@ -11,6 +11,29 @@
         </a>
 
         {%- set gallery_photos = vehicle.photos if vehicle.photos else ([{'photo_url': vehicle.image_url}] if vehicle.image_url else []) -%}
+        {%- set whatsapp_message -%}
+Hi Cherrywood Auto Parts,
+
+I'm interested in parts from the following vehicle:
+
+Vehicle: {{ vehicle.title }}
+Registration: {{ vehicle.reg or 'N/A' }}
+{%- if vehicle.engine %}
+Engine: {{ vehicle.engine }}
+{%- endif %}
+{%- if vehicle.fuel %}
+Fuel: {{ vehicle.fuel }}
+{%- endif %}
+{%- if vehicle.transmission %}
+Transmission: {{ vehicle.transmission }}
+{%- endif %}
+
+Vehicle link: {{ request.url }}
+
+Could you let me know what parts are available and pricing?
+
+Thank you.
+        {%- endset -%}
         <div class="bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden">
             <!-- Image -->
             <div class="h-96 bg-slate-900">
@@ -64,8 +87,29 @@
         </div>
         {% endif %}
 
-            <!-- Details -->
-            <div class="p-8">
+        {% if vehicle.parts_list %}
+        <!-- Parts Available From This Vehicle -->
+        <div class="bg-[#111827] border border-slate-800 rounded-2xl p-6 md:p-8 mt-6">
+            <h2 class="text-lg font-black text-white mb-1">
+                <i class="fa-solid fa-gears text-[#f97316] mr-2"></i> Parts Available From This Vehicle
+            </h2>
+            <p class="text-sm text-slate-400 mb-4">Tap any part to enquire — we'll confirm availability and pricing.</p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {% for part in vehicle.parts_list %}
+                <a href="https://wa.me/447440369576?text={{ whatsapp_message.strip() | urlencode }}"
+                   target="_blank"
+                   rel="noopener"
+                   class="flex items-center gap-2 bg-[#0f172a] text-slate-300 px-3 py-2.5 rounded-lg text-sm font-medium border border-slate-700 hover:border-[#f97316] hover:text-white transition">
+                    <i class="fa-solid fa-circle-check text-[#f97316] text-xs"></i>
+                    {{ part.strip() }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Details -->
+        <div class="bg-[#111827] border border-slate-800 rounded-2xl p-6 md:p-8 mt-6">
                 <div class="flex items-start justify-between mb-4">
                     <h1 class="text-3xl font-black text-white">{{ vehicle.title }}</h1>
                     <span class="bg-[#f97316] text-black font-black text-xs uppercase px-4 py-2 rounded-full">
@@ -107,21 +151,25 @@
                         <p class="text-xs text-slate-500">Mileage</p>
                         <p class="font-bold text-white">{{ vehicle.mileage or 'N/A' }}</p>
                     </div>
-                </div>
-
-                <!-- Parts Available -->
-                {% if vehicle.parts_list %}
-                <div class="mb-6">
-                    <h3 class="text-sm font-black uppercase text-slate-400 tracking-wider mb-3">Available Parts</h3>
-                    <div class="flex flex-wrap gap-2">
-                        {% for part in vehicle.parts_list %}
-                            <span class="bg-slate-800 text-slate-300 px-3 py-1 rounded-lg text-sm font-medium border border-slate-700">
-                                {{ part.strip() }}
-                            </span>
-                        {% endfor %}
+                    {% if vehicle.engine_code %}
+                    <div>
+                        <p class="text-xs text-slate-500">Engine Code</p>
+                        <p class="font-bold text-white">{{ vehicle.engine_code }}</p>
                     </div>
+                    {% endif %}
+                    {% if vehicle.gearbox_code %}
+                    <div>
+                        <p class="text-xs text-slate-500">Gearbox Code</p>
+                        <p class="font-bold text-white">{{ vehicle.gearbox_code }}</p>
+                    </div>
+                    {% endif %}
+                    {% if vehicle.colour %}
+                    <div>
+                        <p class="text-xs text-slate-500">Colour</p>
+                        <p class="font-bold text-white">{{ vehicle.colour }}</p>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
 
                 <!-- Description -->
                 {% if vehicle.description %}
@@ -130,30 +178,6 @@
                     <p class="text-slate-300 leading-relaxed">{{ vehicle.description }}</p>
                 </div>
                 {% endif %}
-
-                {%- set whatsapp_message -%}
-Hi Cherrywood Auto Parts,
-
-I'm interested in parts from the following vehicle:
-
-Vehicle: {{ vehicle.title }}
-Registration: {{ vehicle.reg or 'N/A' }}
-{%- if vehicle.engine %}
-Engine: {{ vehicle.engine }}
-{%- endif %}
-{%- if vehicle.fuel %}
-Fuel: {{ vehicle.fuel }}
-{%- endif %}
-{%- if vehicle.transmission %}
-Transmission: {{ vehicle.transmission }}
-{%- endif %}
-
-Vehicle link: {{ request.url }}
-
-Could you let me know what parts are available and pricing?
-
-Thank you.
-                {%- endset -%}
 
                 <!-- Action Buttons -->
                 <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-slate-800">
@@ -168,7 +192,6 @@ Thank you.
                     </a>
                 </div>
             </div>
-        </div>
     </div>
 
     {% if gallery_photos %}

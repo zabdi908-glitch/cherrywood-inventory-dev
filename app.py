@@ -135,11 +135,19 @@ def init_db():
     try:
         with sqlite3.connect(DATABASE) as conn:
             conn.execute('''CREATE TABLE IF NOT EXISTS vehicle (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                title TEXT, make TEXT, model TEXT, year TEXT, reg TEXT, 
-                engine TEXT, fuel TEXT, transmission TEXT, mileage TEXT, 
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT, make TEXT, model TEXT, year TEXT, reg TEXT,
+                engine TEXT, fuel TEXT, transmission TEXT, mileage TEXT,
                 status TEXT, image_url TEXT, parts_available TEXT, description TEXT
             )''')
+            # Phase 3 gallery-card fields — wrapped individually so this is
+            # safe to run on every startup, same pattern as the parts table
+            # migrations below. Existing vehicles get NULL until edited.
+            for column_def in ['engine_code TEXT', 'gearbox_code TEXT', 'colour TEXT']:
+                try:
+                    conn.execute(f'ALTER TABLE vehicle ADD COLUMN {column_def}')
+                except sqlite3.OperationalError:
+                    pass
             conn.execute('''CREATE TABLE IF NOT EXISTS vehicle_photos (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 vehicle_id INTEGER,
@@ -302,15 +310,18 @@ def add_vehicle():
         db = get_db()
 
         # Create the vehicle first (without an image) so we get its real ID
-        cursor = db.execute('''INSERT INTO vehicle 
-            (title, make, model, year, reg, engine, fuel, 
-             transmission, mileage, status, image_url, parts_available, description) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+        cursor = db.execute('''INSERT INTO vehicle
+            (title, make, model, year, reg, engine, fuel,
+             transmission, mileage, status, image_url, parts_available, description,
+             engine_code, gearbox_code, colour)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
             (request.form['title'], request.form['make'], request.form['model'],
              request.form['year'], request.form['reg'], request.form['engine'],
              request.form['fuel'], request.form['transmission'], request.form['mileage'],
              request.form['status'], '',
-             request.form['parts_available'], request.form['description']))
+             request.form['parts_available'], request.form['description'],
+             request.form.get('engine_code', ''), request.form.get('gearbox_code', ''),
+             request.form.get('colour', '')))
         vehicle_id = cursor.lastrowid
         db.commit()
 
@@ -398,14 +409,17 @@ def edit_vehicle(id):
         return redirect(url_for('index'))
     if request.method == 'POST':
         try:
-            db.execute('''UPDATE vehicle SET title=?, make=?, model=?, year=?, reg=?, 
-                engine=?, fuel=?, transmission=?, mileage=?, status=?, 
-                image_url=?, parts_available=?, description=? WHERE id=?''',
+            db.execute('''UPDATE vehicle SET title=?, make=?, model=?, year=?, reg=?,
+                engine=?, fuel=?, transmission=?, mileage=?, status=?,
+                image_url=?, parts_available=?, description=?,
+                engine_code=?, gearbox_code=?, colour=? WHERE id=?''',
                 (request.form['title'], request.form['make'], request.form['model'],
                  request.form['year'], request.form['reg'], request.form['engine'],
                  request.form['fuel'], request.form['transmission'], request.form['mileage'],
                  request.form['status'], request.form.get('image_url', ''),
-                 request.form['parts_available'], request.form['description'], id))
+                 request.form['parts_available'], request.form['description'],
+                 request.form.get('engine_code', ''), request.form.get('gearbox_code', ''),
+                 request.form.get('colour', ''), id))
             db.commit()
             db.close()
             flash('✅ Vehicle updated!', 'success')
