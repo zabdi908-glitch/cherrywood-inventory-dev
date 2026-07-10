@@ -10,13 +10,15 @@
             <i class="fa-solid fa-arrow-left mr-1"></i> Back to Gallery
         </a>
 
+        {%- set gallery_photos = vehicle.photos if vehicle.photos else ([{'photo_url': vehicle.image_url}] if vehicle.image_url else []) -%}
         <div class="bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden">
             <!-- Image -->
             <div class="h-96 bg-slate-900">
-                {% if vehicle.image_url %}
-                <img src="{{ vehicle.image_url }}"
+                {% if gallery_photos %}
+                <img src="{{ gallery_photos[0].photo_url }}"
                      alt="{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} - breaking for {{ vehicle.fuel }} parts, engine {{ vehicle.engine }}"
-                     class="w-full h-full object-contain">
+                     class="w-full h-full object-contain cursor-zoom-in"
+                     onclick="openLightbox(0)">
                 {% else %}
                 <div class="w-full h-full flex items-center justify-center">
                     <div class="text-center">
@@ -26,6 +28,41 @@
                 </div>
                 {% endif %}
             </div>
+
+            {% if gallery_photos|length > 1 %}
+            <!-- Thumbnail strip -->
+            <div class="flex gap-2 overflow-x-auto p-3 bg-[#0f172a] border-t border-slate-800">
+                {% for photo in gallery_photos %}
+                <img src="{{ photo.photo_url }}"
+                     alt="{{ vehicle.title }} photo {{ loop.index }}"
+                     class="h-16 w-24 object-cover rounded-lg border border-slate-700 hover:border-[#f97316] transition cursor-pointer flex-shrink-0"
+                     onclick="openLightbox({{ loop.index0 }})">
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        {% if gallery_photos %}
+        <!-- Lightbox -->
+        <div id="lightbox" class="fixed inset-0 z-50 bg-black/90 hidden items-center justify-center" onclick="if(event.target===this) closeLightbox()">
+            <button onclick="closeLightbox()" aria-label="Close" class="absolute top-4 right-4 text-white text-3xl w-11 h-11 flex items-center justify-center rounded-full hover:bg-white/10 transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            {% if gallery_photos|length > 1 %}
+            <button onclick="event.stopPropagation(); prevPhoto()" aria-label="Previous photo" class="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 text-white text-3xl w-11 h-11 flex items-center justify-center rounded-full hover:bg-white/10 transition">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <button onclick="event.stopPropagation(); nextPhoto()" aria-label="Next photo" class="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 text-white text-3xl w-11 h-11 flex items-center justify-center rounded-full hover:bg-white/10 transition">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+            {% endif %}
+            <img id="lightbox-img"
+                 src=""
+                 alt="{{ vehicle.title }}"
+                 class="max-w-[92vw] max-h-[88vh] object-contain transition-transform duration-200 cursor-zoom-in select-none"
+                 onclick="event.stopPropagation(); toggleZoom(event)">
+        </div>
+        {% endif %}
 
             <!-- Details -->
             <div class="p-8">
@@ -133,4 +170,80 @@ Thank you.
             </div>
         </div>
     </div>
+
+    {% if gallery_photos %}
+    <script>
+        const galleryPhotos = {{ gallery_photos | map(attribute='photo_url') | list | tojson }};
+        let currentPhotoIndex = 0;
+        let touchStartX = null;
+
+        function renderLightboxImage() {
+            const img = document.getElementById('lightbox-img');
+            img.src = galleryPhotos[currentPhotoIndex];
+            img.classList.remove('scale-[2.2]');
+            img.style.transformOrigin = 'center center';
+        }
+
+        function openLightbox(index) {
+            currentPhotoIndex = index;
+            renderLightboxImage();
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.remove('hidden');
+            lightbox.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.add('hidden');
+            lightbox.classList.remove('flex');
+            document.body.style.overflow = '';
+        }
+
+        function nextPhoto() {
+            currentPhotoIndex = (currentPhotoIndex + 1) % galleryPhotos.length;
+            renderLightboxImage();
+        }
+
+        function prevPhoto() {
+            currentPhotoIndex = (currentPhotoIndex - 1 + galleryPhotos.length) % galleryPhotos.length;
+            renderLightboxImage();
+        }
+
+        function toggleZoom(e) {
+            const img = document.getElementById('lightbox-img');
+            if (img.classList.contains('scale-[2.2]')) {
+                img.classList.remove('scale-[2.2]');
+            } else {
+                const rect = img.getBoundingClientRect();
+                const originX = ((e.clientX - rect.left) / rect.width) * 100;
+                const originY = ((e.clientY - rect.top) / rect.height) * 100;
+                img.style.transformOrigin = `${originX}% ${originY}%`;
+                img.classList.add('scale-[2.2]');
+            }
+        }
+
+        document.addEventListener('keydown', function (e) {
+            const lightbox = document.getElementById('lightbox');
+            if (lightbox.classList.contains('hidden')) return;
+            if (e.key === 'Escape') closeLightbox();
+            if (e.key === 'ArrowRight') nextPhoto();
+            if (e.key === 'ArrowLeft') prevPhoto();
+        });
+
+        const lightboxEl = document.getElementById('lightbox');
+        lightboxEl.addEventListener('touchstart', function (e) {
+            touchStartX = e.changedTouches[0].clientX;
+        });
+        lightboxEl.addEventListener('touchend', function (e) {
+            if (touchStartX === null) return;
+            const deltaX = e.changedTouches[0].clientX - touchStartX;
+            if (Math.abs(deltaX) > 50) {
+                if (deltaX < 0) nextPhoto();
+                else prevPhoto();
+            }
+            touchStartX = null;
+        });
+    </script>
+    {% endif %}
 {% endblock %}

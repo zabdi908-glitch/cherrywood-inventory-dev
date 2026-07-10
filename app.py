@@ -251,11 +251,15 @@ def view_vehicle(id):
     try:
         db = get_db()
         vehicle = db.execute('SELECT * FROM vehicle WHERE id = ?', (id,)).fetchone()
-        db.close()
         if not vehicle:
+            db.close()
             flash('Vehicle not found', 'error')
             return redirect(url_for('index'))
         v = dict(vehicle)
+        v['photos'] = db.execute(
+            'SELECT * FROM vehicle_photos WHERE vehicle_id = ? ORDER BY photo_order', (id,)
+        ).fetchall()
+        db.close()
         v['parts_list'] = v.get('parts_available', '').split(',') if v.get('parts_available') else []
         meta_description = f"Find used {v['title']} parts at Cherrywood Auto Parts. {v['make']} {v['model']} {v['year']} breaking for parts. UK delivery available."
         return render_template('vehicle_detail.html', vehicle=v, meta_description=meta_description)
