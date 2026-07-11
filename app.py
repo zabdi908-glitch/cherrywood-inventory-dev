@@ -68,7 +68,13 @@ MAX_PHOTO_DIMENSION = 1600  # resize anything larger than this — phone photos
 
 MAX_VEHICLE_PHOTOS_PER_UPLOAD = 10
 MAX_VEHICLE_PHOTO_DIMENSION = 1600  # same resize ceiling used for parts photos
- 
+
+if os.getenv('RENDER'):
+    ENQUIRY_UPLOAD_DIR = '/data/uploads/enquiries'
+else:
+    ENQUIRY_UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads', 'enquiries')
+os.makedirs(ENQUIRY_UPLOAD_DIR, exist_ok=True)
+
 if os.getenv('RENDER'):
     VEHICLE_UPLOAD_DIR = '/data/uploads/vehicles'
 else:
@@ -772,6 +778,10 @@ def delete_vehicle_photo(photo_id):
 def serve_vehicle_photo(filename):
     return send_from_directory(VEHICLE_UPLOAD_DIR, filename)
 
+@app.route('/uploads/enquiries/<path:filename>')
+def serve_enquiry_photo(filename):
+    return send_from_directory(ENQUIRY_UPLOAD_DIR, filename)
+
 # ============================================
 # INFO PAGES
 # ============================================
@@ -803,8 +813,76 @@ def enquiry():
         vehicle = request.form.get('vehicle')
         parts = request.form.get('parts')
         message = request.form.get('message')
-        whatsapp = f"Hi Cherrywood, part enquiry:\nName: {name}\nEmail: {email}\nReg: {reg}\nParts: {parts}\nMessage: {message}"
-        return redirect(f"https://wa.me/447440369576?text={whatsapp.replace(' ', '%20').replace('\n', '%0A')}")
+        contact_method = request.form.get('contact_method', 'WhatsApp')
+
+        if contact_method == 'WhatsApp' or not contact_method:
+            whatsapp = f"Hi Cherrywood, part enquiry:\nName: {name}\nEmail: {email}\nReg: {reg}\nParts: {parts}\nMessage: {message}"
+            return redirect(f"https://wa.me/447440369576?text={whatsapp.replace(' ', '%20').replace('\n', '%0A')}")
+
+        # Email / Phone from here — previously urgency, vin and photos were
+        # submitted but silently discarded regardless of contact method.
+        # Now captured so nothing the customer sent is lost.
+        urgency = request.form.get('urgency', '')
+        vin = request.form.get('vin', '')
+
+        photo_urls = []
+        files = [f for f in request.files.getlist('photos') if f and f.filename]
+        for file in files[:MAX_PHOTOS_PER_UPLOAD]:
+            if not _allowed_file(file.filename):
+                continue
+            file.seek(0, os.SEEK_END)
+            size = file.tell()
+            file.seek(0)
+            if size > MAX_PHOTO_SIZE_BYTES:
+                continue
+            try:
+                img = Image.open(file)
+                img.load()
+            except Exception as e:
+                print(f"⚠️ [Enquiry] Failed to decode '{file.filename}': {type(e).__name__}: {e}", flush=True)
+                continue
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            if img.width > MAX_PHOTO_DIMENSION or img.height > MAX_PHOTO_DIMENSION:
+                img.thumbnail((MAX_PHOTO_DIMENSION, MAX_PHOTO_DIMENSION), Image.LANCZOS)
+            filename = f"enquiry_{uuid.uuid4().hex}.jpg"
+            img.save(os.path.join(ENQUIRY_UPLOAD_DIR, filename), format='JPEG', quality=85)
+            photo_urls.append(f'/uploads/enquiries/{filename}')
+
+        # reg and message have no dedicated columns in enquiries_store —
+        # folded into vehicle/part so nothing typed by the customer is lost.
+        # No raw newlines here: this value also gets used as a raw email
+        # subject line by mailer.py/email_templates.py's fallback path, and
+        # Python's email header encoder rejects embedded newlines outright.
+        vehicle_display = f"{vehicle} — Reg: {reg}" if reg else vehicle
+        part_display = parts or ''
+        if message:
+            part_display = f"{part_display} | Additional info: {message}" if part_display else message
+
+        customer_data = {
+            'name': name,
+            'email': email,
+            'phone': phone,
+            'vehicle': vehicle_display,
+            'part': part_display,
+            'contact_method': contact_method,
+            'urgency': urgency,
+            'vin': vin,
+            'photos': ','.join(photo_urls),
+        }
+
+        enquiry_id = enquiries_store.add_enquiry(customer_data)
+
+        if contact_method == 'Email':
+            mailer.send_staff_notification(customer_data)
+            customer_sent = mailer.send_customer_confirmation(customer_data)
+            if enquiry_id and customer_sent:
+                enquiries_store.update_status(enquiry_id, 'Contacted', notes='Confirmation email sent to customer.')
+            flash("✅ Thanks! Your enquiry has been received — check your email for confirmation, we'll be in touch shortly.", 'success')
+        else:  # Phone
+            flash("✅ Thanks! Your enquiry has been received — we'll call you back shortly. You can also reach us anytime on 07440 369576.", 'success')
+
+        return redirect(url_for('enquiry'))
     return render_template('enquiry.html')
 
 @app.route('/about')

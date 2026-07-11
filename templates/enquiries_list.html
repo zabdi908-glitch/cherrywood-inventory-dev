@@ -46,8 +46,10 @@
                         <th class="px-4 py-3">Date</th>
                         <th class="px-4 py-3">Name</th>
                         <th class="px-4 py-3">Contact</th>
+                        <th class="px-4 py-3">Method</th>
                         <th class="px-4 py-3">Vehicle</th>
                         <th class="px-4 py-3">Part Needed</th>
+                        <th class="px-4 py-3">Photos</th>
                         <th class="px-4 py-3">Status</th>
                         <th class="px-4 py-3">Actions</th>
                     </tr>
@@ -61,8 +63,30 @@
                             <div>{{ e.phone or '-' }}</div>
                             <div class="text-slate-500">{{ e.email or '-' }}</div>
                         </td>
-                        <td class="px-4 py-3 text-slate-300">{{ e.vehicle or '-' }}</td>
-                        <td class="px-4 py-3 text-slate-300">{{ e.part or '-' }}</td>
+                        <td class="px-4 py-3 text-slate-300">
+                            <div>{{ e.contact_method or 'WhatsApp' }}</div>
+                            {% if e.urgency == 'Urgent' %}
+                            <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-red-500/10 text-red-400">Urgent</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-slate-300">
+                            <div>{{ e.vehicle or '-' }}</div>
+                            {% if e.vin %}<div class="text-slate-500 text-xs">VIN: {{ e.vin }}</div>{% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-slate-300 whitespace-pre-line">{{ e.part or '-' }}</td>
+                        <td class="px-4 py-3">
+                            {% if e.photos %}
+                            <div class="flex gap-1 flex-wrap">
+                                {% for url in e.photos.split(',') if url %}
+                                <a href="{{ url }}" target="_blank" rel="noopener">
+                                    <img src="{{ url }}" alt="Enquiry photo" class="w-10 h-10 object-cover rounded border border-slate-700 hover:border-[#f97316] transition" loading="lazy" decoding="async">
+                                </a>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <span class="text-slate-600">-</span>
+                            {% endif %}
+                        </td>
                         <td class="px-4 py-3">
                             <span class="px-2 py-1 rounded text-[10px] font-bold uppercase
                                 {% if e.status == 'New' %}bg-[#f97316]/10 text-[#f97316]
