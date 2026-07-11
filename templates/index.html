@@ -76,22 +76,20 @@
             <div class="max-w-3xl">
                 <p class="anim-hero anim-hero-1 text-[#f97316] font-bold text-sm uppercase tracking-wider mb-2">Audi • VW • SEAT • Škoda Specialists</p>
                 <h1 class="anim-hero anim-hero-2 text-4xl sm:text-5xl md:text-6xl font-black text-white leading-tight">
-                    Used <span class="text-[#f97316]">Audi, VW, SEAT & Škoda</span> Parts from a Birmingham Vehicle Breaker
+                    Genuine Used <span class="text-[#f97316]">Audi, VW, SEAT & Škoda</span> Parts — Tested, Warrantied, Delivered UK-Wide
                 </h1>
                 <p class="anim-hero anim-hero-3 text-lg sm:text-xl text-slate-300 mt-4 font-medium">
                     <span id="stat-count" data-target="150">150</span>+ Vehicles Broken · Thousands of Genuine Used Parts
                 </p>
-                <div class="anim-hero anim-hero-4 flex flex-wrap gap-3 mt-6">
-                    <span class="pill-hover bg-[#f97316]/10 text-[#f97316] px-4 py-2 rounded-full text-sm font-bold border border-[#f97316]/30">Engines</span>
-                    <span class="pill-hover bg-[#f97316]/10 text-[#f97316] px-4 py-2 rounded-full text-sm font-bold border border-[#f97316]/30">Gearboxes</span>
-                    <span class="pill-hover bg-[#f97316]/10 text-[#f97316] px-4 py-2 rounded-full text-sm font-bold border border-[#f97316]/30">Body Panels</span>
-                    <span class="pill-hover bg-[#f97316]/10 text-[#f97316] px-4 py-2 rounded-full text-sm font-bold border border-[#f97316]/30">Interior Parts</span>
-                    <span class="pill-hover bg-[#f97316]/10 text-[#f97316] px-4 py-2 rounded-full text-sm font-bold border border-[#f97316]/30">Electrical Components</span>
+                <div class="anim-hero anim-hero-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 mt-6">
+                    <p class="flex items-center gap-2 text-slate-200 text-sm font-semibold"><i class="fa-solid fa-circle-check text-[#f97316]"></i> 90-Day Warranty on every part</p>
+                    <p class="flex items-center gap-2 text-slate-200 text-sm font-semibold"><i class="fa-solid fa-circle-check text-[#f97316]"></i> 100% Tested Before Dispatch</p>
+                    <p class="flex items-center gap-2 text-slate-200 text-sm font-semibold"><i class="fa-solid fa-circle-check text-[#f97316]"></i> EA Licensed Recycler (Licence 102422)</p>
+                    <p class="flex items-center gap-2 text-slate-200 text-sm font-semibold"><i class="fa-solid fa-circle-check text-[#f97316]"></i> Nationwide Delivery from our Birmingham Yard</p>
                 </div>
-                <p class="anim-hero anim-hero-4 text-slate-400 text-sm mt-4 font-semibold">Available Nationwide</p>
                 <div class="anim-hero anim-hero-5 flex flex-wrap gap-4 mt-8">
                     <a href="/gallery" class="px-8 py-3 bg-[#f97316] text-black font-black rounded-lg hover:bg-orange-500 hover:scale-105 transition">
-                        View Our Stock
+                        View Available Vehicles
                     </a>
                     <a href="tel:07440369576" class="px-8 py-3 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-700 hover:scale-105 transition">
                         Call Us: 07440 369576
@@ -244,7 +242,7 @@
                     <!-- ===== BUTTONS ===== -->
                     <div class="mt-auto pt-4 flex gap-2 flex-wrap">
                         <a href="/vehicle/{{ vehicle.id }}" class="flex-1 bg-[#f97316] text-black text-center py-2 rounded-lg text-xs font-bold uppercase hover:bg-orange-500 transition">
-                            View Details
+                            Check Parts &amp; Availability
                         </a>
                         <a href="https://wa.me/447440369576?text={{ ('Hi, I am interested in vehicle ' ~ vehicle.id) | urlencode }}" target="_blank" rel="noopener" class="flex-1 bg-green-600 text-white text-center py-2 rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition flex items-center justify-center gap-1">
                             <i class="fa-brands fa-whatsapp"></i> Enquire
