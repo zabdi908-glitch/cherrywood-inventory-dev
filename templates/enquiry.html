@@ -24,6 +24,7 @@
         {% endwith %}
 
         <form action="/enquiry" method="POST" class="space-y-4" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <!-- Row 1: Name + Email -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
