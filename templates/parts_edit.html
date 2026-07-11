@@ -224,7 +224,7 @@
             <div class="flex flex-wrap gap-4 mb-4">
                 {% for photo in part.photos if photo.photo_order < 100 %}
                 <div class="relative group">
-                    <img src="{{ photo.photo_url }}" class="w-24 h-24 object-cover rounded border border-slate-700">
+                    <img src="{{ photo.photo_url }}" class="w-24 h-24 object-cover rounded border border-slate-700" loading="lazy" decoding="async">
 
                     <form action="/parts/delete-photo/{{ photo.id }}" method="POST" class="absolute top-1 right-1"
                           onsubmit="return confirm('Delete this photo?');">

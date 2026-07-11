@@ -41,6 +41,7 @@ Thank you.
                 <img src="{{ gallery_photos[0].photo_url }}"
                      alt="{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} - breaking for {{ vehicle.fuel }} parts, engine {{ vehicle.engine }}"
                      class="w-full h-full object-contain cursor-zoom-in"
+                     loading="lazy" decoding="async"
                      onclick="openLightbox(0)">
                 {% else %}
                 <div class="w-full h-full flex items-center justify-center">
@@ -59,6 +60,7 @@ Thank you.
                 <img src="{{ photo.photo_url }}"
                      alt="{{ vehicle.title }} photo {{ loop.index }}"
                      class="h-16 w-24 object-cover rounded-lg border border-slate-700 hover:border-[#f97316] transition cursor-pointer flex-shrink-0"
+                     loading="lazy" decoding="async"
                      onclick="openLightbox({{ loop.index0 }})">
                 {% endfor %}
             </div>
@@ -83,6 +85,7 @@ Thank you.
                  src=""
                  alt="{{ vehicle.title }}"
                  class="max-w-[92vw] max-h-[88vh] object-contain transition-transform duration-200 cursor-zoom-in select-none"
+                 loading="lazy" decoding="async"
                  onclick="event.stopPropagation(); toggleZoom(event)">
         </div>
         {% endif %}

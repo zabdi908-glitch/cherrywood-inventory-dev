@@ -1,7 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Cherrywood Auto Parts | Used Audi, VW, SEAT & Škoda Parts{% endblock %}
+{% block title %}Used Audi, VW, SEAT & Škoda Parts | Cherrywood Auto Parts Birmingham{% endblock %}
+{% block meta_description %}
+<meta name="description" content="Quality used Audi, VW, SEAT & Škoda parts from a licensed Birmingham vehicle breaker. Engines, gearboxes, body panels and more. UK delivery. 90-day warranty.">
+{% endblock %}
 
 {% block extra_head %}
+<link rel="canonical" href="https://cherrywoodautoparts.co.uk/">
+<link rel="preload" as="image" href="/static/shutter-background.jpg">
+<meta property="og:title" content="Cherrywood Auto Parts">
+<meta property="og:description" content="Quality used Audi, VW, SEAT & Škoda parts with UK delivery.">
+<meta property="og:url" content="https://cherrywoodautoparts.co.uk">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
 <style>
     @keyframes fadeInUp {
         from { opacity: 0; transform: translateY(24px); }
@@ -66,7 +76,7 @@
             <div class="max-w-3xl">
                 <p class="anim-hero anim-hero-1 text-[#f97316] font-bold text-sm uppercase tracking-wider mb-2">Audi • VW • SEAT • Škoda Specialists</p>
                 <h1 class="anim-hero anim-hero-2 text-4xl sm:text-5xl md:text-6xl font-black text-white leading-tight">
-                    We Break <span class="text-[#f97316]">Audi, VW, SEAT & Škoda</span> Vehicles
+                    Used <span class="text-[#f97316]">Audi, VW, SEAT & Škoda</span> Parts from a Birmingham Vehicle Breaker
                 </h1>
                 <p class="anim-hero anim-hero-3 text-lg sm:text-xl text-slate-300 mt-4 font-medium">
                     <span id="stat-count" data-target="150">150</span>+ Vehicles Broken · Thousands of Genuine Used Parts
@@ -209,7 +219,8 @@
                     {% if vehicle.image_url %}
                     <img src="{{ vehicle.image_url }}"
                          alt="{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} - breaking for {{ vehicle.fuel }} parts, engine {{ vehicle.engine }}"
-                         class="w-full h-full object-cover">
+                         class="w-full h-full object-cover"
+                         loading="lazy" decoding="async">
                     {% else %}
                     <div class="w-full h-full flex items-center justify-center">
                         <i class="fa-solid fa-car-side text-4xl text-slate-700"></i>
