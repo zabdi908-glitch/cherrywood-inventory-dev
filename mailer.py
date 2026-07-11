@@ -52,12 +52,12 @@ def _send(to_addr: str, subject: str, html_body: str = None, text_body: str = No
         return False
 
 
-def send_customer_confirmation(customer_data: dict, resolved_items: list = None) -> bool:
+def send_customer_confirmation(customer_data: dict, resolved_items: list = None, enquiry_id: int = None) -> bool:
     to_addr = customer_data.get("email")
     if not to_addr:
         print("⚠️ [MAILER] No customer email provided, skipping confirmation", flush=True)
         return False
-    subject, html_body, text_body = build_confirmation_email(customer_data, resolved_items)
+    subject, html_body, text_body = build_confirmation_email(customer_data, resolved_items, enquiry_id)
     return _send(to_addr, subject, html_body, text_body)
 
 

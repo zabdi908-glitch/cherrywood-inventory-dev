@@ -875,7 +875,7 @@ def enquiry():
 
         if contact_method == 'Email':
             mailer.send_staff_notification(customer_data)
-            customer_sent = mailer.send_customer_confirmation(customer_data)
+            customer_sent = mailer.send_customer_confirmation(customer_data, enquiry_id=enquiry_id)
             if enquiry_id and customer_sent:
                 enquiries_store.update_status(enquiry_id, 'Contacted', notes='Confirmation email sent to customer.')
             flash("✅ Thanks! Your enquiry has been received — check your email for confirmation, we'll be in touch shortly.", 'success')
@@ -1524,7 +1524,7 @@ def finalize_enquiry(db, session_id: str, tracker, customer_data: dict) -> str:
             f"Could not email STAFF_EMAIL for enquiry: {customer_data}\nSession: {session_id}"
         )
 
-    customer_sent = mailer.send_customer_confirmation(customer_data, all_selected_items)
+    customer_sent = mailer.send_customer_confirmation(customer_data, all_selected_items, enquiry_id=enquiry_id)
 
     if enquiry_id and customer_sent:
         enquiries_store.update_status(enquiry_id, "Contacted", notes="Confirmation email sent to customer.")
