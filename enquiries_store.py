@@ -55,6 +55,14 @@ def _init_table():
             created_at REAL NOT NULL
         )
     """)
+    # Fields captured by the standalone /enquiry form that weren't tracked
+    # before — wrapped individually so this is safe to run on every startup,
+    # same pattern used for the vehicle/parts table migrations.
+    for column_def in ['contact_method TEXT', 'urgency TEXT', 'vin TEXT', 'photos TEXT']:
+        try:
+            conn.execute(f'ALTER TABLE enquiries ADD COLUMN {column_def}')
+        except sqlite3.OperationalError:
+            pass
     conn.commit()
     conn.close()
 
@@ -67,8 +75,10 @@ class EnquiryStore:
         conn = _get_conn()
         try:
             cursor = conn.execute(
-                """INSERT INTO enquiries (name, phone, email, vehicle, part, status, created_at)
-                   VALUES (?, ?, ?, ?, ?, 'New', ?)""",
+                """INSERT INTO enquiries
+                   (name, phone, email, vehicle, part, status, created_at,
+                    contact_method, urgency, vin, photos)
+                   VALUES (?, ?, ?, ?, ?, 'New', ?, ?, ?, ?, ?)""",
                 (
                     data.get('name'),
                     data.get('phone'),
@@ -76,6 +86,10 @@ class EnquiryStore:
                     data.get('vehicle'),
                     data.get('part'),
                     time.time(),
+                    data.get('contact_method'),
+                    data.get('urgency'),
+                    data.get('vin'),
+                    data.get('photos'),
                 )
             )
             conn.commit()
