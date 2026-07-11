@@ -167,7 +167,7 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-6">
                 {% for photo in vehicle.photos %}
                 <div class="relative group">
-                    <img src="{{ photo.photo_url }}" class="w-full h-28 object-cover rounded-lg border border-slate-700" alt="Vehicle photo">
+                    <img src="{{ photo.photo_url }}" class="w-full h-28 object-cover rounded-lg border border-slate-700" alt="Vehicle photo" loading="lazy" decoding="async">
                     <form action="/vehicle/delete-photo/{{ photo.id }}" method="POST" onsubmit="return confirm('Delete this photo?');" class="absolute top-1.5 right-1.5">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" aria-label="Delete photo"

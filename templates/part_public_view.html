@@ -100,6 +100,7 @@
                 {% if photos %}
                     <img id="main-part-photo" src="{{ photos[0].photo_url }}" alt="{{ part.part_name }}"
                          class="w-full h-full object-contain cursor-zoom-in"
+                         loading="lazy" decoding="async"
                          onclick="openLightbox(currentPhotoIndex)">
 
                     {% if photos|length > 1 %}
@@ -138,7 +139,7 @@
             <div class="flex gap-2 p-4 bg-[#0b0f19] overflow-x-auto">
                 {% for photo in photos %}
                 <img src="{{ photo.photo_url }}"
-                     loading="lazy"
+                     loading="lazy" decoding="async"
                      onclick="showPhoto({{ loop.index0 }})"
                      data-index="{{ loop.index0 }}"
                      class="part-thumb w-16 h-16 object-cover rounded-lg border-2 {{ 'border-[#f97316]' if loop.first else 'border-slate-700' }} cursor-pointer hover:border-[#f97316] transition flex-shrink-0"
@@ -401,7 +402,7 @@ Thank you.
                 <a href="/part/{{ p.slug or p.id }}" class="bg-[#111827] border border-slate-800 rounded-xl overflow-hidden hover:border-[#f97316] transition block">
                     <div class="h-32 bg-slate-900">
                         {% if p.photo_url %}
-                        <img src="{{ p.photo_url }}" class="w-full h-full object-contain" loading="lazy" alt="{{ p.part_name }}">
+                        <img src="{{ p.photo_url }}" class="w-full h-full object-contain" loading="lazy" decoding="async" alt="{{ p.part_name }}">
                         {% else %}
                         <div class="w-full h-full flex items-center justify-center"><i class="fa-solid fa-image text-2xl text-slate-700"></i></div>
                         {% endif %}
@@ -425,7 +426,7 @@ Thank you.
                 <a href="/part/{{ p.slug or p.id }}" class="bg-[#111827] border border-slate-800 rounded-xl overflow-hidden hover:border-[#f97316] transition block">
                     <div class="h-32 bg-slate-900">
                         {% if p.photo_url %}
-                        <img src="{{ p.photo_url }}" class="w-full h-full object-contain" loading="lazy" alt="{{ p.part_name }}">
+                        <img src="{{ p.photo_url }}" class="w-full h-full object-contain" loading="lazy" decoding="async" alt="{{ p.part_name }}">
                         {% else %}
                         <div class="w-full h-full flex items-center justify-center"><i class="fa-solid fa-image text-2xl text-slate-700"></i></div>
                         {% endif %}
@@ -470,6 +471,7 @@ Thank you.
         <img id="lightbox-img" src="" alt="{{ part.part_name }}"
              class="max-w-[90vw] max-h-[85vh] object-contain cursor-zoom-in"
              style="transition: transform 0.1s ease-out;"
+             loading="lazy" decoding="async"
              onmousemove="handleZoomMove(event)" onmouseleave="resetZoom()">
 
         <p class="absolute bottom-4 text-white/50 text-xs hidden md:block">Hover image to zoom · Arrow keys to navigate · Esc to close</p>
@@ -709,7 +711,7 @@ Thank you.
                 const grid = document.getElementById('recently-viewed-grid');
                 grid.innerHTML = data.parts.map(p => {
                     const imgHtml = p.photo_url
-                        ? `<img src="${escapeHtmlText(p.photo_url)}" class="w-full h-full object-contain" loading="lazy" alt="${escapeHtmlText(p.part_name)}">`
+                        ? `<img src="${escapeHtmlText(p.photo_url)}" class="w-full h-full object-contain" loading="lazy" decoding="async" alt="${escapeHtmlText(p.part_name)}">`
                         : `<div class="w-full h-full flex items-center justify-center"><i class="fa-solid fa-image text-2xl text-slate-700"></i></div>`;
                     return `<a href="/part/${escapeHtmlText(String(p.slug))}" class="bg-[#111827] border border-slate-800 rounded-xl overflow-hidden hover:border-[#f97316] transition block">
                         <div class="h-32 bg-slate-900">${imgHtml}</div>

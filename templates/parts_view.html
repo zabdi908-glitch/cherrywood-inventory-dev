@@ -30,7 +30,7 @@
             <div class="h-96 bg-slate-900 rounded-xl mb-6 relative overflow-hidden">
                 {% set photos = parts_agent.get_photos(part.id) %}
                 {% if photos %}
-                    <img src="{{ photos[0].photo_url }}" alt="{{ part.part_name }}" class="w-full h-full object-cover">
+                    <img src="{{ photos[0].photo_url }}" alt="{{ part.part_name }}" class="w-full h-full object-cover" loading="lazy" decoding="async">
                 {% else %}
                     <div class="w-full h-full flex items-center justify-center bg-slate-800">
                         <div class="text-center">

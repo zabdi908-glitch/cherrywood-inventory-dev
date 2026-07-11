@@ -50,6 +50,8 @@
         "name": "Cherrywood Auto Parts",
         "description": "Birmingham-based VAG vehicle breaker. We dismantle Audi, Volkswagen, SEAT and Škoda vehicles and supply tested used parts throughout the UK.",
         "url": "https://cherrywoodautoparts.co.uk",
+        "image": "https://cherrywoodautoparts.co.uk/static/shutter-background.jpg",
+        "areaServed": "United Kingdom",
         "telephone": "07440 369576",
         "address": {
             "@type": "PostalAddress",
@@ -179,7 +181,7 @@
             </div>
         </div>
         <div class="max-w-7xl mx-auto px-4 mt-8 pt-8 border-t border-slate-900/40 text-center text-[11px] text-slate-600 font-medium">
-            <p>© 2026 Cherrywood Auto Parts. All Rights Reserved.</p>
+            <p>© <span id="year"></span> Cherrywood Auto Parts. All Rights Reserved.</p>
             <p class="mt-1">Environment Agency Licence: 102422 · EPR Ref: TP3398VM</p>
         </div>
     </footer>
@@ -205,6 +207,7 @@
             menu.classList.toggle('hidden');
             btn.setAttribute('aria-expanded', !isOpen);
         });
+        document.getElementById('year').textContent = new Date().getFullYear();
     </script>
 
 <style>

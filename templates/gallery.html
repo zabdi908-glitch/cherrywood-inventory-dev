@@ -41,7 +41,8 @@
                 <div class="relative h-48 bg-slate-900">
                     <img src="{{ vehicle.image_url or 'https://via.placeholder.com/400x300/1a1a2e/ffffff?text=No+Image' }}"
                          alt="{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} - breaking for {{ vehicle.fuel }} parts, engine {{ vehicle.engine }}"
-                         class="w-full h-full object-cover">
+                         class="w-full h-full object-cover"
+                         loading="lazy" decoding="async">
                     <span class="absolute top-3 right-3 font-black text-xs uppercase px-3 py-1 rounded-md
                         {%- if vehicle.status == 'In Stock' %} bg-green-500 text-black
                         {%- elif vehicle.status == 'Sold' %} bg-slate-500 text-black
