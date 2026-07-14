@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
 from email_reply_agent import handle_enquiry_auto_reply
 from list_tracker import SessionListTracker
 from email_templates import build_confirmation_email
@@ -915,7 +915,55 @@ def delivery():
 
 @app.route('/parts-public')
 def parts_public():
-    return redirect('/gallery', code=301)
+    page = request.args.get('page', 1, type=int)
+    if page < 1:
+        page = 1
+    category = request.args.get('category', '').strip() or None
+    price_range = request.args.get('price', '').strip() or None
+    status = request.args.get('status', '').strip() or None
+    sort = request.args.get('sort', 'newest').strip() or 'newest'
+    search_query = request.args.get('q', '').strip() or None
+
+    per_page = 20
+    result = parts_agent.get_parts(
+        page=page, per_page=per_page, category=category,
+        price_range=price_range, status=status, sort=sort,
+        search_query=search_query
+    )
+    parts = result['parts']
+    total = result['total']
+    pages = max(1, -(-total // per_page))  # ceil division
+
+    # Attach a primary photo + count to each part — get_parts() doesn't
+    # join part_photos, same pattern used in /api/parts-by-ids.
+    for part in parts:
+        photos = parts_agent.get_photos(part['id'])
+        real_photos = [p for p in photos if p['photo_order'] < 100]
+        part['photo_url'] = real_photos[0]['photo_url'] if real_photos else None
+        part['photo_count'] = len(real_photos)
+
+    # Only the currently-active filters, so pagination links and the
+    # search/filter forms can carry them forward instead of clobbering
+    # each other on submit.
+    filter_args = {}
+    if search_query:
+        filter_args['q'] = search_query
+    if category:
+        filter_args['category'] = category
+    if price_range:
+        filter_args['price'] = price_range
+    if status:
+        filter_args['status'] = status
+    if sort != 'newest':
+        filter_args['sort'] = sort
+
+    return render_template(
+        'parts_public.html',
+        parts=parts, page=page, pages=pages,
+        search_query=search_query, category=category,
+        price_range=price_range, status_filter=status, sort=sort,
+        filter_args=filter_args
+    )
 @app.route('/parts')
 def parts_index():
     try:
@@ -1044,7 +1092,26 @@ def parts_view(id):
 
 @app.route('/part/<slug>')
 def part_public_view(slug):
-    return redirect('/gallery', code=301)
+    part = parts_agent.get_part_by_slug(slug)
+    if not part:
+        # Older/plain links may just use the numeric id (see part.slug or part.id in templates)
+        try:
+            part = parts_agent.get_part(int(slug))
+        except (TypeError, ValueError):
+            part = None
+    if not part:
+        abort(404)
+
+    similar_parts = parts_agent.get_similar_parts(part['id'], part['category'])
+    same_vehicle_parts = parts_agent.get_same_vehicle_parts(
+        part['id'], part.get('registration'), part.get('make'),
+        part.get('model'), part.get('year')
+    )
+    return render_template(
+        'part_public_view.html',
+        part=part, parts_agent=parts_agent,
+        similar_parts=similar_parts, same_vehicle_parts=same_vehicle_parts
+    )
 
 @app.route('/parts/bulk-import', methods=['GET', 'POST'])
 @login_required

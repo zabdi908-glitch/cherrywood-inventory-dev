@@ -11,6 +11,10 @@
         <div class="max-w-7xl mx-auto px-4 text-center">
             <h1 class="text-2xl md:text-3xl font-black uppercase">Search Our Parts Inventory</h1>
             <p class="text-sm font-bold opacity-90">Find the VAG part you need — search by part number, model, or category</p>
+            <p class="text-xs font-bold mt-3">
+                Not sure which part you need?
+                <a href="/gallery" class="underline hover:no-underline">Browse our vehicles</a> to find your donor car first.
+            </p>
         </div>
     </section>
 
@@ -19,11 +23,15 @@
         <!-- Search Bar -->
         <form action="/parts-public" method="GET" class="flex flex-col md:flex-row gap-3">
             <div class="flex-1">
-                <input type="text" name="q" 
-                       placeholder="🔍 Search part number, model, engine code..." 
+                <input type="text" name="q"
+                       placeholder="🔍 Search part number, model, engine code..."
                        class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-[#f97316] outline-none transition"
                        value="{{ search_query or '' }}">
             </div>
+            {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
+            {% if price_range %}<input type="hidden" name="price" value="{{ price_range }}">{% endif %}
+            {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+            {% if sort and sort != 'newest' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
             <div class="flex gap-2">
                 <button type="submit" class="px-6 py-3 bg-[#f97316] text-black font-black rounded-lg hover:bg-orange-500 transition">
                     Search
@@ -56,15 +64,18 @@
 
         <!-- Price, Status, Sort Filters as a single form -->
         <form id="filter-form" action="/parts-public" method="GET" class="flex flex-wrap gap-3 mt-3">
+            {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
+            {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
+
             <!-- Price Filter -->
             <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
                 <span class="text-xs text-slate-400 font-bold">Price:</span>
                 <select name="price" class="bg-[#0f172a] text-white text-sm rounded px-2 py-1 focus:outline-none" onchange="document.getElementById('filter-form').submit()">
-                    <option value="">All</option>
-                    <option value="0-100">Under £100</option>
-                    <option value="100-500">£100 - £500</option>
-                    <option value="500-1000">£500 - £1000</option>
-                    <option value="1000-99999">Over £1000</option>
+                    <option value="" {{ 'selected' if not price_range }}>All</option>
+                    <option value="0-100" {{ 'selected' if price_range == '0-100' }}>Under £100</option>
+                    <option value="100-500" {{ 'selected' if price_range == '100-500' }}>£100 - £500</option>
+                    <option value="500-1000" {{ 'selected' if price_range == '500-1000' }}>£500 - £1000</option>
+                    <option value="1000-99999" {{ 'selected' if price_range == '1000-99999' }}>Over £1000</option>
                 </select>
             </div>
 
@@ -72,10 +83,10 @@
             <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
                 <span class="text-xs text-slate-400 font-bold">Status:</span>
                 <select name="status" class="bg-[#0f172a] text-white text-sm rounded px-2 py-1 focus:outline-none" onchange="document.getElementById('filter-form').submit()">
-                    <option value="">All</option>
-                    <option value="Available">Available</option>
-                    <option value="Reserved">Reserved</option>
-                    <option value="Sold">Sold</option>
+                    <option value="" {{ 'selected' if not status_filter }}>All</option>
+                    <option value="Available" {{ 'selected' if status_filter == 'Available' }}>Available</option>
+                    <option value="Reserved" {{ 'selected' if status_filter == 'Reserved' }}>Reserved</option>
+                    <option value="Sold" {{ 'selected' if status_filter == 'Sold' }}>Sold</option>
                 </select>
             </div>
 
@@ -83,10 +94,10 @@
             <div class="flex items-center gap-2 bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2">
                 <span class="text-xs text-slate-400 font-bold">Sort:</span>
                 <select name="sort" class="bg-[#0f172a] text-white text-sm rounded px-2 py-1 focus:outline-none" onchange="document.getElementById('filter-form').submit()">
-                    <option value="newest">Newest First</option>
-                    <option value="price_asc">Price: Low → High</option>
-                    <option value="price_desc">Price: High → Low</option>
-                    <option value="name">Name A → Z</option>
+                    <option value="newest" {{ 'selected' if sort == 'newest' }}>Newest First</option>
+                    <option value="price_asc" {{ 'selected' if sort == 'price_asc' }}>Price: Low → High</option>
+                    <option value="price_desc" {{ 'selected' if sort == 'price_desc' }}>Price: High → Low</option>
+                    <option value="name" {{ 'selected' if sort == 'name' }}>Name A → Z</option>
                 </select>
             </div>
         </form>
