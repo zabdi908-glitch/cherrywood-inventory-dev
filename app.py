@@ -1,3 +1,15 @@
+import sys
+
+# Log lines throughout this app use emoji prefixes (checkmarks, warning signs,
+# etc). On Windows, the console's default encoding (cp1252) can't represent
+# them, and print() raises UnicodeEncodeError instead of just printing —
+# which, inside an exception handler that itself logs the error, cascades
+# into an unhandled exception and a 500 on every request. errors="replace"
+# makes any unencodable character degrade to "?" instead of crashing.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(errors="replace")
+
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from email_reply_agent import handle_enquiry_auto_reply
 from list_tracker import SessionListTracker
