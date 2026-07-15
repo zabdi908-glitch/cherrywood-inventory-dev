@@ -822,7 +822,11 @@ def enquiry():
 
         if contact_method == 'WhatsApp' or not contact_method:
             whatsapp = f"Hi Cherrywood, part enquiry:\nName: {name}\nEmail: {email}\nReg: {reg}\nParts: {parts}\nMessage: {message}"
-            return redirect(f"https://wa.me/447440369576?text={whatsapp.replace(' ', '%20').replace('\n', '%0A')}")
+            # Encode outside the f-string expression: a backslash inside an
+            # f-string replacement field (the '\n' below) only parses on
+            # Python 3.12+ (PEP 701). Doing it here keeps us 3.11-compatible.
+            whatsapp_encoded = whatsapp.replace(' ', '%20').replace('\n', '%0A')
+            return redirect(f"https://wa.me/447440369576?text={whatsapp_encoded}")
 
         # Email / Phone from here — previously urgency, vin and photos were
         # submitted but silently discarded regardless of contact method.
