@@ -1,4 +1,9 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
+import sys
+# Log lines throughout this app use emoji prefixes...
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(errors="replace")
+from flask import Flask, render_template, request, redirect, url_for,session,flash, abort
 from email_reply_agent import handle_enquiry_auto_reply
 from list_tracker import SessionListTracker
 from email_templates import build_confirmation_email
