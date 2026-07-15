@@ -16,8 +16,7 @@ services:
       - key: RENDER
         value: true
       - key: PYTHON_VERSION
-        value: 3.11.0
-services:
+        value: 3.14.3
   - type: cron
     name: daily-backup
     schedule: "0 2 * * *"  # Runs at 2:00 AM daily
