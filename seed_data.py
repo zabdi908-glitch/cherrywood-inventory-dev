@@ -1,12 +1,17 @@
 import sqlite3
 import os
 
+import tenants_store
+
 if os.getenv('RENDER'):
     DATABASE = os.path.join('/tmp', 'inventory.db')
 else:
     DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inventory.db')
 
-def seed_database():
+def seed_database(tenant_id=None):
+    """tenant_id defaults to the one pre-existing tenant — pass one
+    explicitly to seed sample data for a different tenant (e.g. a second
+    test tenant in the Render test environment)."""
     vehicles = [
         {
             'title': '2015 Audi A3 Breaker - All Parts Available',
@@ -40,21 +45,26 @@ def seed_database():
         }
     ]
     
+    if tenant_id is None:
+        tenant_id = tenants_store.get_default_tenant_id()
+
     try:
         conn = sqlite3.connect(DATABASE)
         for vehicle in vehicles:
-            conn.execute('''INSERT INTO vehicle 
-                           (title, make, model, year, reg, engine, fuel, 
-                            transmission, mileage, status, image_url, parts_available, description) 
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+            conn.execute('''INSERT INTO vehicle
+                           (title, make, model, year, reg, engine, fuel,
+                            transmission, mileage, status, image_url, parts_available, description,
+                            tenant_id)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                         (vehicle['title'], vehicle['make'], vehicle['model'],
                          vehicle['year'], vehicle['reg'], vehicle['engine'],
                          vehicle['fuel'], vehicle['transmission'], vehicle['mileage'],
                          vehicle['status'], vehicle['image_url'],
-                         vehicle['parts_available'], vehicle['description']))
+                         vehicle['parts_available'], vehicle['description'],
+                         tenant_id))
         conn.commit()
         conn.close()
-        print(f"Database seeded with {len(vehicles)} vehicles!")
+        print(f"Database seeded with {len(vehicles)} vehicles for tenant_id={tenant_id}!")
     except Exception as e:
         print(f"Error seeding database: {e}")
 

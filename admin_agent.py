@@ -5,6 +5,8 @@ import datetime
 import csv
 from functools import wraps
 
+import tenants_store
+
 class AdminAgent:
     def __init__(self):
         if os.getenv('RENDER'):
@@ -21,77 +23,107 @@ class AdminAgent:
         conn.row_factory = sqlite3.Row
         return conn
     
-    def auto_backup(self):
+    def auto_backup(self, tenant_id):
+        """Backs up one tenant's vehicles only. tenant_id is required — a
+        mixed-tenant backup file would make restore_backup() unable to draw
+        a clean boundary around a single tenant's data, which is exactly
+        the bug this and restore_backup() were fixed together to avoid."""
         try:
+            tenant = tenants_store.get_by_id(tenant_id)
+            if not tenant:
+                return {'success': False, 'error': f'Unknown tenant_id {tenant_id}'}
+
             conn = self.get_connection()
-            cursor = conn.execute('SELECT * FROM vehicle ORDER BY id DESC')
+            cursor = conn.execute(
+                'SELECT * FROM vehicle WHERE tenant_id = ? ORDER BY id DESC', (tenant_id,)
+            )
             rows = cursor.fetchall()
-            
+
             vehicles = []
             for row in rows:
                 vehicles.append(dict(row))
-            
+
             timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-            backup_file = os.path.join(self.backup_dir, f'vehicles_backup_{timestamp}.json')
-            
+            backup_file = os.path.join(
+                self.backup_dir, f"vehicles_backup_{tenant['slug']}_{timestamp}.json"
+            )
+
             with open(backup_file, 'w') as f:
                 json.dump(vehicles, f, indent=2)
-            
+
             conn.close()
-            self.cleanup_old_backups(30)
-            
+            self.cleanup_old_backups(tenant['slug'], 30)
+
             return {
                 'success': True,
-                'message': f'Backed up {len(vehicles)} vehicles',
+                'message': f"Backed up {len(vehicles)} vehicles for {tenant['slug']}",
                 'file': backup_file,
                 'count': len(vehicles)
             }
         except Exception as e:
             return {'success': False, 'error': str(e)}
-    
-    def cleanup_old_backups(self, keep=30):
+
+    def cleanup_old_backups(self, tenant_slug, keep=30):
+        """Scoped to one tenant's own backup files (matched by filename
+        prefix) so keeping "the last N backups" means the last N for that
+        yard, not an arbitrary lexicographic mix across every tenant."""
         try:
-            files = [f for f in os.listdir(self.backup_dir) if f.startswith('vehicles_backup_')]
+            prefix = f'vehicles_backup_{tenant_slug}_'
+            files = [f for f in os.listdir(self.backup_dir) if f.startswith(prefix)]
             files.sort()
-            
+
             if len(files) > keep:
                 for file in files[:-keep]:
                     os.remove(os.path.join(self.backup_dir, file))
-            
+
             return {'success': True, 'deleted': len(files) - keep if len(files) > keep else 0}
         except Exception as e:
             return {'success': False, 'error': str(e)}
-    
-    def restore_backup(self, backup_file=None):
+
+    def restore_backup(self, tenant_id, backup_file=None):
+        """Restores one tenant's vehicles from that tenant's own backup file.
+        Deletes only that tenant's existing rows first — never a blind
+        DELETE FROM vehicle, which would wipe every other yard's inventory
+        the moment a second tenant's data exists in this DB. tenant_id is
+        required; there is no "restore everything" mode."""
         try:
+            tenant = tenants_store.get_by_id(tenant_id)
+            if not tenant:
+                return {'success': False, 'error': f'Unknown tenant_id {tenant_id}'}
+
             if backup_file is None:
-                files = [f for f in os.listdir(self.backup_dir) if f.startswith('vehicles_backup_')]
+                prefix = f"vehicles_backup_{tenant['slug']}_"
+                files = [f for f in os.listdir(self.backup_dir) if f.startswith(prefix)]
                 if not files:
-                    return {'success': False, 'error': 'No backup files found'}
+                    return {'success': False, 'error': f"No backup files found for {tenant['slug']}"}
                 files.sort()
                 backup_file = os.path.join(self.backup_dir, files[-1])
-            
+
             with open(backup_file, 'r') as f:
                 vehicles = json.load(f)
-            
+
             conn = self.get_connection()
-            conn.execute('DELETE FROM vehicle')
-            
+            conn.execute('DELETE FROM vehicle WHERE tenant_id = ?', (tenant_id,))
+
             for v in vehicles:
-                conn.execute('''INSERT INTO vehicle 
-                    (title, make, model, year, reg, engine, fuel, transmission, 
-                     mileage, status, image_url, parts_available, description) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                # tenant_id is forced to the tenant this restore was called
+                # for (not read from the backup row) so a stray/edited
+                # backup file can never insert vehicles into the wrong tenant.
+                conn.execute('''INSERT INTO vehicle
+                    (title, make, model, year, reg, engine, fuel, transmission,
+                     mileage, status, image_url, parts_available, description, tenant_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                     (v['title'], v['make'], v['model'], v['year'], v['reg'],
                      v['engine'], v['fuel'], v['transmission'], v['mileage'],
-                     v['status'], v['image_url'], v['parts_available'], v['description']))
-            
+                     v['status'], v['image_url'], v['parts_available'], v['description'],
+                     tenant_id))
+
             conn.commit()
             conn.close()
-            
+
             return {
                 'success': True,
-                'message': f'Restored {len(vehicles)} vehicles',
+                'message': f"Restored {len(vehicles)} vehicles for {tenant['slug']}",
                 'count': len(vehicles)
             }
         except Exception as e:
@@ -151,16 +183,27 @@ class AdminAgent:
         except Exception as e:
             return {'success': False, 'error': str(e)}
     
-    def bulk_update_status(self, status, ids):
+    def bulk_update_status(self, status, ids, tenant_id=None):
+        """tenant_id defaults to the one pre-existing tenant when not passed
+        (no per-request tenant context exists yet — same situation as
+        restore_vehicles() in app.py); pass it explicitly once a caller has
+        a real g.tenant to hand over. Scoping by tenant_id in addition to
+        id IN (...) means a caller can never touch another tenant's
+        vehicles even by passing in the wrong ids."""
         try:
+            if tenant_id is None:
+                tenant_id = tenants_store.get_default_tenant_id()
             conn = self.get_connection()
             placeholders = ','.join(['?'] * len(ids))
-            conn.execute(f"UPDATE vehicle SET status = ? WHERE id IN ({placeholders})", [status] + ids)
-            
+            conn.execute(
+                f"UPDATE vehicle SET status = ? WHERE id IN ({placeholders}) AND tenant_id = ?",
+                [status] + ids + [tenant_id]
+            )
+
             updated = conn.total_changes
             conn.commit()
             conn.close()
-            
+
             return {
                 'success': True,
                 'updated': updated,
@@ -168,17 +211,23 @@ class AdminAgent:
             }
         except Exception as e:
             return {'success': False, 'error': str(e)}
-    
-    def bulk_delete(self, ids):
+
+    def bulk_delete(self, ids, tenant_id=None):
+        """Same tenant-scoping note as bulk_update_status() above."""
         try:
+            if tenant_id is None:
+                tenant_id = tenants_store.get_default_tenant_id()
             conn = self.get_connection()
             placeholders = ','.join(['?'] * len(ids))
-            conn.execute(f"DELETE FROM vehicle WHERE id IN ({placeholders})", ids)
-            
+            conn.execute(
+                f"DELETE FROM vehicle WHERE id IN ({placeholders}) AND tenant_id = ?",
+                ids + [tenant_id]
+            )
+
             deleted = conn.total_changes
             conn.commit()
             conn.close()
-            
+
             return {
                 'success': True,
                 'deleted': deleted,

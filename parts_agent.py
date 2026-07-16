@@ -8,6 +8,8 @@ import re
 import unicodedata
 from datetime import datetime
 
+import tenants_store
+
 class PartsAgent:
     def __init__(self):
         if os.getenv('RENDER'):
@@ -69,6 +71,25 @@ class PartsAgent:
                 photo_order INTEGER DEFAULT 0,
                 FOREIGN KEY (part_id) REFERENCES parts(id) ON DELETE CASCADE
             )''')
+
+            # Multi-tenancy — schema-only migration. Nullable tenant_id,
+            # backfilled onto the one pre-existing yard, same pattern as the
+            # vehicle/enquiries tables. The legacy parts_* routes/logic are
+            # NOT being scoped by tenant yet — that's a later phase — this
+            # just keeps the column present and consistent everywhere.
+            default_tenant_id = tenants_store.get_default_tenant_id()
+            for table in ('parts', 'part_photos'):
+                try:
+                    conn.execute(f'ALTER TABLE {table} ADD COLUMN tenant_id INTEGER')
+                except sqlite3.OperationalError:
+                    pass
+                if default_tenant_id is not None:
+                    conn.execute(
+                        f'UPDATE {table} SET tenant_id = ? WHERE tenant_id IS NULL',
+                        (default_tenant_id,)
+                    )
+                conn.execute(f'CREATE INDEX IF NOT EXISTS idx_{table}_tenant ON {table}(tenant_id)')
+
             conn.commit()
             conn.close()
             print("Parts inventory tables ready")
@@ -110,12 +131,18 @@ class PartsAgent:
     def add_part(self, data):
         try:
             conn = self.get_db()
-            cursor = conn.execute('''INSERT INTO parts 
-                (stock_id, part_name, category, part_type, make, model, generation, 
+            # No per-request tenant context yet (deferred resolution phase,
+            # same situation as restore_vehicles() in app.py) — defaults to
+            # the one pre-existing tenant. Without this, parts_bulk_delete()
+            # in app.py (tenant-scoped since it isn't legacy-deferred) would
+            # silently match 0 rows for any part added here.
+            tenant_id = tenants_store.get_default_tenant_id()
+            cursor = conn.execute('''INSERT INTO parts
+                (stock_id, part_name, category, part_type, make, model, generation,
                  oem_number, engine_code, condition, price, stock_status, location, notes,
                  registration, vin, mileage, year, fuel_type, transmission, engine_size,
-                 colour, side, position)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                 colour, side, position, tenant_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                 (data.get('stock_id'), data.get('part_name'), data.get('category'),
                  data.get('part_type'), data.get('make'), data.get('model'),
                  data.get('generation'), data.get('oem_number'), data.get('engine_code'),
@@ -125,7 +152,7 @@ class PartsAgent:
                  int(data['mileage']) if data.get('mileage') not in (None, '') else None,
                  int(data['year']) if data.get('year') not in (None, '') else None,
                  data.get('fuel_type'), data.get('transmission'), data.get('engine_size'),
-                 data.get('colour'), data.get('side'), data.get('position')))
+                 data.get('colour'), data.get('side'), data.get('position'), tenant_id))
             part_id = cursor.lastrowid
             slug = self.generate_slug(data.get('part_name', ''), part_id)
             conn.execute('UPDATE parts SET slug = ? WHERE id = ?', (slug, part_id))

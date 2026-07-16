@@ -37,6 +37,7 @@ import backup
 import contact_parser
 import analytics
 import settings_store
+import tenants_store
 import uuid 
 from flask import send_from_directory
 from PIL import Image  # Pillow — used to genuinely verify uploads are real images
@@ -166,6 +167,28 @@ def init_db():
                 photo_order INTEGER DEFAULT 0,
                 FOREIGN KEY (vehicle_id) REFERENCES vehicle(id) ON DELETE CASCADE
             )''')
+
+            # Multi-tenancy — additive migration only. Nullable tenant_id,
+            # backfilled onto the one pre-existing yard (tenants_store's
+            # default tenant), same pattern as the column migrations above.
+            # Left nullable deliberately: SQLite can't add a NOT NULL
+            # constraint without a full table rebuild, and this runs against
+            # the live production DB — enforcement happens at the
+            # application layer once query filtering ships in a later
+            # deploy, after row counts are verified on Render.
+            default_tenant_id = tenants_store.get_default_tenant_id()
+            for table in ('vehicle', 'vehicle_photos'):
+                try:
+                    conn.execute(f'ALTER TABLE {table} ADD COLUMN tenant_id INTEGER')
+                except sqlite3.OperationalError:
+                    pass
+                if default_tenant_id is not None:
+                    conn.execute(
+                        f'UPDATE {table} SET tenant_id = ? WHERE tenant_id IS NULL',
+                        (default_tenant_id,)
+                    )
+                conn.execute(f'CREATE INDEX IF NOT EXISTS idx_{table}_tenant ON {table}(tenant_id)')
+
             conn.commit()
             print("Database initialized")
     except Exception as e:
@@ -177,39 +200,61 @@ init_db()
 # BACKUP SYSTEM
 # ============================================
 def auto_backup_vehicles():
+    """One JSON file per tenant (vehicles_backup_<slug>.json) rather than one
+    shared file — keeps a future restore from ever being ambiguous about
+    which yard's vehicles it's restoring."""
     try:
         db = get_db()
-        rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
+        for tenant in tenants_store.get_all():
+            rows = db.execute(
+                'SELECT * FROM vehicle WHERE tenant_id = ? ORDER BY id DESC',
+                (tenant['id'],)
+            ).fetchall()
+            vehicles = [dict(row) for row in rows]
+            with open(f'vehicles_backup_{tenant["slug"]}.json', 'w') as f:
+                json.dump(vehicles, f, indent=2)
         db.close()
-        vehicles = [dict(row) for row in rows]
-        with open('vehicles_backup.json', 'w') as f:
-            json.dump(vehicles, f, indent=2)
         return True
-    except:
+    except Exception as e:
+        print(f"❌ [BACKUP] auto_backup_vehicles failed: {e}", flush=True)
         return False
 
-def restore_from_backup():
+def restore_from_backup(tenant_id):
+    """Restores one tenant's vehicles from that tenant's own backup file.
+    Deletes only that tenant's existing rows first — never a blind
+    DELETE FROM vehicle, which would wipe every other yard's inventory too.
+    tenant_id is required; there is no "restore everything" mode."""
     try:
-        if not os.path.exists('vehicles_backup.json'):
+        tenant = tenants_store.get_by_id(tenant_id)
+        if not tenant:
+            print(f"❌ [BACKUP] Unknown tenant_id {tenant_id}, cannot restore", flush=True)
             return False
-        with open('vehicles_backup.json', 'r') as f:
+        backup_path = f'vehicles_backup_{tenant["slug"]}.json'
+        if not os.path.exists(backup_path):
+            return False
+        with open(backup_path, 'r') as f:
             vehicles = json.load(f)
         if not vehicles:
             return False
         db = get_db()
-        db.execute('DELETE FROM vehicle')
+        db.execute('DELETE FROM vehicle WHERE tenant_id = ?', (tenant_id,))
         for v in vehicles:
-            db.execute('''INSERT INTO vehicle 
-                (title, make, model, year, reg, engine, fuel, transmission, 
-                 mileage, status, image_url, parts_available, description) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+            # tenant_id is forced to the tenant this restore was called for
+            # (not read from the backup row) so a stray/edited backup file
+            # can never insert vehicles into the wrong tenant.
+            db.execute('''INSERT INTO vehicle
+                (title, make, model, year, reg, engine, fuel, transmission,
+                 mileage, status, image_url, parts_available, description, tenant_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                 (v['title'], v['make'], v['model'], v['year'], v['reg'],
                  v['engine'], v['fuel'], v['transmission'], v['mileage'],
-                 v['status'], v['image_url'], v['parts_available'], v['description']))
+                 v['status'], v['image_url'], v['parts_available'], v['description'],
+                 tenant_id))
         db.commit()
         db.close()
         return True
-    except:
+    except Exception as e:
+        print(f"❌ [BACKUP] restore_from_backup failed: {e}", flush=True)
         return False
 
 def backup_after_change(func):
@@ -320,19 +365,28 @@ def add_vehicle():
     try:
         db = get_db()
 
+        # No per-request tenant context yet (deferred resolution phase) —
+        # defaults to the one pre-existing tenant. Swap for g.tenant['id']
+        # once that phase lands. Every row this request creates (the
+        # vehicle itself and any uploaded photos) is tagged with this same
+        # tenant_id, so the tenant-scoped WHERE clauses further down in
+        # this function (and in delete_vehicle_photo() later) actually
+        # match these rows instead of silently affecting zero rows.
+        tenant_id = tenants_store.get_default_tenant_id()
+
         # Create the vehicle first (without an image) so we get its real ID
         cursor = db.execute('''INSERT INTO vehicle
             (title, make, model, year, reg, engine, fuel,
              transmission, mileage, status, image_url, parts_available, description,
-             engine_code, gearbox_code, colour)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+             engine_code, gearbox_code, colour, tenant_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
             (request.form['title'], request.form['make'], request.form['model'],
              request.form['year'], request.form['reg'], request.form['engine'],
              request.form['fuel'], request.form['transmission'], request.form['mileage'],
              request.form['status'], '',
              request.form['parts_available'], request.form['description'],
              request.form.get('engine_code', ''), request.form.get('gearbox_code', ''),
-             request.form.get('colour', '')))
+             request.form.get('colour', ''), tenant_id))
         vehicle_id = cursor.lastrowid
         db.commit()
 
@@ -384,15 +438,18 @@ def add_vehicle():
                 photo_order += 1
                 web_url = f'/uploads/vehicles/{filename}'
                 db.execute(
-                    'INSERT INTO vehicle_photos (vehicle_id, photo_url, photo_order) VALUES (?, ?, ?)',
-                    (vehicle_id, web_url, photo_order)
+                    'INSERT INTO vehicle_photos (vehicle_id, photo_url, photo_order, tenant_id) VALUES (?, ?, ?, ?)',
+                    (vehicle_id, web_url, photo_order, tenant_id)
                 )
                 uploaded_count += 1
                 if first_photo_url is None:
                     first_photo_url = web_url
 
             if first_photo_url:
-                db.execute('UPDATE vehicle SET image_url = ? WHERE id = ?', (first_photo_url, vehicle_id))
+                db.execute(
+                    'UPDATE vehicle SET image_url = ? WHERE id = ? AND tenant_id = ?',
+                    (first_photo_url, vehicle_id, tenant_id)
+                )
 
             db.commit()
 
@@ -420,17 +477,23 @@ def edit_vehicle(id):
         return redirect(url_for('index'))
     if request.method == 'POST':
         try:
+            # No per-request tenant context yet (deferred resolution phase,
+            # same situation as restore_vehicles() above) — defaults to the
+            # one pre-existing tenant. AND tenant_id = ? is defensive: id is
+            # already unique, but this means a guessed/foreign id can never
+            # update another tenant's vehicle even by mistake.
+            tenant_id = tenants_store.get_default_tenant_id()
             db.execute('''UPDATE vehicle SET title=?, make=?, model=?, year=?, reg=?,
                 engine=?, fuel=?, transmission=?, mileage=?, status=?,
                 image_url=?, parts_available=?, description=?,
-                engine_code=?, gearbox_code=?, colour=? WHERE id=?''',
+                engine_code=?, gearbox_code=?, colour=? WHERE id=? AND tenant_id=?''',
                 (request.form['title'], request.form['make'], request.form['model'],
                  request.form['year'], request.form['reg'], request.form['engine'],
                  request.form['fuel'], request.form['transmission'], request.form['mileage'],
                  request.form['status'], request.form.get('image_url', ''),
                  request.form['parts_available'], request.form['description'],
                  request.form.get('engine_code', ''), request.form.get('gearbox_code', ''),
-                 request.form.get('colour', ''), id))
+                 request.form.get('colour', ''), id, tenant_id))
             db.commit()
             db.close()
             flash('✅ Vehicle updated!', 'success')
@@ -452,7 +515,12 @@ def edit_vehicle(id):
 def delete_vehicle(id):
     try:
         db = get_db()
-        db.execute('DELETE FROM vehicle WHERE id = ?', (id,))
+        # No per-request tenant context yet (deferred resolution phase) —
+        # defaults to the one pre-existing tenant. AND tenant_id = ? is
+        # defensive: id is already unique, but this means a guessed/foreign
+        # id can never delete another tenant's vehicle even by mistake.
+        tenant_id = tenants_store.get_default_tenant_id()
+        db.execute('DELETE FROM vehicle WHERE id = ? AND tenant_id = ?', (id, tenant_id))
         db.commit()
         db.close()
         flash('✅ Vehicle deleted!', 'success')
@@ -465,32 +533,47 @@ def delete_vehicle(id):
 @app.route('/admin/backup-now', methods=['POST'])
 @login_required
 def backup_now():
+    """One backup file per tenant (full_backup_<slug>_<timestamp>.json)
+    rather than one shared file — a restore can then never be ambiguous
+    about whose vehicles/parts/photos it's restoring. Backs up every tenant
+    in one click since there's no tenant selector in the admin UI yet."""
     try:
         db = get_db()
-        vehicle_rows = db.execute('SELECT * FROM vehicle ORDER BY id DESC').fetchall()
-        parts_rows = db.execute('SELECT * FROM parts ORDER BY id DESC').fetchall()
-        photo_rows = db.execute('SELECT * FROM part_photos ORDER BY id').fetchall()
-        db.close()
-
-        vehicles = [dict(row) for row in vehicle_rows]
-        parts = [dict(row) for row in parts_rows]
-        photos = [dict(row) for row in photo_rows]  # NEW — was missing entirely before
-
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         backup_dir = '/data/backups/'
         os.makedirs(backup_dir, exist_ok=True)
 
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_data = {
-            'timestamp': timestamp,
-            'vehicles': vehicles,
-            'parts': parts,
-            'part_photos': photos,  # NEW
-        }
-        backup_file = os.path.join(backup_dir, f'full_backup_{timestamp}.json')
-        with open(backup_file, 'w') as f:
-            json.dump(backup_data, f, indent=2)
+        summaries = []
+        for tenant in tenants_store.get_all():
+            vehicle_rows = db.execute(
+                'SELECT * FROM vehicle WHERE tenant_id = ? ORDER BY id DESC', (tenant['id'],)
+            ).fetchall()
+            parts_rows = db.execute(
+                'SELECT * FROM parts WHERE tenant_id = ? ORDER BY id DESC', (tenant['id'],)
+            ).fetchall()
+            photo_rows = db.execute(
+                'SELECT * FROM part_photos WHERE tenant_id = ? ORDER BY id', (tenant['id'],)
+            ).fetchall()
 
-        flash(f'✅ Backup created: {len(vehicles)} vehicles, {len(parts)} parts, {len(photos)} photo records', 'success')
+            vehicles = [dict(row) for row in vehicle_rows]
+            parts = [dict(row) for row in parts_rows]
+            photos = [dict(row) for row in photo_rows]
+
+            backup_data = {
+                'timestamp': timestamp,
+                'tenant_id': tenant['id'],
+                'tenant_slug': tenant['slug'],
+                'vehicles': vehicles,
+                'parts': parts,
+                'part_photos': photos,
+            }
+            backup_file = os.path.join(backup_dir, f"full_backup_{tenant['slug']}_{timestamp}.json")
+            with open(backup_file, 'w') as f:
+                json.dump(backup_data, f, indent=2)
+            summaries.append(f"{tenant['slug']}: {len(vehicles)} vehicles, {len(parts)} parts, {len(photos)} photos")
+
+        db.close()
+        flash(f'✅ Backup created — {"; ".join(summaries)}', 'success')
         return redirect(url_for('index'))
     except Exception as e:
         flash(f'❌ Backup failed: {e}', 'error')
@@ -500,14 +583,33 @@ def backup_now():
 @app.route('/admin/restore', methods=['POST'])
 @login_required
 def restore_vehicles():
+    """Restores one tenant's vehicles/parts/part_photos from that tenant's
+    own backup file. Deletes only that tenant's existing rows first — never
+    a blind DELETE FROM vehicle/parts/part_photos, which used to wipe every
+    table completely (all tenants) on every restore.
+
+    NOTE: there is no per-request tenant resolution yet (host/slug-based
+    resolution is the deferred query-filtering phase) and no tenant
+    selector in the admin UI, so this restores the one pre-existing tenant
+    for now. Once request-time resolution lands, swap
+    tenants_store.get_default_tenant_id() below for g.tenant['id'] — the
+    delete/insert scoping itself already never touches another tenant's
+    rows, regardless of how many tenants exist."""
     try:
+        tenant_id = tenants_store.get_default_tenant_id()
+        tenant = tenants_store.get_by_id(tenant_id) if tenant_id is not None else None
+        if not tenant:
+            flash('❌ No tenant configured, cannot restore.', 'error')
+            return redirect(url_for('index'))
+
         backup_dir = '/data/backups/'
         if not os.path.exists(backup_dir):
             flash('❌ No backup folder found. Please run a backup first.', 'error')
             return redirect(url_for('index'))
-        files = sorted([f for f in os.listdir(backup_dir) if f.startswith('full_backup_')], reverse=True)
+        prefix = f"full_backup_{tenant['slug']}_"
+        files = sorted([f for f in os.listdir(backup_dir) if f.startswith(prefix)], reverse=True)
         if not files:
-            flash('❌ No backup files found. Please run a backup first.', 'error')
+            flash(f"❌ No backup files found for {tenant['slug']}. Please run a backup first.", 'error')
             return redirect(url_for('index'))
         latest_backup = os.path.join(backup_dir, files[0])
         with open(latest_backup, 'r') as f:
@@ -518,39 +620,43 @@ def restore_vehicles():
         photos = data.get('part_photos', [])  # will be empty on OLD backups taken before this fix — that's fine, handled below
 
         conn = sqlite3.connect(DATABASE)
-        conn.execute('DELETE FROM part_photos')  # NEW — clear old photo rows before restoring
-        conn.execute('DELETE FROM vehicle')
-        conn.execute('DELETE FROM parts')
+        conn.execute('DELETE FROM part_photos WHERE tenant_id = ?', (tenant_id,))
+        conn.execute('DELETE FROM vehicle WHERE tenant_id = ?', (tenant_id,))
+        conn.execute('DELETE FROM parts WHERE tenant_id = ?', (tenant_id,))
 
         for v in vehicles:
-            conn.execute('''INSERT INTO vehicle 
-                (title, make, model, year, reg, engine, fuel, transmission, 
-                 mileage, status, image_url, parts_available, description) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+            # tenant_id is forced to the tenant this restore was called for
+            # (not read from the backup row) so a stray/edited backup file
+            # can never insert rows into the wrong tenant.
+            conn.execute('''INSERT INTO vehicle
+                (title, make, model, year, reg, engine, fuel, transmission,
+                 mileage, status, image_url, parts_available, description, tenant_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                 (v['title'], v['make'], v['model'], v['year'], v['reg'],
                  v['engine'], v['fuel'], v['transmission'], v['mileage'],
-                 v['status'], v['image_url'], v['parts_available'], v['description']))
+                 v['status'], v['image_url'], v['parts_available'], v['description'],
+                 tenant_id))
 
         for p in parts:
             # THE KEY FIX: explicitly preserve the original part ID instead of
             # letting SQLite assign a new one — this is what photo records
             # link to, so without this, photos always end up orphaned after
             # any restore, even from a backup that DOES contain photo data.
-            conn.execute('''INSERT INTO parts 
-                (id, stock_id, part_name, category, part_type, make, model, generation, 
-                 oem_number, engine_code, condition, price, stock_status, location, notes, slug)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+            conn.execute('''INSERT INTO parts
+                (id, stock_id, part_name, category, part_type, make, model, generation,
+                 oem_number, engine_code, condition, price, stock_status, location, notes, slug, tenant_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                 (p['id'], p['stock_id'], p['part_name'], p['category'], p.get('part_type', ''),
                  p.get('make', ''), p.get('model', ''), p.get('generation', ''),
                  p.get('oem_number', ''), p.get('engine_code', ''),
                  p.get('condition', 'Good'), p.get('price', 0),
                  p.get('stock_status', 'Available'), p.get('location', ''),
-                 p.get('notes', ''), p.get('slug', '')))
+                 p.get('notes', ''), p.get('slug', ''), tenant_id))
 
         for photo in photos:
-            conn.execute('''INSERT INTO part_photos (part_id, photo_url, photo_order)
-                VALUES (?, ?, ?)''',
-                (photo['part_id'], photo['photo_url'], photo.get('photo_order', 0)))
+            conn.execute('''INSERT INTO part_photos (part_id, photo_url, photo_order, tenant_id)
+                VALUES (?, ?, ?, ?)''',
+                (photo['part_id'], photo['photo_url'], photo.get('photo_order', 0), tenant_id))
 
         conn.commit()
         conn.close()
@@ -670,6 +776,12 @@ def upload_vehicle_photo(vehicle_id):
         return redirect(url_for('edit_vehicle', id=vehicle_id))
 
     db = get_db()
+    # No per-request tenant context yet (deferred resolution phase, same
+    # situation as restore_vehicles() above) — defaults to the one
+    # pre-existing tenant. Tagging every photo inserted below with this
+    # tenant_id is what lets delete_vehicle_photo()'s tenant-scoped DELETE
+    # actually match these rows later.
+    tenant_id = tenants_store.get_default_tenant_id()
     max_order = db.execute(
         'SELECT MAX(photo_order) FROM vehicle_photos WHERE vehicle_id = ? AND photo_order < 100',
         (vehicle_id,)
@@ -712,8 +824,8 @@ def upload_vehicle_photo(vehicle_id):
         max_order += 1
         web_url = f'/uploads/vehicles/{filename}'
         db.execute(
-            'INSERT INTO vehicle_photos (vehicle_id, photo_url, photo_order) VALUES (?, ?, ?)',
-            (vehicle_id, web_url, max_order)
+            'INSERT INTO vehicle_photos (vehicle_id, photo_url, photo_order, tenant_id) VALUES (?, ?, ?, ?)',
+            (vehicle_id, web_url, max_order, tenant_id)
         )
         uploaded_count += 1
         if first_new_photo_url is None:
@@ -725,7 +837,10 @@ def upload_vehicle_photo(vehicle_id):
     # person deliberately chose as the "main" one just because they added more.
     current_image_url = db.execute('SELECT image_url FROM vehicle WHERE id = ?', (vehicle_id,)).fetchone()
     if current_image_url and not current_image_url['image_url'] and first_new_photo_url:
-        db.execute('UPDATE vehicle SET image_url = ? WHERE id = ?', (first_new_photo_url, vehicle_id))
+        db.execute(
+            'UPDATE vehicle SET image_url = ? WHERE id = ? AND tenant_id = ?',
+            (first_new_photo_url, vehicle_id, tenant_id)
+        )
 
     db.commit()
     db.close()
@@ -743,9 +858,15 @@ def upload_vehicle_photo(vehicle_id):
 @login_required
 def delete_vehicle_photo(photo_id):
     db = get_db()
+    # No per-request tenant context yet (deferred resolution phase, same
+    # situation as restore_vehicles() above) — defaults to the one
+    # pre-existing tenant. AND tenant_id = ? on both statements below is
+    # defensive: id is already unique, but this means a guessed/foreign
+    # photo_id can never delete or affect another tenant's photo/vehicle.
+    tenant_id = tenants_store.get_default_tenant_id()
     row = db.execute('SELECT photo_url, vehicle_id FROM vehicle_photos WHERE id = ?', (photo_id,)).fetchone()
     if row:
-        db.execute('DELETE FROM vehicle_photos WHERE id = ?', (photo_id,))
+        db.execute('DELETE FROM vehicle_photos WHERE id = ? AND tenant_id = ?', (photo_id, tenant_id))
         db.commit()
 
         # THE FIX: if the photo just deleted was the one the vehicle is
@@ -760,7 +881,10 @@ def delete_vehicle_photo(photo_id):
                 (row['vehicle_id'],)
             ).fetchone()
             new_image_url = replacement['photo_url'] if replacement else ''
-            db.execute('UPDATE vehicle SET image_url = ? WHERE id = ?', (new_image_url, row['vehicle_id']))
+            db.execute(
+                'UPDATE vehicle SET image_url = ? WHERE id = ? AND tenant_id = ?',
+                (new_image_url, row['vehicle_id'], tenant_id)
+            )
             db.commit()
 
     db.close()
@@ -1155,9 +1279,18 @@ def parts_bulk_import():
 def parts_bulk_delete():
     part_ids = request.form.getlist('part_ids')
     if part_ids:
+        # No per-request tenant context yet (deferred resolution phase, same
+        # situation as restore_vehicles() above) — defaults to the one
+        # pre-existing tenant. Swap for g.tenant['id'] once that phase lands.
+        # AND tenant_id = ? means a submitted id list can never delete
+        # another tenant's parts even if an id happened to collide.
+        tenant_id = tenants_store.get_default_tenant_id()
         db = get_db()
         placeholders = ', '.join(['?'] * len(part_ids))
-        db.execute(f'DELETE FROM parts WHERE id IN ({placeholders})', part_ids)
+        db.execute(
+            f'DELETE FROM parts WHERE id IN ({placeholders}) AND tenant_id = ?',
+            part_ids + [tenant_id]
+        )
         db.commit()
         db.close()
         flash(f'✅ Successfully deleted {len(part_ids)} part(s).', 'success')

@@ -28,6 +28,8 @@ import sqlite3
 import time
 from datetime import datetime
 
+import tenants_store
+
 if os.getenv('RENDER'):
     DATABASE = os.path.join('/data', 'inventory.db')
 else:
@@ -63,6 +65,23 @@ def _init_table():
             conn.execute(f'ALTER TABLE enquiries ADD COLUMN {column_def}')
         except sqlite3.OperationalError:
             pass
+
+    # Multi-tenancy — additive migration only, same pattern as app.py's
+    # vehicle/vehicle_photos migration. Nullable tenant_id, backfilled onto
+    # the one pre-existing yard; enforcement is an application-layer concern
+    # in a later deploy once query filtering ships.
+    try:
+        conn.execute('ALTER TABLE enquiries ADD COLUMN tenant_id INTEGER')
+    except sqlite3.OperationalError:
+        pass
+    default_tenant_id = tenants_store.get_default_tenant_id()
+    if default_tenant_id is not None:
+        conn.execute(
+            'UPDATE enquiries SET tenant_id = ? WHERE tenant_id IS NULL',
+            (default_tenant_id,)
+        )
+    conn.execute('CREATE INDEX IF NOT EXISTS idx_enquiries_tenant ON enquiries(tenant_id)')
+
     conn.commit()
     conn.close()
 
@@ -74,11 +93,19 @@ class EnquiryStore:
     def add_enquiry(self, data: dict):
         conn = _get_conn()
         try:
+            # No per-request tenant context yet (deferred resolution phase,
+            # same situation as restore_vehicles() in app.py) — defaults to
+            # the one pre-existing tenant. Tagging every new enquiry with
+            # this tenant_id is what lets update_status()/delete_enquiry()'s
+            # tenant-scoped WHERE clauses actually match this row later —
+            # without it, admin status updates and GDPR deletions on any
+            # enquiry submitted after this fix would silently affect 0 rows.
+            tenant_id = tenants_store.get_default_tenant_id()
             cursor = conn.execute(
                 """INSERT INTO enquiries
                    (name, phone, email, vehicle, part, status, created_at,
-                    contact_method, urgency, vin, photos)
-                   VALUES (?, ?, ?, ?, ?, 'New', ?, ?, ?, ?, ?)""",
+                    contact_method, urgency, vin, photos, tenant_id)
+                   VALUES (?, ?, ?, ?, ?, 'New', ?, ?, ?, ?, ?, ?)""",
                 (
                     data.get('name'),
                     data.get('phone'),
@@ -90,6 +117,7 @@ class EnquiryStore:
                     data.get('urgency'),
                     data.get('vin'),
                     data.get('photos'),
+                    tenant_id,
                 )
             )
             conn.commit()
@@ -102,18 +130,26 @@ class EnquiryStore:
         finally:
             conn.close()
 
-    def update_status(self, enquiry_id, status, notes=None):
+    def update_status(self, enquiry_id, status, notes=None, tenant_id=None):
+        """tenant_id defaults to the one pre-existing tenant when not passed
+        (no per-request tenant context exists yet — same situation as
+        restore_vehicles() in app.py); pass it explicitly once a caller has
+        a real g.tenant to hand over. Defensive: id is already unique, but
+        this means a guessed/foreign enquiry_id can never update another
+        tenant's enquiry."""
         conn = _get_conn()
         try:
+            if tenant_id is None:
+                tenant_id = tenants_store.get_default_tenant_id()
             if notes is not None:
                 conn.execute(
-                    "UPDATE enquiries SET status = ?, notes = ? WHERE id = ?",
-                    (status, notes, enquiry_id)
+                    "UPDATE enquiries SET status = ?, notes = ? WHERE id = ? AND tenant_id = ?",
+                    (status, notes, enquiry_id, tenant_id)
                 )
             else:
                 conn.execute(
-                    "UPDATE enquiries SET status = ? WHERE id = ?",
-                    (status, enquiry_id)
+                    "UPDATE enquiries SET status = ? WHERE id = ? AND tenant_id = ?",
+                    (status, enquiry_id, tenant_id)
                 )
             conn.commit()
             updated = conn.total_changes > 0
@@ -185,11 +221,18 @@ class EnquiryStore:
         finally:
             conn.close()
 
-    def delete_enquiry(self, enquiry_id) -> bool:
-        """For GDPR deletion requests."""
+    def delete_enquiry(self, enquiry_id, tenant_id=None) -> bool:
+        """For GDPR deletion requests. tenant_id defaults to the one
+        pre-existing tenant when not passed (no per-request tenant context
+        exists yet — same situation as restore_vehicles() in app.py); pass
+        it explicitly once a caller has a real g.tenant to hand over.
+        Defensive: id is already unique, but this means a guessed/foreign
+        enquiry_id can never delete another tenant's enquiry."""
         conn = _get_conn()
         try:
-            conn.execute("DELETE FROM enquiries WHERE id = ?", (enquiry_id,))
+            if tenant_id is None:
+                tenant_id = tenants_store.get_default_tenant_id()
+            conn.execute("DELETE FROM enquiries WHERE id = ? AND tenant_id = ?", (enquiry_id, tenant_id))
             conn.commit()
             deleted = conn.total_changes > 0
             if deleted:
@@ -199,15 +242,35 @@ class EnquiryStore:
             conn.close()
 
     def purge_old(self, retention_days: int = 730):
-        """Default 730 days (2 years), per agreed retention policy."""
+        """Default 730 days (2 years), per agreed retention policy.
+
+        Loops every tenant and purges each one's own old enquiries,
+        rather than resolving to one "current" tenant the way
+        restore_vehicles() does. This runs unattended (triggered
+        opportunistically from data_retention.maybe_purge(), no per-request
+        tenant context exists) — but unlike a restore, retention purging
+        isn't an action performed "for" whichever tenant happens to be
+        current; the policy is supposed to apply to every tenant's data
+        independently. Deferring this to a single default tenant would mean
+        every other tenant's old enquiries silently never get purged from
+        the day they onboard — a real compliance gap, not just a stopgap
+        waiting on the resolution phase. So this one doesn't need a
+        g.tenant swap later; it's already correct for any number of tenants."""
         conn = _get_conn()
         try:
             cutoff = time.time() - (retention_days * 86400)
-            cursor = conn.execute("DELETE FROM enquiries WHERE created_at < ?", (cutoff,))
+            total_purged = 0
+            tenants = tenants_store.get_all()
+            for tenant in tenants:
+                cursor = conn.execute(
+                    "DELETE FROM enquiries WHERE tenant_id = ? AND created_at < ?",
+                    (tenant['id'], cutoff)
+                )
+                total_purged += cursor.rowcount
             conn.commit()
-            if cursor.rowcount:
-                print(f"🧹 Purged {cursor.rowcount} enquiries older than {retention_days} days", flush=True)
-            return cursor.rowcount
+            if total_purged:
+                print(f"🧹 Purged {total_purged} enquiries older than {retention_days} days across {len(tenants)} tenant(s)", flush=True)
+            return total_purged
         finally:
             conn.close()
 

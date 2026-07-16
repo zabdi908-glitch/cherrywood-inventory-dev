@@ -7,3 +7,4 @@ openai==1.51.0
 httpx
 requests
 pillow-heif
+cryptography==43.0.3
