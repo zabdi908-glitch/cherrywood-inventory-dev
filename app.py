@@ -38,6 +38,7 @@ import contact_parser
 import analytics
 import settings_store
 import tenants_store
+import tenant_users_store
 import uuid 
 from flask import send_from_directory
 from PIL import Image  # Pillow — used to genuinely verify uploads are real images
@@ -195,6 +196,7 @@ def init_db():
         print(f"DB init error: {e}")
 
 init_db()
+tenant_users_store.seed_default_admin()
 
 # ============================================
 # BACKUP SYSTEM
@@ -769,7 +771,7 @@ def resolve_tenant():
     host = request.host.split(':')[0]  # strip port for local/dev requests
     tenant = tenants_store.get_by_hostname(host)
 
-    if tenant is None and os.getenv('ALLOW_TENANT_OVERRIDE'):
+    if tenant is None and os.getenv('ALLOW_TENANT_OVERRIDE', '').lower() == 'true':
         override_slug = request.args.get('tenant')
         if override_slug:
             tenant = tenants_store.get_by_slug(override_slug)
