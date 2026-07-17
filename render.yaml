@@ -17,6 +17,10 @@ services:
         value: true
       - key: PYTHON_VERSION
         value: 3.14.3
+      - key: DEFAULT_TENANT_SLUG
+        value: cherrywood
+      - key: ALLOW_TENANT_OVERRIDE
+        value: false
   - type: cron
     name: daily-backup
     schedule: "0 2 * * *"  # Runs at 2:00 AM daily

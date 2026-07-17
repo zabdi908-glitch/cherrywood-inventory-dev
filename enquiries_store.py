@@ -90,17 +90,18 @@ class EnquiryStore:
     def __init__(self):
         _init_table()
 
-    def add_enquiry(self, data: dict):
+    def add_enquiry(self, data: dict, tenant_id: int = None):
         conn = _get_conn()
         try:
-            # No per-request tenant context yet (deferred resolution phase,
-            # same situation as restore_vehicles() in app.py) — defaults to
-            # the one pre-existing tenant. Tagging every new enquiry with
-            # this tenant_id is what lets update_status()/delete_enquiry()'s
+            # tenant_id defaults to the one pre-existing tenant when not
+            # passed; pass it explicitly (g.tenant['id']) once a caller has
+            # real tenant context. Tagging every new enquiry with this
+            # tenant_id is what lets update_status()/delete_enquiry()'s
             # tenant-scoped WHERE clauses actually match this row later —
             # without it, admin status updates and GDPR deletions on any
             # enquiry submitted after this fix would silently affect 0 rows.
-            tenant_id = tenants_store.get_default_tenant_id()
+            if tenant_id is None:
+                tenant_id = tenants_store.get_default_tenant_id()
             cursor = conn.execute(
                 """INSERT INTO enquiries
                    (name, phone, email, vehicle, part, status, created_at,
@@ -162,30 +163,37 @@ class EnquiryStore:
         finally:
             conn.close()
 
-    def get_all(self):
+    def get_all(self, tenant_id=None):
         """Generic accessor — kept for convenience, not called by the admin panel."""
+        if tenant_id is None:
+            tenant_id = tenants_store.get_default_tenant_id()
         conn = _get_conn()
         try:
-            rows = conn.execute("SELECT * FROM enquiries ORDER BY created_at DESC").fetchall()
+            rows = conn.execute("SELECT * FROM enquiries WHERE tenant_id = ? ORDER BY created_at DESC", (tenant_id,)).fetchall()
             return [dict(r) for r in rows]
         finally:
             conn.close()
 
-    def get_all_enquiries(self, status_filter: str = 'All'):
+    def get_all_enquiries(self, status_filter: str = 'All', tenant_id=None):
         """Used by /admin/enquiries. status_filter='All' returns everything;
         any other value filters to an exact status match. Formats created_at
         as a readable date string here (rather than storing it that way),
         since the template displays it directly with no formatting of its
         own — but purge_old() still compares against the raw stored float."""
+        if tenant_id is None:
+            tenant_id = tenants_store.get_default_tenant_id()
         conn = _get_conn()
         try:
             if status_filter and status_filter != 'All':
                 rows = conn.execute(
-                    "SELECT * FROM enquiries WHERE status = ? ORDER BY created_at DESC",
-                    (status_filter,)
+                    "SELECT * FROM enquiries WHERE status = ? AND tenant_id = ? ORDER BY created_at DESC",
+                    (status_filter, tenant_id)
                 ).fetchall()
             else:
-                rows = conn.execute("SELECT * FROM enquiries ORDER BY created_at DESC").fetchall()
+                rows = conn.execute(
+                    "SELECT * FROM enquiries WHERE tenant_id = ? ORDER BY created_at DESC",
+                    (tenant_id,)
+                ).fetchall()
             results = []
             for r in rows:
                 d = dict(r)
@@ -195,15 +203,18 @@ class EnquiryStore:
         finally:
             conn.close()
 
-    def get_counts(self):
+    def get_counts(self, tenant_id=None):
         """Used by /admin/enquiries for the status tab counts. Always includes
         New/Contacted/Closed (even at zero) so the template never hits a
         missing key, plus 'Total' for the overall count — matching the exact
         key name enquiries_list.html expects (NOT 'All')."""
+        if tenant_id is None:
+            tenant_id = tenants_store.get_default_tenant_id()
         conn = _get_conn()
         try:
             rows = conn.execute(
-                "SELECT status, COUNT(*) as c FROM enquiries GROUP BY status"
+                "SELECT status, COUNT(*) as c FROM enquiries WHERE tenant_id = ? GROUP BY status",
+                (tenant_id,)
             ).fetchall()
             counts = {r['status']: r['c'] for r in rows}
             counts['Total'] = sum(counts.values())
@@ -213,10 +224,12 @@ class EnquiryStore:
         finally:
             conn.close()
 
-    def get_by_id(self, enquiry_id):
+    def get_by_id(self, enquiry_id, tenant_id=None):
+        if tenant_id is None:
+            tenant_id = tenants_store.get_default_tenant_id()
         conn = _get_conn()
         try:
-            row = conn.execute("SELECT * FROM enquiries WHERE id = ?", (enquiry_id,)).fetchone()
+            row = conn.execute("SELECT * FROM enquiries WHERE id = ? AND tenant_id = ?", (enquiry_id, tenant_id)).fetchone()
             return dict(row) if row else None
         finally:
             conn.close()

@@ -52,17 +52,21 @@ def _send(to_addr: str, subject: str, html_body: str = None, text_body: str = No
         return False
 
 
-def send_customer_confirmation(customer_data: dict, resolved_items: list = None, enquiry_id: int = None) -> bool:
+def send_customer_confirmation(customer_data: dict, resolved_items: list = None, enquiry_id: int = None, tenant_id: int = None) -> bool:
     to_addr = customer_data.get("email")
     if not to_addr:
         print("⚠️ [MAILER] No customer email provided, skipping confirmation", flush=True)
         return False
-    subject, html_body, text_body = build_confirmation_email(customer_data, resolved_items, enquiry_id)
+    subject, html_body, text_body = build_confirmation_email(customer_data, resolved_items, enquiry_id, tenant_id)
     return _send(to_addr, subject, html_body, text_body)
 
 
-def send_staff_notification(customer_data: dict, resolved_items: list = None) -> bool:
-    staff_email = os.getenv("STAFF_EMAIL")
+def send_staff_notification(customer_data: dict, resolved_items: list = None, staff_email: str = None) -> bool:
+    # staff_email is the tenant's own tenant_settings.staff_email — falls
+    # back to the shared STAFF_EMAIL env var when not passed (not yet
+    # configured for that tenant, or called before tenant resolution
+    # existed) so nothing breaks before every call site passes it explicitly.
+    staff_email = staff_email or os.getenv("STAFF_EMAIL")
     if not staff_email:
         print("❌ [MAILER] STAFF_EMAIL not configured", flush=True)
         return False
@@ -90,10 +94,12 @@ Parts:
     return _send(staff_email, subject, text_body=text_body)
 
 
-def alert_staff(subject: str, message: str) -> bool:
+def alert_staff(subject: str, message: str, staff_email: str = None) -> bool:
     """Internal error alerts — see monitoring.py for the cooldown logic that
-    stops this from spamming your inbox during an extended outage."""
-    staff_email = os.getenv("STAFF_EMAIL")
+    stops this from spamming your inbox during an extended outage.
+    staff_email falls back to the shared STAFF_EMAIL env var when not
+    passed, same reasoning as send_staff_notification() above."""
+    staff_email = staff_email or os.getenv("STAFF_EMAIL")
     if not staff_email:
         print(f"❌ [MAILER] STAFF_EMAIL not configured, cannot send alert: {subject}", flush=True)
         return False

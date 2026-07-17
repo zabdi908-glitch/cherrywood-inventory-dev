@@ -236,10 +236,12 @@ class AdminAgent:
         except Exception as e:
             return {'success': False, 'error': str(e)}
     
-    def export_to_csv(self):
+    def export_to_csv(self, tenant_id=None):
+        if tenant_id is None:
+            tenant_id = tenants_store.get_default_tenant_id()
         try:
             conn = self.get_connection()
-            cursor = conn.execute('SELECT * FROM vehicle ORDER BY id DESC')
+            cursor = conn.execute('SELECT * FROM vehicle WHERE tenant_id = ? ORDER BY id DESC', (tenant_id,))
             rows = cursor.fetchall()
             conn.close()
             
@@ -264,10 +266,16 @@ class AdminAgent:
         except Exception as e:
             return {'success': False, 'error': str(e)}
     
-    def health_check(self):
+    def health_check(self, tenant_id=None):
+        # Scoped to one tenant, same optional-default pattern as everywhere
+        # else in this codebase — not a system-wide count across all
+        # tenants (that would need its own loop, same shape as
+        # auto_backup()/backup_now()'s per-tenant iteration, if ever needed).
+        if tenant_id is None:
+            tenant_id = tenants_store.get_default_tenant_id()
         try:
             conn = self.get_connection()
-            cursor = conn.execute('SELECT COUNT(*) as count FROM vehicle')
+            cursor = conn.execute('SELECT COUNT(*) as count FROM vehicle WHERE tenant_id = ?', (tenant_id,))
             count = cursor.fetchone()['count']
             conn.close()
             

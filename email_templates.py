@@ -21,22 +21,31 @@ single line — still styled, just not itemized.
 
 import settings_store
 
-COMPANY_NAME = "Cherrywood Auto Parts"
-COMPANY_EMAIL = "cherryvagparts@gmail.com"
-COMPANY_ADDRESS = "Bordesley Green, Birmingham"
-BRAND_COLOR = "#EA580C"  # orange, matching your site's accent colour
+BRAND_COLOR = "#EA580C"  # orange, matching your site's accent colour — not
+                          # yet tenant-configurable (no per-tenant color
+                          # scheme exists; branding/logo direction is still
+                          # unresolved per CLAUDE.md)
 
 
-def build_confirmation_email(customer_data: dict, resolved_items: list[dict] | None = None, enquiry_id: int | None = None):
+def build_confirmation_email(customer_data: dict, resolved_items: list[dict] | None = None, enquiry_id: int | None = None, tenant_id: int | None = None):
     name = customer_data.get("name", "there")
     resolved_items = resolved_items or []
     # Pulled fresh on every call so an admin editing these in /admin/settings
-    # takes effect immediately, with no deploy needed.
-    company_phone = settings_store.get_setting("company_phone")
-    whatsapp_link = settings_store.get_setting("whatsapp_link")
+    # takes effect immediately, with no deploy needed. tenant_id=None falls
+    # back to the default tenant (settings_store's own convention) — the
+    # caller (mailer.send_customer_confirmation) is expected to pass
+    # g.tenant['id'] explicitly once that's wired through.
+    company_phone = settings_store.get_setting("company_phone", tenant_id)
+    whatsapp_link = settings_store.get_setting("whatsapp_link", tenant_id)
+    company_name = settings_store.get_setting("business_name", tenant_id)
+    company_email = settings_store.get_setting("company_email", tenant_id)
+    company_address = ", ".join(filter(None, [
+        settings_store.get_setting("address_locality", tenant_id),
+        settings_store.get_setting("address_region", tenant_id),
+    ]))
     phone_tel_href = "tel:" + company_phone.replace(" ", "")
 
-    subject = f"We've received your enquiry — {COMPANY_NAME}"
+    subject = f"We've received your enquiry — {company_name}"
 
     if resolved_items:
         rows_html = "\n".join(_item_row_html(it, customer_data) for it in resolved_items)
@@ -75,7 +84,7 @@ def build_confirmation_email(customer_data: dict, resolved_items: list[dict] | N
 
           <tr>
             <td style="background:#1a1a1a; padding:24px 32px;">
-              <span style="color:#ffffff; font-size:20px; font-weight:700; letter-spacing:0.5px;">{COMPANY_NAME.upper()}</span>
+              <span style="color:#ffffff; font-size:20px; font-weight:700; letter-spacing:0.5px;">{company_name.upper()}</span>
             </td>
           </tr>
 
@@ -136,8 +145,8 @@ def build_confirmation_email(customer_data: dict, resolved_items: list[dict] | N
           <tr>
             <td style="padding:20px 32px; background:#fafafa; border-top:1px solid #eee;">
               <p style="margin:0; color:#888; font-size:13px; line-height:1.6;">
-                {COMPANY_NAME} · {COMPANY_ADDRESS}<br>
-                {company_phone} · {COMPANY_EMAIL}
+                {company_name} · {company_address}<br>
+                {company_phone} · {company_email}
               </p>
             </td>
           </tr>
@@ -170,9 +179,9 @@ Call us: {company_phone}
 {ref_text}
 
 --
-{COMPANY_NAME}
-{COMPANY_ADDRESS}
-{company_phone} · {COMPANY_EMAIL}
+{company_name}
+{company_address}
+{company_phone} · {company_email}
 """
 
     return subject, html_body, text_body

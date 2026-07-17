@@ -44,11 +44,13 @@ def add_photo(db, vehicle_id, photo_url, order=0, tenant_id=None):
     db.commit()
 
 
-def get_photos(db, vehicle_id):
+def get_photos(db, vehicle_id, tenant_id=None):
     ensure_table(db)
+    if tenant_id is None:
+        tenant_id = tenants_store.get_default_tenant_id()
     rows = db.execute(
-        'SELECT * FROM vehicle_photos WHERE vehicle_id = ? ORDER BY photo_order',
-        (vehicle_id,)
+        'SELECT * FROM vehicle_photos WHERE vehicle_id = ? AND tenant_id = ? ORDER BY photo_order',
+        (vehicle_id, tenant_id)
     ).fetchall()
     return [dict(r) for r in rows]
 
@@ -58,8 +60,9 @@ def delete_photo(db, photo_id, tenant_id=None):
     if tenant_id is None:
         tenant_id = tenants_store.get_default_tenant_id()
     # Return the photo_url before deleting, so the caller can also remove
-    # the actual file from disk
-    row = db.execute('SELECT photo_url FROM vehicle_photos WHERE id = ?', (photo_id,)).fetchone()
+    # the actual file from disk. Scoped by tenant_id so a foreign photo_id
+    # can never be reported as deletable (and DELETE below is scoped too).
+    row = db.execute('SELECT photo_url FROM vehicle_photos WHERE id = ? AND tenant_id = ?', (photo_id, tenant_id)).fetchone()
     photo_url = row['photo_url'] if row else None
     db.execute('DELETE FROM vehicle_photos WHERE id = ? AND tenant_id = ?', (photo_id, tenant_id))
     db.commit()

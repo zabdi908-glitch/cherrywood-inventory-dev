@@ -55,6 +55,94 @@
                       class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition">{{ settings.faq_text }}</textarea>
         </div>
 
+        <hr class="border-slate-800">
+        <h2 class="text-lg font-black text-white">Branding &amp; Contact</h2>
+        <p class="text-slate-500 text-xs -mt-3">Used site-wide — page titles, footer, structured data for search engines, and confirmation emails.</p>
+
+        <div>
+            <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Business Name</label>
+            <input type="text" name="business_name" value="{{ settings.business_name }}"
+                   class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition">
+        </div>
+
+        <div>
+            <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Tagline / Meta Description</label>
+            <textarea name="tagline" rows="2"
+                      class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition">{{ settings.tagline }}</textarea>
+        </div>
+
+        <div>
+            <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Public Contact Email</label>
+            <input type="email" name="company_email" value="{{ settings.company_email }}"
+                   class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition">
+        </div>
+
+        <div>
+            <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Staff Notification Email (optional)</label>
+            <input type="email" name="staff_email" value="{{ settings.staff_email }}" placeholder="Leave blank to use the server's default STAFF_EMAIL"
+                   class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition">
+            <p class="text-xs text-slate-500 mt-1">Where new-enquiry notifications and system alerts are sent.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2">
+                <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Address Line 1</label>
+                <input type="text" name="address_line1" value="{{ settings.address_line1 }}"
+                       class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition">
+            </div>
+            <div>
+                <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Town / Locality</label>
+                <input type="text" name="address_locality" value="{{ settings.address_locality }}"
+                       class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition">
+            </div>
+            <div>
+                <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Region</label>
+                <input type="text" name="address_region" value="{{ settings.address_region }}"
+                       class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition">
+            </div>
+            <div>
+                <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Postcode</label>
+                <input type="text" name="postcode" value="{{ settings.postcode }}"
+                       class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition">
+            </div>
+            <div>
+                <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Country Code</label>
+                <input type="text" name="address_country" value="{{ settings.address_country }}" placeholder="GB"
+                       class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Environment Agency Licence</label>
+                <input type="text" name="licence_number" value="{{ settings.licence_number }}"
+                       class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition">
+            </div>
+            <div>
+                <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">EPR Ref</label>
+                <input type="text" name="epr_ref" value="{{ settings.epr_ref }}"
+                       class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition">
+            </div>
+            <div>
+                <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Compliance Band</label>
+                <input type="text" name="compliance_band" value="{{ settings.compliance_band }}"
+                       class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition">
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Google Site Verification (optional)</label>
+            <input type="text" name="google_site_verification" value="{{ settings.google_site_verification }}"
+                   class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition">
+            <p class="text-xs text-slate-500 mt-1">From Google Search Console, if verifying this domain. Leave blank to omit.</p>
+        </div>
+
+        <div>
+            <label class="block text-xs font-black uppercase text-slate-400 mb-1.5">Hero / Structured-Data Image URL</label>
+            <input type="text" name="hero_image_url" value="{{ settings.hero_image_url }}"
+                   class="w-full p-3 bg-[#0f172a] border border-slate-700 rounded-lg text-white focus:border-[#f97316] outline-none transition">
+        </div>
+
         <button type="submit" class="w-full p-3 bg-[#f97316] text-black font-black uppercase text-sm tracking-wider rounded-xl hover:bg-orange-500 transition">
             Save Settings
         </button>

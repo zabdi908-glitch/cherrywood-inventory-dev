@@ -115,10 +115,12 @@ class PartsAgent:
             base_slug = f"part-{part_id}"
         return f"{base_slug}-{part_id}"
 
-    def get_part_by_slug(self, slug):
+    def get_part_by_slug(self, slug, tenant_id=None):
+        if tenant_id is None:
+            tenant_id = tenants_store.get_default_tenant_id()
         try:
             conn = self.get_db()
-            part = conn.execute('SELECT * FROM parts WHERE slug = ?', (slug,)).fetchone()
+            part = conn.execute('SELECT * FROM parts WHERE slug = ? AND tenant_id = ?', (slug, tenant_id)).fetchone()
             conn.close()
             return dict(part) if part else None
         except Exception as e:
@@ -128,15 +130,16 @@ class PartsAgent:
     # CRUD OPERATIONS
     # ============================================
 
-    def add_part(self, data):
+    def add_part(self, data, tenant_id=None):
         try:
             conn = self.get_db()
-            # No per-request tenant context yet (deferred resolution phase,
-            # same situation as restore_vehicles() in app.py) — defaults to
-            # the one pre-existing tenant. Without this, parts_bulk_delete()
-            # in app.py (tenant-scoped since it isn't legacy-deferred) would
+            # tenant_id defaults to the one pre-existing tenant when not
+            # passed; pass it explicitly (g.tenant['id']) once a caller has
+            # real tenant context. Without this, parts_bulk_delete() in
+            # app.py (tenant-scoped since it isn't legacy-deferred) would
             # silently match 0 rows for any part added here.
-            tenant_id = tenants_store.get_default_tenant_id()
+            if tenant_id is None:
+                tenant_id = tenants_store.get_default_tenant_id()
             cursor = conn.execute('''INSERT INTO parts
                 (stock_id, part_name, category, part_type, make, model, generation,
                  oem_number, engine_code, condition, price, stock_status, location, notes,
@@ -162,24 +165,28 @@ class PartsAgent:
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
-    def get_part(self, part_id):
+    def get_part(self, part_id, tenant_id=None):
+        if tenant_id is None:
+            tenant_id = tenants_store.get_default_tenant_id()
         try:
             conn = self.get_db()
-            part = conn.execute('SELECT * FROM parts WHERE id = ?', (part_id,)).fetchone()
+            part = conn.execute('SELECT * FROM parts WHERE id = ? AND tenant_id = ?', (part_id, tenant_id)).fetchone()
             conn.close()
             return dict(part) if part else None
         except Exception as e:
             return None
 
-    def get_similar_parts(self, part_id, category, limit=4):
+    def get_similar_parts(self, part_id, category, limit=4, tenant_id=None):
         """Other available parts in the same category, excluding this one."""
+        if tenant_id is None:
+            tenant_id = tenants_store.get_default_tenant_id()
         try:
             conn = self.get_db()
             rows = conn.execute(
-                '''SELECT * FROM parts 
-                   WHERE category = ? AND id != ? AND stock_status = 'Available'
+                '''SELECT * FROM parts
+                   WHERE category = ? AND id != ? AND stock_status = 'Available' AND tenant_id = ?
                    ORDER BY created_at DESC LIMIT ?''',
-                (category, part_id, limit)
+                (category, part_id, tenant_id, limit)
             ).fetchall()
             conn.close()
             return [dict(r) for r in rows]
@@ -187,26 +194,28 @@ class PartsAgent:
             print(f"Error in get_similar_parts: {e}")
             return []
 
-    def get_same_vehicle_parts(self, part_id, registration, make, model, year, limit=6):
+    def get_same_vehicle_parts(self, part_id, registration, make, model, year, limit=6, tenant_id=None):
         """Other parts from the same donor vehicle. Matches on registration
         when available (the most reliable signal, since two parts sharing a
         reg definitely came from the same car) — falls back to make/model/
         year if registration isn't set on this part."""
+        if tenant_id is None:
+            tenant_id = tenants_store.get_default_tenant_id()
         try:
             conn = self.get_db()
             if registration:
                 rows = conn.execute(
-                    '''SELECT * FROM parts 
-                       WHERE registration = ? AND id != ?
+                    '''SELECT * FROM parts
+                       WHERE registration = ? AND id != ? AND tenant_id = ?
                        ORDER BY created_at DESC LIMIT ?''',
-                    (registration, part_id, limit)
+                    (registration, part_id, tenant_id, limit)
                 ).fetchall()
             elif make and model and year:
                 rows = conn.execute(
-                    '''SELECT * FROM parts 
-                       WHERE make = ? AND model = ? AND year = ? AND id != ?
+                    '''SELECT * FROM parts
+                       WHERE make = ? AND model = ? AND year = ? AND id != ? AND tenant_id = ?
                        ORDER BY created_at DESC LIMIT ?''',
-                    (make, model, year, part_id, limit)
+                    (make, model, year, part_id, tenant_id, limit)
                 ).fetchall()
             else:
                 rows = []
@@ -216,16 +225,21 @@ class PartsAgent:
             print(f"Error in get_same_vehicle_parts: {e}")
             return []
 
-    def get_parts_by_ids(self, part_ids):
+    def get_parts_by_ids(self, part_ids, tenant_id=None):
         """Batch lookup — used for rendering 'Recently Viewed' from a list
-        of IDs stored in the customer's browser."""
+        of IDs stored in the customer's browser. tenant_id scoping matters
+        here specifically because the ids come straight from the browser,
+        not from a query the server already scoped — without it, a
+        customer's browser could request another tenant's part by id."""
         if not part_ids:
             return []
+        if tenant_id is None:
+            tenant_id = tenants_store.get_default_tenant_id()
         try:
             conn = self.get_db()
             placeholders = ','.join('?' * len(part_ids))
             rows = conn.execute(
-                f'SELECT * FROM parts WHERE id IN ({placeholders})', part_ids
+                f'SELECT * FROM parts WHERE id IN ({placeholders}) AND tenant_id = ?', part_ids + [tenant_id]
             ).fetchall()
             conn.close()
             parts_by_id = {r['id']: dict(r) for r in rows}
@@ -236,21 +250,25 @@ class PartsAgent:
             print(f"Error in get_parts_by_ids: {e}")
             return []
 
-    def get_all_parts(self):
+    def get_all_parts(self, tenant_id=None):
+        if tenant_id is None:
+            tenant_id = tenants_store.get_default_tenant_id()
         try:
             conn = self.get_db()
-            parts = conn.execute('SELECT * FROM parts ORDER BY created_at DESC').fetchall()
+            parts = conn.execute('SELECT * FROM parts WHERE tenant_id = ? ORDER BY created_at DESC', (tenant_id,)).fetchall()
             conn.close()
             return [dict(p) for p in parts]
         except Exception as e:
             return []
 
-    def get_parts(self, page=1, per_page=20, category=None, price_range=None, status=None, sort='newest', search_query=None):
+    def get_parts(self, page=1, per_page=20, category=None, price_range=None, status=None, sort='newest', search_query=None, tenant_id=None):
+        if tenant_id is None:
+            tenant_id = tenants_store.get_default_tenant_id()
         try:
             conn = self.get_db()
-            where_clauses = []
-            params = []
-            
+            where_clauses = ["tenant_id = ?"]
+            params = [tenant_id]
+
             if category:
                 where_clauses.append("category = ?")
                 params.append(category)
@@ -292,20 +310,22 @@ class PartsAgent:
             print(f"Error in get_parts: {e}")
             return {'parts': [], 'total': 0}
 
-    def search_parts(self, query):
+    def search_parts(self, query, tenant_id=None):
+        if tenant_id is None:
+            tenant_id = tenants_store.get_default_tenant_id()
         try:
             conn = self.get_db()
             search = f'%{query}%'
-            parts = conn.execute('''SELECT * FROM parts 
-                WHERE part_name LIKE ? 
-                OR oem_number LIKE ? 
-                OR make LIKE ? 
-                OR model LIKE ? 
+            parts = conn.execute('''SELECT * FROM parts
+                WHERE (part_name LIKE ?
+                OR oem_number LIKE ?
+                OR make LIKE ?
+                OR model LIKE ?
                 OR engine_code LIKE ?
                 OR category LIKE ?
-                OR stock_id LIKE ?
+                OR stock_id LIKE ?) AND tenant_id = ?
                 ORDER BY created_at DESC''',
-                (search, search, search, search, search, search, search)).fetchall()
+                (search, search, search, search, search, search, search, tenant_id)).fetchall()
             conn.close()
             return [dict(p) for p in parts]
         except Exception as e:
@@ -372,10 +392,12 @@ class PartsAgent:
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
-    def get_photos(self, part_id):
+    def get_photos(self, part_id, tenant_id=None):
+        if tenant_id is None:
+            tenant_id = tenants_store.get_default_tenant_id()
         try:
             conn = self.get_db()
-            photos = conn.execute('SELECT * FROM part_photos WHERE part_id = ? ORDER BY photo_order', (part_id,)).fetchall()
+            photos = conn.execute('SELECT * FROM part_photos WHERE part_id = ? AND tenant_id = ? ORDER BY photo_order', (part_id, tenant_id)).fetchall()
             conn.close()
             return [dict(p) for p in photos]
         except Exception as e:

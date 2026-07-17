@@ -6,6 +6,8 @@ import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+import settings_store
+
 
 def find_matching_parts(get_db_func, search_text, limit=10):
     """
@@ -54,7 +56,7 @@ def find_matching_parts(get_db_func, search_text, limit=10):
         return []
 
 
-def generate_email_reply(customer_data, matched_parts, api_key):
+def generate_email_reply(customer_data, matched_parts, api_key, tenant_id=None):
     """
     Uses OpenAI to draft a reply email. Strictly instructed to only reference
     parts actually found in matched_parts — never invent prices or stock.
@@ -68,7 +70,15 @@ def generate_email_reply(customer_data, matched_parts, api_key):
     else:
         inventory_context = "No exact matching parts were found in current stock for this enquiry."
 
-    system_prompt = f"""You are writing a reply email on behalf of Cherrywood Auto Parts, a Birmingham-based VAG vehicle breaker (Audi, VW, SEAT, Skoda).
+    business_name = settings_store.get_setting('business_name', tenant_id)
+
+    # NOTE: "a Birmingham-based VAG vehicle breaker (Audi, VW, SEAT, Skoda)"
+    # below is still a hardcoded business-type description, not threaded
+    # through tenant_settings — only the name/sign-off were in scope for
+    # this pass. This module has no live caller today (see
+    # handle_enquiry_auto_reply's docstring), so it's not an active gap,
+    # but would need its own field if this is ever wired up.
+    system_prompt = f"""You are writing a reply email on behalf of {business_name}, a Birmingham-based VAG vehicle breaker (Audi, VW, SEAT, Skoda).
 
 Customer enquiry details:
 Name: {customer_data.get('name', 'Customer')}
@@ -81,7 +91,7 @@ RULES — FOLLOW EXACTLY:
 1. If matching parts were found above, reference them by name and exact price. Never invent a price or part that isn't listed above.
 2. If no matching parts were found, do NOT guess or make up a part or price. Instead write a warm, honest reply saying a staff member will check current stock and follow up shortly, typically within 2 hours.
 3. Keep the tone friendly, professional, and concise — 3 to 5 sentences maximum.
-4. Sign off as "The Cherrywood Auto Parts Team".
+4. Sign off as "The {business_name} Team".
 5. Do not include a subject line, only the email body.
 6. Do not use markdown formatting, just plain text suitable for an email.
 """
@@ -107,7 +117,7 @@ RULES — FOLLOW EXACTLY:
         return None
 
 
-def send_reply_email(customer_data, reply_body):
+def send_reply_email(customer_data, reply_body, tenant_id=None):
     """Sends the generated reply directly to the customer's email address."""
     sender = os.getenv('EMAIL_USER')
     password = os.getenv('EMAIL_PASS')
@@ -117,11 +127,13 @@ def send_reply_email(customer_data, reply_body):
         print("❌ [Email Reply] Missing sender credentials or customer email — reply not sent", flush=True)
         return False
 
+    business_name = settings_store.get_setting('business_name', tenant_id)
+
     try:
         msg = MIMEMultipart()
         msg['From'] = sender
         msg['To'] = recipient
-        msg['Subject'] = f"Re: Your enquiry about {customer_data.get('part', 'your part')} - Cherrywood Auto Parts"
+        msg['Subject'] = f"Re: Your enquiry about {customer_data.get('part', 'your part')} - {business_name}"
         msg.attach(MIMEText(reply_body, 'plain'))
 
         server = smtplib.SMTP('smtp.gmail.com', 587)
@@ -137,11 +149,16 @@ def send_reply_email(customer_data, reply_body):
         return False
 
 
-def handle_enquiry_auto_reply(customer_data, get_db_func):
+def handle_enquiry_auto_reply(customer_data, get_db_func, tenant_id=None):
     """
     Main entry point — call this after an enquiry is saved.
     Looks up matching parts, generates a reply, and sends it to the customer.
     Returns the reply text (or None if it failed), so it can also be logged.
+
+    NOTE: not currently called from anywhere in app.py (confirmed dead code
+    as of this migration) — tenant_id threading was added for consistency
+    with the rest of the multi-tenant work, ready for whenever this is
+    wired up. tenant_id=None falls back to the default tenant.
     """
     api_key = os.getenv('OPENAI_API_KEY')
     if not api_key:
@@ -151,9 +168,9 @@ def handle_enquiry_auto_reply(customer_data, get_db_func):
     search_text = f"{customer_data.get('vehicle', '')} {customer_data.get('part', '')}"
     matched_parts = find_matching_parts(get_db_func, search_text)
 
-    reply_body = generate_email_reply(customer_data, matched_parts, api_key)
+    reply_body = generate_email_reply(customer_data, matched_parts, api_key, tenant_id)
     if not reply_body:
         return None
 
-    sent = send_reply_email(customer_data, reply_body)
+    sent = send_reply_email(customer_data, reply_body, tenant_id)
     return reply_body if sent else None
